@@ -1,0 +1,17 @@
+# Node.js
+**/node_modules
+**/.expo
+**/.next
+
+# React Native
+**/android/build
+**/ios/Pods
+
+# ASP.NET
+**/bin
+**/obj
+**/appsettings.json
+**/wwwroot
+
+# Environment variables
+.env

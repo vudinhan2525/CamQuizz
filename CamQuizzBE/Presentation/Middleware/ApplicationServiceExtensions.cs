@@ -5,7 +5,7 @@ using CamQuizzBE.Infras.Repositories;
 using CamQuizzBE.Applications.Services;
 using CamQuizzBE.Domain.Repositories;
 
-namespace CamQuizzBE.Infras.Extensions;
+namespace CamQuizzBE.Presentation.Middleware;
 
 public static class ApplicationServiceExtensions
 {

@@ -1,41 +1,58 @@
+using CamQuizzBE.Infras.Data;
+using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Infras.Extensions;
+using CamQuizzBE.Presentation.Middleware;
+using Microsoft.IdentityModel.Logging;
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddConsole();
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddApplicationServices(builder.Configuration);
+builder.Services.AddIdentityServices(builder.Configuration);
 
+IdentityModelEventSource.ShowPII = true;
+builder.Services.AddSwaggerGen();
+builder.Logging.AddConsole(options =>
+{
+    options.LogToStandardErrorThreshold = LogLevel.Information;
+});
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+logger.LogInformation("Application starting...");
+
+app.UseMiddleware<ExceptionMiddleware>();
+app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
+    .WithOrigins("http://localhost:3000"));
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+// Enable Swagger middleware in the request pipeline
+app.UseSwagger();
+
+app.UseSwaggerUI(c =>
 {
-    app.MapOpenApi();
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+    c.RoutePrefix = string.Empty; 
+});
+app.MapControllers();
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+try
+{
+    var context = services.GetRequiredService<DataContext>();
+    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+    var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
+    var scopedLogger = services.GetRequiredService<ILogger<Program>>();
+
+    await context.Database.MigrateAsync();
 }
-
-app.UseHttpsRedirection();
-
-var summaries = new[]
+catch (Exception ex)
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var scopedLogger = services.GetRequiredService<ILogger<Program>>();
+    scopedLogger.LogError(ex, "An error occurred during migration");
+}
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

@@ -11,7 +11,8 @@ class UserMap
     public string? Pincode { get; set; }
     public RegisterDto? RegisterDto { get; set; }
 }
-
+[Route("api/v1/auth")]
+[ApiController]
 public class AuthController(
     ITokenService tokenService,
     UserManager<AppUser> userManager,
@@ -27,17 +28,18 @@ public class AuthController(
     [HttpPost("validate-signup")]
     public async Task<ActionResult<UserDto>> ValidateSignup(RegisterDto registerDto)
     {
-         if (string.IsNullOrWhiteSpace(registerDto.Email) || !IsValidEmail(registerDto.Email))
+        if (string.IsNullOrWhiteSpace(registerDto.Email) || !IsValidEmail(registerDto.Email))
         {
             return BadRequest("Email already exists.");
         }
+
         var result = await userManager.PasswordValidators.First().ValidateAsync(
             userManager,
             null!,
             registerDto.Password
         );
-
         if (!result.Succeeded)
+
         {
             return BadRequest(result.Errors);
         }
@@ -61,7 +63,7 @@ public class AuthController(
         }
         else
         {
-            await userManager.AddToRoleAsync(user, registerDto.Role ?? "Listener");
+            await userManager.AddToRoleAsync(user, registerDto.Role ?? "Student");
         }
 
         return mapper.Map<UserDto>(user);
@@ -73,6 +75,7 @@ public class AuthController(
         var existingUser = await userManager.Users
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .SingleOrDefaultAsync(x => x.NormalizedEmail == loginDto.Email.ToUpper());
+
         if (existingUser == null)
         {
             return Unauthorized("User with this email does not exist.");
@@ -86,7 +89,7 @@ public class AuthController(
 
         return userDto;
     }
-    
+
     [HttpGet("test-token")]
     public IActionResult TestToken(string token)
     {

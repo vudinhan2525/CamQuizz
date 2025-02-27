@@ -3,6 +3,7 @@ using CamQuizzBE.Applications.Helpers;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Infras.Repositories;
 using CamQuizzBE.Applications.Services;
+using CamQuizzBE.Domain.Repositories;
 
 namespace CamQuizzBE.Infras.Extensions;
 
@@ -17,7 +18,9 @@ public static class ApplicationServiceExtensions
         });
         services.AddCors();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IQuizzesService, QuizzesService>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IQuizzesRepository, QuizzesRepository>();
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
         return services;
     }

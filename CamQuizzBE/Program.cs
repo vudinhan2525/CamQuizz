@@ -5,7 +5,13 @@ using CamQuizzBE.Presentation.Middleware;
 using Microsoft.IdentityModel.Logging;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddConsole();
-
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
 
@@ -34,9 +40,11 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
-    c.RoutePrefix = string.Empty; 
+    c.RoutePrefix = string.Empty;
 });
 app.MapControllers();
+
+
 
 using var scope = app.Services.CreateScope();
 var services = scope.ServiceProvider;

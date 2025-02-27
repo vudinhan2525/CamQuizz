@@ -12,6 +12,7 @@ IdentityDbContext<
     IdentityUserLogin<int>,
     IdentityRoleClaim<int>,
     IdentityUserToken<int>
->(options){
-
+>(options)
+{
+    public DbSet<Quizzes> Quizzes { get; set; }
 }

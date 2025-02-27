@@ -1,0 +1,93 @@
+# General OS Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# ===================
+# Golang
+# ===================
+**/bin/
+**/obj/
+**/pkg/
+**/vendor/
+**/coverage.out
+**/*.test
+**/*.exe
+**/*.dll
+**/*.so
+**/*.dylib
+**/*.o
+**/*.a
+**/*.out
+
+# Go modules
+**/go.sum
+**/go.work
+**/go.work.sum
+
+# Editor-specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===================
+# C# (.NET)
+# ===================
+**/bin/
+**/obj/
+**/out/
+**/publish/
+**/TestResults/
+**/.vscode/
+**/.idea/
+**/*.user
+**/.vs/
+**/*.suo
+**/*.dbmdl
+**/*.jfm
+**/*.pidb
+**/*.sdf
+**/*.userprefs
+**/*.psess
+**/*.vsp
+**/*.bak
+**/*.log
+**/*.nupkg
+**/*.snupkg
+**/.cache/
+**/.publish/
+
+# ASP.NET
+**/appsettings.*.json
+**/secrets.json
+
+# ===================
+# Node.js
+# ===================
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/pnpm-lock.yaml*
+**/dist/
+**/build/
+**/.cache/
+
+# Environment Variables
+# Keep .env files specific to each service
+# Ignore global or sensitive env files
+**/.env
+
+# TypeScript
+**/*.tsbuildinfo
+
+# Jest / Testing
+**/coverage/
+**/*.lcov
+**/junit.xml
+**/test-results.xml
+**/__snapshots__/

@@ -1,5 +1,6 @@
 namespace CamQuizzBE.Domain.Entities;
 
+[Table("quizzes")]
 public class Quizzes
 {
     public int Id { get; set; }

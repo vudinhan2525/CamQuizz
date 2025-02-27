@@ -40,7 +40,8 @@ public class QuizzesService : IQuizzesService
         //     throw new Exception("User not found");
         // }
 
-        // Implement logic to create a new quiz
+        await _quizzesRepo.AddAsync(quiz);
+
     }
 
     public async Task DeleteQuizAsync(int id)

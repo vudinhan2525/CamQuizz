@@ -12,6 +12,8 @@
 **/obj
 **/appsettings.*.json
 **/wwwroot
-
+**/Logs
+**/CoverageReport
+**/TestResults
 # Environment variables
 .env

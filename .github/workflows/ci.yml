@@ -1,4 +1,4 @@
-name: TaskFlow CI Pipeline
+name: CamQuizz CI Pipeline
 on:
   push:
     branches: ["backend/develop"]
@@ -7,18 +7,34 @@ jobs:
   test:
     runs-on: ubuntu-latest
     services:
-      mysql:
-        image: mysql:8.0
+      postgres:
+        image: postgres:13
         env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: testdb
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: yourpassword
+          POSTGRES_DB: mydb
         ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping -h 127.0.0.1 --silent" --health-interval=10s --health-timeout=5s --health-retries=5
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install Make
+        run: sudo apt-get update && sudo apt-get install -y make
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.103' 
+
+      - name: Restore dependencies
+        run: dotnet restore ./CamQuizSln.sln
+
+      - name: Run Tests
+        run: make coverage

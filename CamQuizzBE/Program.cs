@@ -2,8 +2,12 @@ using CamQuizzBE.Infras.Data;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Presentation.Middleware;
 using Microsoft.IdentityModel.Logging;
+using Serilog;
 var builder = WebApplication.CreateBuilder(args);
-builder.Logging.AddConsole();
+
+// // Log config
+builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -23,8 +27,11 @@ builder.Logging.AddConsole(options =>
 var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var kestrelUrl = builder.Configuration.GetValue<string>("Kestrel:Endpoints:Http:Url");
+logger.LogInformation("🚀 Application starting on {Addresses}", kestrelUrl);
 
-logger.LogInformation("Application starting...");
+
+
 
 app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
@@ -32,6 +39,9 @@ app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Enable log for request
+app.UseSerilogRequestLogging();
 
 // Enable Swagger middleware in the request pipeline
 app.UseSwagger();
@@ -41,6 +51,8 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
     c.RoutePrefix = string.Empty;
 });
+
+// Map controller
 app.MapControllers();
 
 

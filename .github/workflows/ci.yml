@@ -34,7 +34,7 @@ jobs:
           dotnet-version: '9.0.103' 
 
       - name: Restore dependencies
-        run: dotnet restore ./CamQuizSln.sln
+        run: dotnet restore 
 
       - name: Run Tests
         run: make coverage

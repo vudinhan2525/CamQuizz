@@ -1,0 +1,13 @@
+version: '3.8'  
+
+services:
+  postgres-default:  
+    image: postgres:13  
+    container_name: postgres-default  
+    environment:  
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: mydb
+    ports:  
+      - "5432:5432"
+    restart: unless-stopped  

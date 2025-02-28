@@ -10,7 +10,7 @@
 # ASP.NET
 **/bin
 **/obj
-**/appsettings.json
+**/appsettings.*.json
 **/wwwroot
 
 # Environment variables

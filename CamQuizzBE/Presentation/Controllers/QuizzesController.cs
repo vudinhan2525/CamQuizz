@@ -12,7 +12,7 @@ public class QuizzesController(IQuizzesService quizzesService, IMapper mapper) :
     private readonly IQuizzesService _quizzesService = quizzesService;
     private readonly IMapper _mapper = mapper;
 
-    // GET: api/v1/quizzes
+    // GET: api/v1/quizz
     [HttpGet]
     public async Task<ActionResult<IEnumerable<QuizzesDto>>> GetAllQuizzes()
     {

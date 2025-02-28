@@ -34,7 +34,9 @@ jobs:
           dotnet-version: '9.0.103' 
 
       - name: Restore dependencies
+        working-directory: Server
         run: dotnet restore 
 
       - name: Run Tests
+        working-directory: Server
         run: make coverage

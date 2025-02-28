@@ -2,6 +2,7 @@ name: CamQuizz CI Pipeline
 on:
   push:
     branches: ["backend/develop"]
+    branches: ["main"]
 
 jobs:
   test:

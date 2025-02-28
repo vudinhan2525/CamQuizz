@@ -1,6 +1,5 @@
 using CamQuizzBE.Infras.Data;
 using CamQuizzBE.Domain.Entities;
-using CamQuizzBE.Infras.Extensions;
 using CamQuizzBE.Presentation.Middleware;
 using Microsoft.IdentityModel.Logging;
 using Serilog;
@@ -68,6 +67,7 @@ try
     var scopedLogger = services.GetRequiredService<ILogger<Program>>();
 
     await context.Database.MigrateAsync();
+    await Seed.SeedUsers(context, userManager, roleManager);
 }
 catch (Exception ex)
 {

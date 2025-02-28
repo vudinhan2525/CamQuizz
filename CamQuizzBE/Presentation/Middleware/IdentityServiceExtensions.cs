@@ -1,7 +1,7 @@
 using CamQuizzBE.Infras.Data;
 using CamQuizzBE.Domain.Entities;
 
-namespace CamQuizzBE.Infras.Extensions;
+namespace CamQuizzBE.Presentation.Middleware;
 
 public static class IdentityServiceExtensions
 {

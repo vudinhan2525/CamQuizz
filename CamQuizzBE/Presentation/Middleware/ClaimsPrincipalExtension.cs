@@ -16,7 +16,6 @@ public static class ClaimsPrincipalExtensions
         {
             Console.WriteLine($"🔹 Claim Type: {claim.Type}, Value: {claim.Value}");
         }
-
         var userIdClaim = user.FindFirstValue(ClaimTypes.NameIdentifier) 
                         ?? user.FindFirstValue(JwtRegisteredClaimNames.Sub) 
                         ?? user.FindFirstValue(JwtRegisteredClaimNames.NameId) 

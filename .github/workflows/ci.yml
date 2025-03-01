@@ -59,5 +59,8 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no -i private_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd /path/to/your/dotnet/project  
+            cd camquiz
+            git pull origin main
+            dotnet publish -c Release -o /camquiz/build
+            sudo systemctl restart my-dotnet-app  
           EOF

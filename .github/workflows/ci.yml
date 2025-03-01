@@ -62,6 +62,6 @@ jobs:
             cd camquiz/CamQuizz
             git pull origin backend/develop
             cd Server/CamQuizzBE
-            dotnet publish -c Release -o /camquiz/build
+            dotnet publish CamQuizzBE.csproj -c Release -o /camquiz/build
             sudo systemctl restart my-dotnet-app  
           EOF

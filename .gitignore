@@ -12,27 +12,17 @@
 **/android/local.properties
 **/ios/Pods/
 **/ios/build/
-
 # Gradle cache (Frontend)
 **/.gradle/
 **/*.iml
-
-# ASP.NET (Backend)
-**/bin/
-**/obj/
-**/appsettings.json
-**/appsettings.Development.json
-**/appsettings.Production.json
-**/wwwroot/
-
-# IDE & Editor files
-.vscode/
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln.cache
-
+# ASP.NET
+**/bin
+**/obj
+**/appsettings.*.json
+**/wwwroot
+**/Logs
+**/CoverageReport
+**/TestResults
 # Environment variables
 .env
 .env.local

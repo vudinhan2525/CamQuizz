@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Repositories;
 using CamQuizzBE.Applications.Services;
 using CamQuizzBE.Domain.Repositories;
 
+using Microsoft.EntityFrameworkCore;
 namespace CamQuizzBE.Presentation.Middleware;
 
 public static class ApplicationServiceExtensions
@@ -17,7 +18,8 @@ public static class ApplicationServiceExtensions
         // Register DB
         services.AddDbContext<DataContext>(opt =>
         {
-            opt.UseNpgsql(config.GetConnectionString("DefaultConnection"));
+            opt.UseMySql(config.GetConnectionString("DefaultConnection"),
+         ServerVersion.AutoDetect(config.GetConnectionString("DefaultConnection")));
         });
 
 

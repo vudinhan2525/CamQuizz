@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - backend/develop
-      - main
+      # - main
 
 jobs:
   # test:
@@ -59,8 +59,8 @@ jobs:
       - name: Deploy to VPS
         run: |
           ssh -o StrictHostKeyChecking=no -i private_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd camquiz
-            git pull origin main
+            cd camquiz/CamQuizz
+            git pull origin backend/develop
             cd Server/CamQuizzBE
             dotnet publish -c Release -o /camquiz/build
             sudo systemctl restart my-dotnet-app  

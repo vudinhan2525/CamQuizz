@@ -1,5 +1,5 @@
 const SCREENS = {
-    EXPLORE: "Khám pháphá",
+    EXPLORE: "Khám phá",
     LOGIN: "Đăng ký",
     SIGNUP: "Đăng nhập",
     ACCOUNT: "Tài khoản",

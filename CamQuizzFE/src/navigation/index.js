@@ -3,6 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import { useIsKeyboardVisible } from '../hooks/useIsKeyboardVisible';
+
 import MaterialCommunityIcons
     from 'react-native-vector-icons/MaterialCommunityIcons';
 import SCREENS from '../screens';
@@ -45,22 +47,27 @@ function UsersStackNavigation() {
 const UserTabNavigator = () => {
     console.log('UserTabNavigator')
     const { colors } = useTheme();
+    const isKeyboardVisible = useIsKeyboardVisible(); 
     return (
         <Tab.Navigator
             initialRouteName={SCREENS.EXPLORE}
             screenOptions={{
                 tabBarActiveTintColor: colors.BLUE,
                 tabBarInactiveTintColor: colors.BLACK,
+                tabBarStyle: {
+                    display: isKeyboardVisible ? 'none' : 'flex', // hide tab bar when open keyboard
+                },
+
             }}
         >
             <Tab.Screen
                 name={SCREENS.EXPLORE}
                 component={Explore}
                 options={{
-                    title: 'Khám phá',
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />
                     ),
+                    headerShown: false
                 }}
             />
             <Tab.Screen

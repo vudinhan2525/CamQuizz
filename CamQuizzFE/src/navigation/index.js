@@ -10,9 +10,10 @@ import MaterialCommunityIcons
 import SCREENS from '../screens';
 import { Library } from '../screens/Users/Library';
 import { Report } from '../screens/Users/Report';
-import { Explore } from '../screens/Users/Explore'
+import { Explore } from '../screens/Users/Explore/Explore'
 import { Account } from '../screens/Account'
 import { StudyGroup } from '../screens/Users/StudyGroup'
+import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -43,7 +44,22 @@ function UsersStackNavigation() {
         </Stack.Navigator>
     );
 }
-
+function ExploreStack() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.EXPLORE}>
+            <Stack.Screen
+                name={SCREENS.EXPLORE}
+                component={Explore}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.EXPLORE_SEARCH}
+                component={ExploreSearch}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
 const UserTabNavigator = () => {
     console.log('UserTabNavigator')
     const { colors } = useTheme();
@@ -62,7 +78,7 @@ const UserTabNavigator = () => {
         >
             <Tab.Screen
                 name={SCREENS.EXPLORE}
-                component={Explore}
+                component={ExploreStack}
                 options={{
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />

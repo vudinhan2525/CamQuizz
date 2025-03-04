@@ -3,14 +3,16 @@ import {
   View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Animated,
   Platform, FlatList
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useNavigation } from '@react-navigation/native';
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
-import COLORS from '../../constant/colors';
-import CategorySection from '../../components/CategorySection';
-import QuizCard from '../../components/QuizCard';
+import COLORS from '../../../constant/colors';
+import CategorySection from '../../../components/CategorySection';
+import QuizCard from '../../../components/QuizCard';
+import SCREENS from '../../index';
 export const Explore = () => {
+  const navigation = useNavigation();
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [userName, setUserName] = useState('Nguyen Duy An');
   const [avatar, setAvatar] = useState(null);
@@ -26,8 +28,14 @@ export const Explore = () => {
     { image: 'https://via.placeholder.com/100', title: 'Quiz 5', questions: 30, attempts: 300 },
     { image: 'https://via.placeholder.com/100', title: 'Quiz 6', questions: 35, attempts: 350 },
   ]);
-  const handleSeeMore = () => {
+  const handleSeeMore = (categoryId,navigate) => {
     // Xử lý sự kiện khi nhấn nút "Xem thêm"
+    if(navigate){
+      return () => {
+        navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId });
+      };
+    }
+
   };
   const handleCategoryPress = (category) => {
     setSelectedCategory(category);
@@ -83,7 +91,7 @@ export const Explore = () => {
             key={index}
             category={category}
             quizzes={quizzes}
-            onSeeMore={handleSeeMore}
+            onSeeMore={handleSeeMore(category,true)}
           />
         ))
       ) : (
@@ -97,7 +105,7 @@ export const Explore = () => {
           contentContainerStyle={styles.gridContainer}
           ListFooterComponent={
             selectedCategory !== 'All' && (
-              <TouchableOpacity style={styles.seeMoreButton} onPress={handleSeeMore}>
+              <TouchableOpacity style={styles.seeMoreButton} onPress={handleSeeMore(selectedCategory,false)}>
                 <Text style={styles.seeMoreButtonText}>Xem thêm</Text>
               </TouchableOpacity>
             )
@@ -110,33 +118,35 @@ export const Explore = () => {
 
 
   return (
-  <View style={styles.container}>
-    
-        {/* headers */}
-        <Animated.View style={[styles.header,
-          {
-            height: animatedValue.interpolate({
-              inputRange: [0, 250],
-              outputRange: [250, 80], 
-              extrapolate: 'clamp',
-            }),
-        
-          }
-        ]}>
-        <Animated.View style={[styles.setting,
-          {
-            height: animatedValue.interpolate({
-              inputRange: [0, 250],
-              outputRange: [60, 0],
-              extrapolate: 'clamp',
-            }),
-            opacity:animatedValue.interpolate({
-              inputRange: [0, 100],
-              outputRange: [1, 0],
-              extrapolate: 'clamp',
-            }),
-          },
+    <View style={styles.container}>
+
+      {/* headers */}
+      <Animated.View style={[styles.header,
+      {
+        height: animatedValue.interpolate({
+          inputRange: [0, 250],
+          outputRange: [250, 80],
+          extrapolate: 'clamp',
+        }),
+
+      }
       ]}>
+        <Animated.View style={[styles.setting,
+        {
+          height: animatedValue.interpolate({
+            inputRange: [0, 250],
+            outputRange: [60, 0],
+            extrapolate: 'clamp',
+          }),
+          opacity: animatedValue.interpolate({
+            inputRange: [0, 100],
+            outputRange: [1, 0],
+            extrapolate: 'clamp',
+          }),
+        },
+        ]}
+        >
+
           {
             avatar == null ?
               <EvilIcons name="user" size={60} color={COLORS.WHITE} />
@@ -147,19 +157,27 @@ export const Explore = () => {
           }
           <View>
             <Text style={styles.userName}>{userName}</Text>
-            <Text style={styles.viewSetting}>Xem cài đặt</Text>
+            <TouchableOpacity
+              onPress={() => { navigation.jumpTo(SCREENS.ACCOUNT) }}
+            >
+              <Text style={styles.viewSetting}>Xem cài đặt</Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
+       
         <Animated.View style={[styles.searchContainer,
         {
           position: 'absolute',
-          bottom: 0, 
+          bottom: 0,
           left: 0,
           right: 0,
         }
         ]}
-      >
-          <View style={styles.searchInputContainer}>
+        >
+          <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => {navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId: null })}}
+          style={styles.searchInputContainer}>
             <EvilIcons name="search" size={24} color={COLORS.GRAY_LIGHT} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -167,23 +185,25 @@ export const Explore = () => {
               placeholderTextColor={COLORS.GRAY_LIGHT}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              disableFullscreenUI={false}
+              editable={false}
             />
-          </View>
+          </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.buttonsContainer,
-          {
-            height: animatedValue.interpolate({
-              inputRange: [0, 250],
-              outputRange: [60, 0],
-              extrapolate: 'clamp',
-            }),
-            opacity:animatedValue.interpolate({
-              inputRange: [0, 100],
-              outputRange: [1, 0],
-              extrapolate: 'clamp',
-            }),
-          },
-      ]}>
+        {
+          height: animatedValue.interpolate({
+            inputRange: [0, 250],
+            outputRange: [60, 0],
+            extrapolate: 'clamp',
+          }),
+          opacity: animatedValue.interpolate({
+            inputRange: [0, 100],
+            outputRange: [1, 0],
+            extrapolate: 'clamp',
+          }),
+        },
+        ]}>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
               <Ionicons name="create-outline" size={30} color={COLORS.BLUE} />
@@ -192,28 +212,28 @@ export const Explore = () => {
           </TouchableOpacity>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
-              <Ionicons name="library-outline" size={30} color={COLORS.BLUE} />
+              <Ionicons name="library-outline" size={30} color={COLORS.BLUE} onPress={() => { navigation.jumpTo(SCREENS.LIBRARY) }} />
             </View>
             <Text style={styles.buttonText}>Xem thư viện</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
-              <Entypo name="line-graph" size={30} color={COLORS.BLUE} />
+              <Entypo name="line-graph" size={30} color={COLORS.BLUE} onPress={() => { navigation.jumpTo(SCREENS.REPORT) }} />
             </View>
             <Text style={styles.buttonText}>Xem báo cáo</Text>
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
-    <Animated.FlatList
-      ListFooterComponent={content}
-      onScroll={Animated.event(
-        [{ nativeEvent: { contentOffset: { y: animatedValue } } }],
-        { useNativeDriver: false }
-      )}
+      <Animated.FlatList
+        ListFooterComponent={content}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: animatedValue } } }],
+          { useNativeDriver: false }
+        )}
 
-      scrollEventThrottle={16}
-    />
-  </View>
+        scrollEventThrottle={16}
+      />
+    </View>
   );
 };
 

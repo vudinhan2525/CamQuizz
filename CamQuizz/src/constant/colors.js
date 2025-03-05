@@ -8,6 +8,7 @@ const COLORS = {
     BLUE:'#1579ea',
     GRAY_BG:'#f2f2f2',
     GRAY_TEXT:'#8a8a8a',
+    BLUE_LIGHT:'#E0F7FA',
   };
   
   export default COLORS;

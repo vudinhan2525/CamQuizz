@@ -2,7 +2,9 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
+import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
+
 
 export const Library = () => {
   const [activeTab, setActiveTab] = useState("myLibrary");
@@ -20,11 +22,11 @@ export const Library = () => {
           <Text style={styles.headerTitle}>Thư viện của tôi</Text>
           <View style={styles.headerIcons}>
             <View style={styles.searchContainer}>
-              <Search size={18} color="#9CA3AF" style={styles.searchIcon} />
-              <TextInput placeholder="Tìm kiếm" style={styles.searchInput} />
+              <Search size={18} color="white" style={styles.searchIcon} />
+              <TextInput placeholder="Tìm kiếm"  style={styles.searchInput} placeholderTextColor="white" />
             </View>
             <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-              <MoreVertical size={20} color="#4B5563" />
+              <MoreVertical size={20} color="white" />
             </TouchableOpacity>
           </View>
         </View>
@@ -32,21 +34,20 @@ export const Library = () => {
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        <LibraryTab title="Thư viện của tôi" isActive={activeTab === "myLibrary"} onClick={() => setActiveTab("myLibrary")} />
-        <LibraryTab title="Collections" isActive={activeTab === "collections"} onClick={() => setActiveTab("collections")} />
-        <LibraryTab title="Flash Card" isActive={activeTab === "flashcard"} onClick={() => setActiveTab("flashcard")} />
+        <LibraryTab title="Bài kiểm tra của tôi" isActive={activeTab === "myLibrary"} onClick={() => setActiveTab("myLibrary")} />
+        <LibraryTab title="Được chia sẻ" isActive={activeTab === "collections"} onClick={() => setActiveTab("collections")} />
+        <LibraryTab title="Thẻ học bài" isActive={activeTab === "flashcard"} onClick={() => setActiveTab("flashcard")} />
       </View>
 
       {/* Tab content */}
       {activeTab === "myLibrary" && (
         <View style={styles.content}>
           <View style={styles.filterRow}>
-            <DropdownFilter label="Created by me" count={0} />
             <DropdownFilter label="Published" count={0} />
           </View>
 
           <TouchableOpacity style={styles.createButton} activeOpacity={0.7}>
-            <Plus size={18} color="purple" />
+            <Plus size={18} color="black" />
             <Text style={styles.createButtonText}>Tạo mới</Text>
           </TouchableOpacity>
 
@@ -84,7 +85,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   header: {
-    padding: 20,
+    padding: 20,    
+    backgroundColor: COLORS.BLUE,
   },
   headerRow: {
     flexDirection: "row",
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1F2937",
+    color: "white",
   },
   headerIcons: {
     flexDirection: "row",
@@ -105,6 +107,7 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     position: "absolute",
+    color: "white",
     left: 10,
     top: "25%",
     transform: [{ translateY: -1 }],
@@ -115,11 +118,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    color: "white",
     outlineStyle: "none",
   },
   iconButton: {
     borderRadius: 50,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: COLORS.BLUE,
     padding: 12,
   },
   tabs: {
@@ -135,13 +139,15 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: 80,
+    left: 30,
     width: 150,
     height: 25,
+    alignSelf: "flex-end",
   },
   createButton: {
-    marginTop: 24,
+    marginTop: -35,
     flexDirection: "row",
     alignItems: "left",
     justifyContent: "center",
@@ -151,7 +157,7 @@ const styles = StyleSheet.create({
     width: 100,
   },
   createButtonText: {
-    color: "purple",
+    color: "black",
     marginLeft: 8,
   },
   emptyState: {
@@ -178,7 +184,7 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingVertical: 12,
     paddingHorizontal: 32,
-    backgroundColor: "purple",
+    backgroundColor: COLORS.BLUE,
     borderRadius: 8,
   },
   exploreButtonText: {

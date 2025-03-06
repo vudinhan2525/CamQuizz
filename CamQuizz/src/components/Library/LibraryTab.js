@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import COLORS from '../../constant/colors';
 
 const LibraryTab = ({ title, isActive, onClick }) => {
   return (
@@ -35,7 +36,7 @@ const styles = StyleSheet.create({
     left: 17,
     height: 4,
     width: "100%",
-    backgroundColor: "purple",
+    backgroundColor: COLORS.BLUE,
   },
 });
 

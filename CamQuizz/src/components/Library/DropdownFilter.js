@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { ChevronDown } from "lucide-react-native";
+import COLORS from '../../constant/colors';
 
 const DropdownFilter = ({ label, count }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,10 +23,10 @@ const DropdownFilter = ({ label, count }) => {
       {isOpen && (
         <View style={styles.dropdown}>
           <TouchableOpacity style={styles.option} onPress={() => console.log("Selected Option 1")} onPressIn={() => setIsOpen(false)}>
-            <Text>Option 1</Text>
+            <Text>Published</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.option} onPress={() => console.log("Selected Option 2")} onPressIn={() => setIsOpen(false)}>
-            <Text>Option 2</Text>
+            <Text>Draft</Text>
           </TouchableOpacity>
         </View>
       )}

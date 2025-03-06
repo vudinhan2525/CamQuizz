@@ -4,10 +4,12 @@ import { Platform, SafeAreaView, StatusBar, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import UsersStackNavigation from './src/navigation';
 import COLORS from './src/constant/colors';
+import { createStackNavigator } from "@react-navigation/stack";
 import { enableScreens } from 'react-native-screens';
 enableScreens();
 
 SplashScreen.preventAutoHideAsync();
+const Stack = createStackNavigator();
 
 const MyTheme = {
   ...DefaultTheme,

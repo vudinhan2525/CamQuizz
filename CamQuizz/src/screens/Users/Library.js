@@ -2,9 +2,9 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
+import FlashCardPage from "../Users/FlashCard/FlashCardPage";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
-
 
 export const Library = () => {
   const [activeTab, setActiveTab] = useState("myLibrary");
@@ -60,6 +60,10 @@ export const Library = () => {
             </TouchableOpacity>
           </View>
         </View>
+      )}
+
+        {activeTab === "flashcard" && (
+        <FlashCardPage /> // <-- Hiển thị FlashCardPage khi chọn tab "Thẻ học bài"
       )}
     </View>
   );

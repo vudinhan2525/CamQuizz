@@ -74,10 +74,11 @@ const UserTabNavigator = () => {
                 name={SCREENS.LIBRARY}
                 component={Library}
                 options={{
-                    title: 'Thư viện',
+                   
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons name={focused ? 'library' : 'library-outline'} size={size} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
             <Tab.Screen

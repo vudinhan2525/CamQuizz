@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-nati
 import RBSheet from 'react-native-raw-bottom-sheet';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import COLORS from '../constant/colors';
-const BottomSheet = forwardRef(({ children, title, height, onCancel }, ref) => {
+const BottomSheet = forwardRef(({ children, title, height='100%', onCancel }, ref) => {
     const handleCancel = () => {
         if (onCancel) {
             onCancel();

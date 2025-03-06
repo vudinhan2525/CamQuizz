@@ -3,7 +3,7 @@ import { ScrollView,View, Text, TouchableOpacity, Image, StyleSheet, Dimensions 
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constant/colors';
 
-const QuestionItem = ({ question, index, onEdit }) => {
+const QuestionItem = ({ question, index, onEdit, onDelete }) => {
     return (
         <View style={[styles.page, {width: '100%'}]}>
             <ScrollView 
@@ -17,12 +17,20 @@ const QuestionItem = ({ question, index, onEdit }) => {
                     </View>
                     <Text style={styles.points}>{question.duration}s</Text>
                     <Text style={styles.points}>• {question.points} Điểm</Text>
-                    <TouchableOpacity 
-                        style={styles.editButton}
-                        onPress={() => onEdit(question.id)}
-                    >
-                        <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
-                    </TouchableOpacity>
+                    <View style={styles.headerButtons}>
+                        <TouchableOpacity 
+                            style={styles.editButton}
+                            onPress={() => onEdit(question.id)}
+                        >
+                            <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={styles.deleteButton}
+                            onPress={() => onDelete(question.id)}
+                        >
+                            <Ionicons name="close-circle" size={24} color={COLORS.BLUE} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.questionContent}>
@@ -113,9 +121,17 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         flexGrow: 1,
     },
+    headerButtons: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     editButton: {
         padding: 8,
         marginLeft: 10,
+    },
+    deleteButton: {
+        padding: 8,
+        marginLeft: 5,
     },
     optionButton: {
         flexDirection: 'row',

@@ -4,12 +4,18 @@ import QuestionItem from './QuestionItem';
 
 
 
-const QuestionSlider = ({questions}) => {
+const QuestionSlider = ({questions, setQuestions}) => {
     const flatListRef = useRef(null);
 
     const handleEditQuestion = (questionId) => {
         // Xử lý sự kiện edit câu hỏi
         console.log('Edit question:', questionId);
+    };
+
+    const handleDeleteQuestion = (questionId) => {
+        // Xóa câu hỏi khỏi danh sách
+        const newQuestions = questions.filter(q => q.id !== questionId);
+        setQuestions(newQuestions);
     };
 
     return (
@@ -25,6 +31,7 @@ const QuestionSlider = ({questions}) => {
                     question={item} 
                     index={index}
                     onEdit={handleEditQuestion}
+                    onDelete={handleDeleteQuestion}
                 />
             )}
             contentContainerStyle={styles.flatListContainer}

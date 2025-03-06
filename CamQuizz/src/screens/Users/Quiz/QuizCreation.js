@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity,ScrollView, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import COLORS from '../../../constant/colors';
@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Dropdown } from 'react-native-element-dropdown';
 import BottomSheet from '../../../components/BottomSheet';
 import QuestionSlider from '../../../components/QuestionSlider'
-import GroupSelectionModal from '../../../components/GroupSelectionModal';
+import OptionalAccessModal from '../../../components/OptionalAccessModal';
 
 const QuizCreation = () => {
     const navigation = useNavigation();
@@ -18,14 +18,16 @@ const QuizCreation = () => {
         name: "Bài kiểm tra ZZZ",
         access: 'Công khai',
         amount: 0,
-        selectedGroups: []
+        selectedGroups: [],
+        invitedEmails: []
     });
     const [tmpQuizInfo, setTmpQuizInfo] = useState({
         categoryId: "Khác",
         name: "Bài kiểm tra ZZZ",
         access: 'Công khai',
         amount: 0,
-        selectedGroups: []
+        selectedGroups: [],
+        invitedEmails: []
     });
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [selectedGroups, setSelectedGroups] = useState([]);
@@ -37,7 +39,7 @@ const QuizCreation = () => {
     const accesses = [
         { label: 'Công khai', value: 'Công khai' },
         { label: 'Riêng tư', value: 'Riêng tư' },
-        { label: 'Nhóm học tập', value: 'Nhóm học tập' },
+        { label: 'Tùy chọn', value: 'Tùy chọn' },
     ];
     const mockGroups = [
         { id: '1', name: 'Nhóm Toán học' },
@@ -47,13 +49,13 @@ const QuizCreation = () => {
         { id: '5', name: 'Nhóm Hóa học' },
         { id: '6', name: 'Nhóm Sinh học' },
     ];
-    const questions = [
+    const [questions, setQuestions] = useState([
         {
             id: 1,
             points: 10,
             duration: 30,
             question: "Thủ đô của Việt Nam là gì?",
-            questionImage:null,
+            questionImage: null,
             options: [
                 { id: 'A', text: "Hà Nội", image: null, isCorrect: true },
                 { id: 'B', text: "Hồ Chí Minh", image: null, isCorrect: false },
@@ -68,7 +70,7 @@ const QuizCreation = () => {
             question: "1 + 1 bằng mấy?",
             questionImage: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
             options: [
-                { id: 'A', text: "1",image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg', isCorrect: false },
+                { id: 'A', text: "1", image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg', isCorrect: false },
                 { id: 'B', text: "2", isCorrect: true },
                 { id: 'C', text: "3", isCorrect: false },
                 { id: 'D', text: "4", isCorrect: false }
@@ -86,9 +88,8 @@ const QuizCreation = () => {
                 { id: 'D', text: "4", isCorrect: false }
             ]
         }
-    ];
+    ]);
     const handleImagePicker = async () => {
-        console.log('press')
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             alert('Ứng dụng cần quyền truy cập thư viện ảnh!');
@@ -103,10 +104,13 @@ const QuizCreation = () => {
 
         if (!result.canceled) {
             setImageUri({ uri: result.assets[0].uri });
-            console.log('Image selected:', result.assets[0].uri);
         }
     };
-
+    console.log('tmpQuizInfo:', {
+        selectedGroups: tmpQuizInfo.selectedGroups,
+        invitedEmails: tmpQuizInfo.invitedEmails
+    });
+    
     const handleDeleteImage = () => {
         setImageUri(null);
     };
@@ -121,27 +125,31 @@ const QuizCreation = () => {
     const saveQuizInfo = () => {
         setQuizInfo({
             ...tmpQuizInfo,
-            selectedGroups: tmpQuizInfo.access === 'Nhóm học tập' ? selectedGroups : []
+            selectedGroups: tmpQuizInfo.access === 'Tùy chọn' ? selectedGroups : [],
+            invitedEmails: tmpQuizInfo.access === 'Tùy chọn' ? tmpQuizInfo.invitedEmails : []
         });
         bottomSheetRef.current.close();
     }
     const handleAccessChange = (item) => {
         setTmpQuizInfo({ ...tmpQuizInfo, access: item.value });
-        if (item.value === 'Nhóm học tập') {
-            bottomSheetRef.current.close();
+        if (item.value === 'Tùy chọn') {
             setShowGroupModal(true);
         }
     };
-    const handleSaveGroups = (groups) => {
-        console.log("a",tmpQuizInfo);
+
+    const handleSaveOptionalAccess = (groups, emails) => {
+        console.log('groups', groups)
+        console.log('emails', emails)
         setSelectedGroups(groups);
         setTmpQuizInfo(prev => ({
             ...prev,
-            selectedGroups: groups
+            selectedGroups: groups,
+            invitedEmails: emails
         }));
         setQuizInfo(prev => ({
             ...prev,
-            selectedGroups: groups
+            selectedGroups: groups,
+            invitedEmails: emails
         }));
     };
     return (
@@ -182,25 +190,26 @@ const QuizCreation = () => {
                             <Text style={styles.quizInfoText}>Tên bài kiểm tra: <Text style={{ color: COLORS.BLACK }}>{quizInfo.name}</Text></Text>
                             <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{quizInfo.categoryId}</Text></Text>
                             <Text style={styles.quizInfoText}>Quyền truy cập: <Text style={{ color: COLORS.BLACK }}>{quizInfo.access}</Text></Text>
-                            {quizInfo.access === 'Nhóm học tập' && quizInfo.selectedGroups.length > 0 && (
-                                <View style={styles.selectedGroupsContainer}>
-                                    <Text style={styles.quizInfoText}>Nhóm được chọn:</Text>
-                                    <ScrollView 
-                                        horizontal 
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.groupsScrollView}
-                                    >
-                                        {quizInfo.selectedGroups.map(groupId => {
-                                            const group = mockGroups.find(g => g.id === groupId);
-                                            return (
-                                                <View key={groupId} style={styles.groupTag}>
-                                                    <Text style={styles.groupTagText}>{group?.name}</Text>
-                                                </View>
-                                            );
-                                        })}
-                                    </ScrollView>
+                            <View style={styles.accessDetailsContainer}>
+                                {quizInfo.access === 'Tùy chọn' && <Text style={styles.quizInfoText}>Tùy chọn truy cập:</Text>}
+                                <View style={styles.flowContainer}>
+                                    {quizInfo.selectedGroups.map(groupId => {
+                                        const group = mockGroups.find(g => g.id === groupId);
+                                        return (
+                                            <View key={`group-${groupId}`} style={styles.itemTag}>
+                                                <Ionicons name="people" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
+                                                <Text style={styles.itemTagText}>{group?.name}</Text>
+                                            </View>
+                                        );
+                                    })}
+                                    {quizInfo.invitedEmails.map((email, index) => (
+                                        <View key={`email-${index}`} style={styles.itemTag}>
+                                            <Ionicons name="mail" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
+                                            <Text style={styles.itemTagText}>{email}</Text>
+                                        </View>
+                                    ))}
                                 </View>
-                            )}
+                            </View>
                             <Text style={styles.quizInfoText}>Số câu hỏi: <Text style={{ color: COLORS.BLACK }}>{quizInfo.amount}</Text></Text>
                         </View>
                         <TouchableOpacity style={styles.editButton}>
@@ -208,7 +217,10 @@ const QuizCreation = () => {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.questionSliderContainer}>
-                        <QuestionSlider questions={questions} />
+                        <QuestionSlider 
+                            questions={questions} 
+                            setQuestions={setQuestions}
+                        />
                     </View>
                 </View>
             </ScrollView>
@@ -222,7 +234,7 @@ const QuizCreation = () => {
                     <Text style={[styles.buttonText, styles.footerButtonText]}>Tạo câu hỏi</Text>
                 </TouchableOpacity>
             </View>
-            <BottomSheet ref={bottomSheetRef} title="Thông tin bài kiểm tra" height={300}>
+            <BottomSheet ref={bottomSheetRef} title="Thông tin bài kiểm tra" height={'100%'}>
                 <View style={styles.dropdownContainer}>
                     <Text style={styles.label}>Tên bài kiểm tra</Text>
                     <TextInput
@@ -258,17 +270,75 @@ const QuizCreation = () => {
                         onChange={handleAccessChange}
                     />
                 </View>
+                <View style={styles.accessContainer}>
+
+                {tmpQuizInfo.access === 'Tùy chọn' && (
+                    <View style={styles.selectedItemsContainer}>
+                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                            <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
+                            <TouchableOpacity 
+                                style={styles.editButton}
+                                onPress={() => setShowGroupModal(true)}
+                                >
+                                <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {tmpQuizInfo.selectedGroups.length > 0 && (
+                            <View style={styles.selectedGroupsContainer}>
+                                <Text style={styles.smallLabel}>Nhóm được chọn:</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.groupsScrollView}
+                                    >
+                                    {tmpQuizInfo.selectedGroups.map(groupId => {
+                                        const group = mockGroups.find(g => g.id === groupId);
+                                        return (
+                                            <View key={groupId} style={styles.groupTag}>
+                                                <Text style={styles.groupTagText}>{group?.name}</Text>
+                                            </View>
+                                        );
+                                    })}
+                                </ScrollView>
+                            </View>
+                        )}
+
+                        {tmpQuizInfo.invitedEmails?.length > 0 && (
+                            <View style={styles.selectedGroupsContainer}>
+                                <Text style={styles.smallLabel}>Email được mời:</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.groupsScrollView}
+                                    >
+                                    {tmpQuizInfo.invitedEmails.map((email, index) => (
+                                        <View key={index} style={styles.groupTag}>
+                                            <Text style={styles.groupTagText}>{email}</Text>
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+                    </View>
+                )}
+                </View>
+
                 <View style={styles.modalButtons}>
-                    <TouchableOpacity style={styles.button} onPress={() => saveQuizInfo()} >
+                    <TouchableOpacity 
+                    disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Tùy chọn' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
+                    style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Tùy chọn' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
+                    onPress={() => saveQuizInfo()} >
                         <Text style={styles.buttonText}>Lưu</Text>
                     </TouchableOpacity>
                 </View>
             </BottomSheet>
-            <GroupSelectionModal
+            <OptionalAccessModal
                 visible={showGroupModal}
                 onClose={() => setShowGroupModal(false)}
-                onSave={handleSaveGroups}
+                onSave={handleSaveOptionalAccess}
                 selectedGroups={selectedGroups}
+                initialInvitedEmails={tmpQuizInfo.invitedEmails}
                 myGroups={mockGroups}
             />
         </View>
@@ -434,6 +504,46 @@ const styles = StyleSheet.create({
         color: COLORS.BLUE,
         fontSize: 14,
     },
+    accessDetailsContainer: {
+        marginTop: 8,
+    },
+    selectedItemsContainer: {
+        marginVertical: 8,
+    },
+    flowContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+        gap: 8,
+    },
+    itemTag: {
+        backgroundColor: COLORS.BLUE_LIGHT,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    tagIcon: {
+        marginRight: 4,
+    },
+    itemTagText: {
+        color: COLORS.BLUE,
+        fontSize: 14,
+    },
+    smallLabel: {
+        fontSize: 14,
+        color: COLORS.GRAY_DARK,
+        marginBottom: 5,
+    },
+    accessContainer:{
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: COLORS.BLUE,
+        backgroundColor: COLORS.BLUE_LIGHT,
+        marginBottom: 10,
+    }
 });
 
 export default QuizCreation;

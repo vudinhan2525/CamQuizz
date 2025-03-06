@@ -10,6 +10,7 @@ const SCREENS = {
     EXPLORE_TAB: "Tab khám phá",
     USER_TAB: "Tab người dùng",
     ADMIN_TAB: "Tab quản trị",
+    QUIZ_CREATION:"Tạo bài kiểm tra"
   };
   
   export default SCREENS;

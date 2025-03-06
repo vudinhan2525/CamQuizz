@@ -12,7 +12,7 @@ import { Explore } from '../screens/Users/Explore/Explore';
 import { Account } from '../screens/Account';
 import { StudyGroup } from '../screens/Users/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
-
+import QuizCreation from '../screens/Users/Quiz/QuizCreation';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -24,6 +24,10 @@ function UsersStackNavigation() {
                 component={UserTabNavigator}
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name={SCREENS.QUIZ_CREATION}
+                component={QuizCreation}
+                options={{headerShown:false}}/>
 
         </Stack.Navigator>
     );

@@ -9,6 +9,8 @@ const COLORS = {
     GRAY_BG:'#f2f2f2',
     GRAY_TEXT:'#8a8a8a',
     BLUE_LIGHT:'#E0F7FA',
+    RED:'#FF0000',
+    GREEN:'#2ECC71'
   };
   
   export default COLORS;

@@ -36,6 +36,8 @@ const App = () => {
         <UsersStackNavigation />
       </NavigationContainer>
     </SafeAreaView>
+
+
   );
 };
 

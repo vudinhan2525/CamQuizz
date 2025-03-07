@@ -10,6 +10,7 @@ const SCREENS = {
     EXPLORE_TAB: "Tab khám phá",
     USER_TAB: "Tab người dùng",
     ADMIN_TAB: "Tab quản trị",
+    FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
   };
   
   export default SCREENS;

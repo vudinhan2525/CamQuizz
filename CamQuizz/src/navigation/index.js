@@ -13,6 +13,8 @@ import { Account } from '../screens/Account';
 import { StudyGroup } from '../screens/Users/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
 import QuizCreation from '../screens/Users/Quiz/QuizCreation';
+import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -28,7 +30,11 @@ function UsersStackNavigation() {
                 name={SCREENS.QUIZ_CREATION}
                 component={QuizCreation}
                 options={{headerShown:false}}/>
-
+            <Stack.Screen 
+                name={SCREENS.QUESTION_SETTING} 
+                component={CreateQuestion}
+                options={{ headerShown: false }}
+            />
         </Stack.Navigator>
     );
 }

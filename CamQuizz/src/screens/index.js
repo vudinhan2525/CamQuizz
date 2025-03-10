@@ -10,7 +10,8 @@ const SCREENS = {
     EXPLORE_TAB: "Tab khám phá",
     USER_TAB: "Tab người dùng",
     ADMIN_TAB: "Tab quản trị",
-    QUIZ_CREATION:"Tạo bài kiểm tra"
+    QUIZ_CREATION:"Tạo bài kiểm tra",
+    QUESTION_SETTING:"Cài đặt câu hỏi"
   };
   
   export default SCREENS;

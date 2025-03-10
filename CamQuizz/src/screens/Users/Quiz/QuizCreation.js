@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -8,7 +8,7 @@ import { Dropdown } from 'react-native-element-dropdown';
 import BottomSheet from '../../../components/BottomSheet';
 import QuestionSlider from '../../../components/QuestionSlider'
 import OptionalAccessModal from '../../../components/OptionalAccessModal';
-
+import SCREENS from '../../index'
 const QuizCreation = () => {
     const navigation = useNavigation();
     const [imageUri, setImageUri] = useState(null);
@@ -49,46 +49,13 @@ const QuizCreation = () => {
         { id: '5', name: 'Nhóm Hóa học' },
         { id: '6', name: 'Nhóm Sinh học' },
     ];
-    const [questions, setQuestions] = useState([
-        {
-            id: 1,
-            points: 10,
-            duration: 30,
-            question: "Thủ đô của Việt Nam là gì?",
-            questionImage: null,
-            options: [
-                { id: 'A', text: "Hà Nội", image: null, isCorrect: true },
-                { id: 'B', text: "Hồ Chí Minh", image: null, isCorrect: false },
-                { id: 'C', text: "Đà Nẵng", image: null, isCorrect: false },
-                { id: 'D', text: "Huế", image: null, isCorrect: false }
-            ]
-        },
-        {
-            id: 2,
-            points: 15,
-            duration: 45,
-            question: "1 + 1 bằng mấy?",
-            questionImage: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
-            options: [
-                { id: 'A', text: "1", image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg', isCorrect: false },
-                { id: 'B', text: "2", isCorrect: true },
-                { id: 'C', text: "3", isCorrect: false },
-                { id: 'D', text: "4", isCorrect: false }
-            ]
-        },
-        {
-            id: 3,
-            points: 20,
-            duration: 60,
-            question: "Câu hỏi thứ ba",
-            options: [
-                { id: 'A', text: "1", isCorrect: false },
-                { id: 'B', text: "2", isCorrect: true },
-                { id: 'C', text: "3", isCorrect: false },
-                { id: 'D', text: "4", isCorrect: false }
-            ]
-        }
-    ]);
+    const [questions, setQuestions] = useState([]);
+    const questionsRef = useRef(questions);
+
+    useEffect(() => {
+        questionsRef.current = questions;
+    }, [questions]);
+
     const handleImagePicker = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -152,6 +119,50 @@ const QuizCreation = () => {
             invitedEmails: emails
         }));
     };
+
+    
+
+    const handleAddQuestion = (newQuestion) => {
+        setQuestions(prev => [...prev, newQuestion]);
+    };
+
+    const handleUpdateQuestion = (updatedQuestion) => {
+        setQuestions(prev => 
+            prev.map(q => q.id === updatedQuestion.id ? updatedQuestion : q)
+        );
+    };
+
+    const handleCreateQuestion = () => {
+        navigation.navigate(SCREENS.QUESTION_SETTING, {
+            questions: questionsRef.current,
+            onSave: handleAddQuestion
+        });
+    };
+
+    const handleEditQuestion = (questionToEdit) => {
+        navigation.navigate(SCREENS.QUESTION_SETTING, {
+            question: questionToEdit,
+            questions: questionsRef.current,
+            onSave: handleUpdateQuestion
+        });
+    };
+
+    const isQuizValid = () => {
+        if (!questions || questions.length === 0) {
+            return false;
+        }
+        return true;
+    };
+
+    const handleSaveQuiz = () => {
+        if (!isQuizValid()) {
+            alert('Vui lòng thêm ít nhất 1 câu hỏi');
+            return;
+        }
+        
+        saveQuizInfo();
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -159,8 +170,18 @@ const QuizCreation = () => {
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Tạo bài kiểm tra</Text>
-                <TouchableOpacity onPress={() => { () => saveQuiz() }}>
-                    <Text style={styles.saveButton}>Lưu</Text>
+                <TouchableOpacity 
+                    style={[
+                        !isQuizValid() && styles.saveButtonDisabled
+                    ]}
+                    onPress={handleSaveQuiz}
+                    disabled={!isQuizValid()}
+                >
+                    <Text style={[
+                        styles.saveButtonText,
+                    ]}>
+                        Lưu
+                    </Text>
                 </TouchableOpacity>
             </View>
             <ScrollView style={styles.container}>
@@ -220,18 +241,24 @@ const QuizCreation = () => {
                         <QuestionSlider 
                             questions={questions} 
                             setQuestions={setQuestions}
+                            handleEditQuestion={handleEditQuestion}
                         />
                     </View>
                 </View>
             </ScrollView>
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.footerButton} onPress={() => { }}>
-                    <Ionicons name="search-outline" color={COLORS.WHITE} size={24} />
-                    <Text style={[styles.buttonText, styles.footerButtonText]}>Tìm kiếm câu hỏi</Text>
+                    <Ionicons name="cloud-upload-outline" color={COLORS.WHITE} size={24} />
+                    <Text style={[styles.buttonText, styles.footerButtonText]}> Đăng sheet câu hỏi</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footerButton} onPress={() => { }}>
+                <TouchableOpacity 
+                    style={styles.footerButton} 
+                    onPress={handleCreateQuestion}
+                >
                     <Ionicons name="create-outline" color={COLORS.WHITE} size={24} />
-                    <Text style={[styles.buttonText, styles.footerButtonText]}>Tạo câu hỏi</Text>
+                    <Text style={[styles.buttonText, styles.footerButtonText]}>
+                        Tạo câu hỏi
+                    </Text>
                 </TouchableOpacity>
             </View>
             <BottomSheet ref={bottomSheetRef} title="Thông tin bài kiểm tra" height={'100%'}>
@@ -363,9 +390,22 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     saveButton: {
-        fontSize: 16,
-        color: COLORS.BLUE,
+        backgroundColor: COLORS.BLUE,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginHorizontal: 16,
+        marginBottom: 16,
     },
+    saveButtonDisabled: {
+        opacity: 0.5,   
+    },
+    saveButtonText: {
+        color: COLORS.BLUE,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    
     content: {
         padding: 16,
     },

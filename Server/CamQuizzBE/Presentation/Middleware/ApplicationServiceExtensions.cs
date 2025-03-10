@@ -34,6 +34,12 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IQuizzesService, QuizzesService>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IQuizzesRepository, QuizzesRepository>();
+        services.AddScoped<GroupService>();
+        services.AddScoped<MemberService>();
+
+        services.AddScoped<IGroupRepository, GroupRepository>();
+        services.AddScoped<IMemberRepository, MemberRepository>();
+
 
         // Register Auto Mapper
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

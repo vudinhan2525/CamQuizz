@@ -19,6 +19,9 @@ IdentityDbContext<
     public DbSet<Answers> Answers { get; set; }
     public DbSet<Questions> Questions { get; set; }
 
+    public DbSet<Group> Groups { get; set; }
+    public DbSet<Member> Members { get; set; }
+
     override protected void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -70,6 +73,28 @@ IdentityDbContext<
             .HasOne(q => q.Question)
             .WithMany(qz => qz.Answers)
             .HasForeignKey(q => q.QuestionId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
+
+        #region Group-Member-User Relationship
+        modelBuilder.Entity<Member>()
+            .HasKey(m => new { m.GroupId, m.UserId }); // Đặt khóa chính là cặp GroupId - UserId
+
+        modelBuilder.Entity<Member>()
+            .HasOne(m => m.Group)
+            .WithMany(g => g.Members)
+            .HasForeignKey(m => m.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Member>()
+            .HasOne(m => m.User)
+            .WithMany(u => u.Members)
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Group>()
+            .HasOne(g => g.Owner)
+            .WithMany()
+            .HasForeignKey(g => g.OwnerId)
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
     }

@@ -10,7 +10,10 @@ const COLORS = {
     GRAY_TEXT:'#8a8a8a',
     BLUE_LIGHT:'#E0F7FA',
     RED:'#FF0000',
-    GREEN:'#2ECC71'
+    GREEN:'#2ECC71',
+    RAJAH: '#fbab60',
+    Light_Cyan: '#e0ffff ',
+    Fresh_Air: '#a6e7ff',
   };
   
   export default COLORS;

@@ -14,6 +14,8 @@ import { StudyGroup } from '../screens/Users/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
 import QuizCreation from '../screens/Users/Quiz/QuizCreation';
 import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
+import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
+
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -35,6 +37,13 @@ function UsersStackNavigation() {
                 component={CreateQuestion}
                 options={{ headerShown: false }}
             />
+
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_SET_DETAIL}
+                component={FlashcardSetDetail}
+                options={{ headerShown: false }}
+            />
+             
         </Stack.Navigator>
     );
 }
@@ -55,6 +64,7 @@ function ExploreStack() {
         </Stack.Navigator>
     );
 }
+
 
 const UserTabNavigator = () => {
     const { colors } = useTheme();
@@ -84,10 +94,11 @@ const UserTabNavigator = () => {
                 name={SCREENS.LIBRARY}
                 component={Library}
                 options={{
-                    title: 'Thư viện',
+                   
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons name={focused ? 'library' : 'library-outline'} size={size} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
             <Tab.Screen

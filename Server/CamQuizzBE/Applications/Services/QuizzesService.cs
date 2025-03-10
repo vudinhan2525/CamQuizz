@@ -2,6 +2,8 @@
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Repositories;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace CamQuizzBE.Applications.Services;
 
@@ -16,36 +18,28 @@ public class QuizzesService : IQuizzesService
         _quizzesRepo = quizzesRepo;
     }
 
-    public async Task<IEnumerable<Quizzes>> GetAllQuizzesAsync()
+    public async Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId)
     {
-        // Example of using _config
-        var pageSize = _config.GetValue<int>("Pagination:PageSize");
-
-        // Implement logic here, e.g., getting all quizzes from a repository
-        return new List<Quizzes>();  // Dummy return for example
+        return await _quizzesRepo.GetAllAsync(kw, limit, page, sort, genreId);
     }
 
     public async Task<Quizzes?> GetQuizByIdAsync(int id)
     {
-        // Implement logic to get quiz by ID
-        return new Quizzes();  // Dummy return for example
+        return await _quizzesRepo.GetByIdAsync(id);
     }
 
     public async Task CreateQuizAsync(Quizzes quiz)
     {
-        // // Example of using _userRepo
-        // var user = await _userRepo.GetUserByIdAsync(quiz.CreatedByUserId);
-        // if (user == null)
-        // {
-        //     throw new Exception("User not found");
-        // }
-
         await _quizzesRepo.AddAsync(quiz);
-
     }
 
     public async Task DeleteQuizAsync(int id)
     {
-        // Implement logic to delete a quiz
+        var quiz = await _quizzesRepo.GetByIdAsync(id);
+        if (quiz == null)
+        {
+            throw new KeyNotFoundException("Quiz not found.");
+        }
+        await _quizzesRepo.DeleteAsync(id);
     }
 }

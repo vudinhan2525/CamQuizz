@@ -13,4 +13,5 @@ public class AppUser : IdentityUser<int>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public ICollection<AppUserRole> UserRoles { get; set; } = [];
+    public ICollection<Quizzes> Quizzes { get; set; } = [];
 }

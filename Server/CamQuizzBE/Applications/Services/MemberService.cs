@@ -36,7 +36,7 @@ public class MemberService : IMemberService
         {
             GroupId = groupId,
             UserId = userId,
-            Status = MembershipStatus.Pending
+            // Status = MembershipStatus.Pending
         };
         await _memberRepository.AddMemberAsync(newMember);
     }
@@ -49,8 +49,8 @@ public class MemberService : IMemberService
             throw new UnauthorizedAccessException("Only the group owner can approve members.");
 
         var member = await _memberRepository.GetByIdAsync(groupId, userId);
-        if (member == null || member.Status != MembershipStatus.Pending)
-            throw new InvalidOperationException("No pending request found for this member.");
+        // if (member == null || member.Status != MembershipStatus.Pending)
+        //     throw new InvalidOperationException("No pending request found for this member.");
 
         await _memberRepository.ApproveMemberAsync(groupId, userId);
     }

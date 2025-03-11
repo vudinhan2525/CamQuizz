@@ -79,7 +79,9 @@ IdentityDbContext<
         #region Group-Member-User Relationship
         modelBuilder.Entity<Member>()
             .HasKey(m => new { m.GroupId, m.UserId }); // Đặt khóa chính là cặp GroupId - UserId
-
+        modelBuilder.Entity<Member>()
+            .Property(m => m.Status)
+            .HasConversion<int>();
         modelBuilder.Entity<Member>()
             .HasOne(m => m.Group)
             .WithMany(g => g.Members)
@@ -90,7 +92,8 @@ IdentityDbContext<
             .HasOne(m => m.User)
             .WithMany(u => u.Members)
             .HasForeignKey(m => m.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.NoAction);
+
         modelBuilder.Entity<Group>()
             .HasOne(g => g.Owner)
             .WithMany()

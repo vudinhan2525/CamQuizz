@@ -56,7 +56,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("QuestionId");
 
-                    b.ToTable("answers");
+                    b.ToTable("answers", (string)null);
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.AppRole", b =>
@@ -215,7 +215,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("genres");
+                    b.ToTable("genres", (string)null);
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Group", b =>
@@ -248,7 +248,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("groups");
+                    b.ToTable("groups", (string)null);
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Member", b =>
@@ -271,7 +271,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("members");
+                    b.ToTable("members", (string)null);
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Questions", b =>
@@ -321,7 +321,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("QuizId");
 
-                    b.ToTable("questions");
+                    b.ToTable("questions", (string)null);
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Quizzes", b =>
@@ -373,7 +373,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("quizzes");
+                    b.ToTable("quizzes", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>

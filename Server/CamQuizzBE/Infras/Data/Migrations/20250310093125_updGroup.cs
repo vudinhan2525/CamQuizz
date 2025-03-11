@@ -39,6 +39,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+             migrationBuilder.Sql("ALTER TABLE `groups` DROP FOREIGN KEY IF EXISTS `FK_groups_AspNetUsers_owner_id`;");
             migrationBuilder.DropForeignKey(
                 name: "FK_groups_AspNetUsers_owner_id",
                 table: "groups");

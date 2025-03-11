@@ -39,6 +39,8 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IMemberRepository, MemberRepository>();
+        services.AddScoped<IMemberService, MemberService>();
+
 
 
         // Register Auto Mapper

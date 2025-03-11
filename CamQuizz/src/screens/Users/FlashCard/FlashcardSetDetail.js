@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { ArrowLeft, Plus, ChevronRight} from "lucide-react-native";
+import { ArrowLeft, Plus, ChevronRight, Upload} from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AddCardScreen from "../../../components/Flash-Card/AddCardScreen";
 import COLORS from "../../../constant/colors";
@@ -43,7 +43,7 @@ export const FlashcardSetDetail = () => {
             <View style={styles.headerRight}>
               <TouchableOpacity onPress={() => setShowAddCard(true)}>
               <View style={styles.plus}>
-              <Plus size={22} color={"black"} />
+              <Plus size={22} color={"white"} />   
             </View>
               </TouchableOpacity>
             </View>
@@ -52,22 +52,22 @@ export const FlashcardSetDetail = () => {
           {/* Stats */}
           <View style={styles.statsContainer}>
             <Text style={styles.statsText}>
-              Total: {flashcards.length}/{flashcards.length}
+              Tổng cộng: {flashcards.length}/{flashcards.length}
             </Text>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
                 <Text style={styles.statNumber}>{flashcards.length}</Text>
-                <Text style={styles.statLabel}>New</Text>
+                <Text style={styles.statLabel}>Mới</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statNumber}>0</Text>
-                <Text style={styles.statLabel}>Reviews</Text>
+                <Text style={styles.statLabel}>Số lượt ôn</Text>
               </View>
               <View style={styles.statBox}>
                 <Text style={styles.statNumber}>
                   {flashcards.length > 0 ? Math.ceil(flashcards.length * 0.5) : 0}
                 </Text>
-                <Text style={styles.statLabel}>Estimated (min)</Text>
+                <Text style={styles.statLabel}>Thời gian (phút)</Text>
               </View>
             </View>
             <TouchableOpacity
@@ -77,7 +77,7 @@ export const FlashcardSetDetail = () => {
               ]}
               disabled={flashcards.length === 0}
             >
-              <Text style={styles.studyButtonText}>Study</Text>
+              <Text style={styles.studyButtonText}>Học</Text>
             </TouchableOpacity>
           </View>
 
@@ -93,7 +93,7 @@ export const FlashcardSetDetail = () => {
                   activeTab === "today" && styles.activeTabText,
                 ]}
               >
-                Today
+                Hôm nay
               </Text>
             </TouchableOpacity>
 
@@ -107,14 +107,14 @@ export const FlashcardSetDetail = () => {
                   activeTab === "record" && styles.activeTabText,
                 ]}
               >
-                Record
+                Bản ghi
               </Text>
             </TouchableOpacity>
 
             <View style={styles.tabSpacer} />
 
             <View style={styles.allButton}>
-              <Text style={styles.allText}>All</Text>
+              <Text style={styles.allText}>Tất cả</Text>
               <ChevronRight size={18} />
             </View>
           </View>
@@ -141,7 +141,7 @@ export const FlashcardSetDetail = () => {
               ))
             ) : (
               <View style={styles.emptyMessage}>
-                <Text>No flashcards yet. Click the + button to add a card.</Text>
+                <Text>Hiện tại chưa có thẻ học bài nào. Nhấn nút + để thêm 1 thẻ.</Text>
               </View>
             )}
           </ScrollView>
@@ -180,7 +180,8 @@ const styles = StyleSheet.create({
   plus: {
     right: 20,
     borderRadius: 10,
-    borderColor: "black",
+    borderColor: COLORS.BLUE,
+    backgroundColor: COLORS.BLUE,
     borderWidth: 2,
     padding: 3, 
     alignItems: "center",

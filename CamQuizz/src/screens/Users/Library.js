@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "reac
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
 import FlashCardPage from "../Users/FlashCard/FlashCardPage";
+import SharedQuizz from "../Users/Library/SharedQuizz";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
 
@@ -34,7 +35,7 @@ export const Library = () => {
 
       {/* Tabs */}
       <View style={styles.tabs}>
-        <LibraryTab title="Bài kiểm tra của tôi" isActive={activeTab === "myLibrary"} onClick={() => setActiveTab("myLibrary")} />
+        <LibraryTab title="Bài kiểm tra" isActive={activeTab === "myLibrary"} onClick={() => setActiveTab("myLibrary")} />
         <LibraryTab title="Được chia sẻ" isActive={activeTab === "collections"} onClick={() => setActiveTab("collections")} />
         <LibraryTab title="Thẻ học bài" isActive={activeTab === "flashcard"} onClick={() => setActiveTab("flashcard")} />
       </View>
@@ -63,7 +64,11 @@ export const Library = () => {
       )}
 
         {activeTab === "flashcard" && (
-        <FlashCardPage /> // <-- Hiển thị FlashCardPage khi chọn tab "Thẻ học bài"
+        <FlashCardPage /> 
+      )}
+
+        {activeTab === "collections" && (
+        <SharedQuizz /> 
       )}
     </View>
   );

@@ -100,7 +100,7 @@ export const Explore = () => {
           style={{ marginHorizontal: 10 }}
           data={quizzes}
           keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => <QuizCard quiz={item} />}
+          renderItem={({ item }) => <QuizCard quiz={item}/>}
           numColumns={2}
           contentContainerStyle={styles.gridContainer}
           ListFooterComponent={

@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace CamQuizzBE.Domain.Entities;
 
 [Table("studysets")]
-public class StudySets
+public class StudySet
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -27,5 +30,6 @@ public class StudySets
     [ForeignKey("UserId")]
     public AppUser User { get; set; } = null!;
 
-    public ICollection<FlashCards> FlashCards { get; set; } = new List<FlashCards>();
+    // Use HashSet instead of List for better performance
+    public ICollection<FlashCard> FlashCards { get; set; } = new HashSet<FlashCard>();
 }

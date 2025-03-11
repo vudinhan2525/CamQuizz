@@ -1,5 +1,10 @@
 namespace CamQuizzBE.Domain.Entities;
-
+public enum MembershipStatus
+{
+    Pending,
+    Approved,
+    Rejected
+}
 [Table("members")]
 public class Member
 {
@@ -19,4 +24,7 @@ public class Member
 
     [Column("joined_at")]
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("status")]
+    public MembershipStatus Status { get; set; } = MembershipStatus.Pending;
 }

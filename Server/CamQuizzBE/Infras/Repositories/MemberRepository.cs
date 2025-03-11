@@ -24,6 +24,7 @@ public class MemberRepository(DataContext context) : IMemberRepository
 
     public async Task AddMemberAsync(Member member)
     {
+        member.Status = MembershipStatus.Pending; // Ensure all new members start as Pending
         await _context.Members.AddAsync(member);
         await _context.SaveChangesAsync();
     }
@@ -36,5 +37,23 @@ public class MemberRepository(DataContext context) : IMemberRepository
             _context.Members.Remove(member);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task ApproveMemberAsync(int groupId, int userId)
+    {
+        var member = await _context.Members
+            .FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
+        if (member != null)
+        {
+            member.Status = MembershipStatus.Approved;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<IEnumerable<Member>> GetPendingMembersAsync(int groupId)
+    {
+        return await _context.Members
+            .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Pending)
+            .ToListAsync();
     }
 }

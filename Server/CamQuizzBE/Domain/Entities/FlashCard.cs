@@ -1,7 +1,10 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace CamQuizzBE.Domain.Entities;
 
 [Table("flashcards")]
-public class FlashCards
+public class FlashCard
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -23,5 +26,5 @@ public class FlashCards
     public int StudySetId { get; set; }
 
     [ForeignKey("StudySetId")]
-    public StudySets StudySet { get; set; } = null!;
+    public StudySet StudySet { get; set; } = null!;
 }

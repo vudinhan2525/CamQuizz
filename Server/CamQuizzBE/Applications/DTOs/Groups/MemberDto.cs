@@ -6,4 +6,5 @@ public class MemberDto
     public int GroupId { get; set; }
     public int UserId { get; set; }
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+    public string Status { get; set; } = "Pending";
 }

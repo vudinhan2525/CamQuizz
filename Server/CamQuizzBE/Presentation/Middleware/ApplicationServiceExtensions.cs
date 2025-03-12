@@ -41,6 +41,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IMemberService, MemberService>();
         services.AddScoped<IStudySetRepository, StudySetRepository>();
         services.AddScoped<IStudySetService, StudySetService>();
+        services.AddScoped<IFlashCardRepository, FlashCardRepository>();
+        services.AddScoped<IFlashCardService, FlashCardService>();
 
 
         // Register Auto Mapper

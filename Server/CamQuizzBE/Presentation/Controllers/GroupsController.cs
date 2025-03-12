@@ -39,23 +39,23 @@ public class GroupController : ControllerBase
     }
 
     [HttpPost]
-[Authorize]
-public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDto groupDto)
-{
-    if (groupDto == null)
-    {
-        return BadRequest("Invalid group data.");
-    }
-
-    var createdGroup = await _groupService.CreateGroupAsync(groupDto);
-    return CreatedAtAction(nameof(GetGroupById), new { id = createdGroup.Id }, createdGroup);
-}
-
-    [HttpDelete("{id}")]
     [Authorize]
-    public async Task<IActionResult> DeleteGroup(int id)
+    public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDto groupDto)
     {
-        await _groupService.DeleteGroupAsync(id);
-        return NoContent();
+        if (groupDto == null)
+        {
+            return BadRequest("Invalid group data.");
+        }
+
+        var createdGroup = await _groupService.CreateGroupAsync(groupDto);
+        return CreatedAtAction(nameof(GetGroupById), new { id = createdGroup.Id }, createdGroup);
     }
-}
+
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteGroup(int id)
+        {
+            await _groupService.DeleteGroupAsync(id);
+            return NoContent();
+        }
+    }

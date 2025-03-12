@@ -21,11 +21,12 @@ public class StudySetController : ControllerBase
 
     [HttpGet("my-study-sets/{userId}")]
     [Authorize]
-    public async Task<IActionResult> GetMyStudySets(int userId)
+    public async Task<IActionResult> GetMyStudySets(int userId, [FromQuery] string? kw, [FromQuery] int limit = 10, [FromQuery] int page = 1)
     {
-        var studySets = await _studySetService.GetMyStudySetsAsync(userId);
+        var studySets = await _studySetService.GetMyStudySetsAsync(userId, kw, limit, page);
         return Ok(studySets);
     }
+
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetStudySetById(int id)

@@ -14,10 +14,11 @@ public class StudySetService : IStudySetService
     {
         _studySetRepository = studySetRepository;
     }
-    public async Task<IEnumerable<StudySetDto>> GetMyStudySetsAsync(int userId)
-    {
-        return await _studySetRepository.GetMyStudySetsAsync(userId);
-    }
+    public async Task<PagedResult<StudySetDto>> GetMyStudySetsAsync(int userId, string? keyword, int limit, int page)
+{
+    return await _studySetRepository.GetMyStudySetsAsync(userId, keyword, limit, page);
+}
+
 
     public async Task<PagedResult<StudySetDto>> GetAllStudySetsAsync(string? kw, int limit, int page, string? sort, int? userId)
     {

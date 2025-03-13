@@ -1,3 +1,4 @@
+using CamQuizzBE.Domain.Entities;
 namespace CamQuizzBE.Applications.DTOs.Groups;
 
 public class GroupDto
@@ -7,6 +8,7 @@ public class GroupDto
     public string Description { get; set; } = string.Empty;
     public int OwnerId { get; set; }
     public List<int> MemberIds { get; set; } = new();
+    public GroupStatus Status { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

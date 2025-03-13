@@ -44,4 +44,9 @@ public class GroupService
     {
         await _groupRepo.DeleteAsync(id);
     }
+    public async Task UpdateGroupStatusAsync(int groupId, GroupStatus newStatus)
+    {
+        await _groupRepo.UpdateStatusAsync(groupId, newStatus);
+    }
+
 }

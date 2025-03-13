@@ -11,4 +11,6 @@ public interface IGroupRepository
     Task<GroupDto?> GetGroupByIdAsync(int id);
     Task AddAsync(Group group);
     Task DeleteAsync(int id);
+    Task UpdateStatusAsync(int groupId, GroupStatus newStatus);
+
 }

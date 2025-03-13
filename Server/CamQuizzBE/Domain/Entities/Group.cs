@@ -1,4 +1,10 @@
 namespace CamQuizzBE.Domain.Entities;
+public enum GroupStatus
+{
+    Active,
+    Deleted,
+    OnHold
+}
 
 [Table("groups")]
 public class Group
@@ -20,6 +26,8 @@ public class Group
     [Column("created_at")]
     [ForeignKey("OwnerId")]
     public AppUser Owner { get; set; } = null!;
+    [Column("status")]
+public GroupStatus Status { get; set; } = GroupStatus.Active;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Member> Members { get; set; } = new List<Member>();

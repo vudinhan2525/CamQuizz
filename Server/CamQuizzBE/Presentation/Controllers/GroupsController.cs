@@ -51,11 +51,19 @@ public class GroupController : ControllerBase
         return CreatedAtAction(nameof(GetGroupById), new { id = createdGroup.Id }, createdGroup);
     }
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteGroup(int id)
-        {
-            await _groupService.DeleteGroupAsync(id);
-            return NoContent();
-        }
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteGroup(int id)
+    {
+        await _groupService.DeleteGroupAsync(id);
+        return NoContent();
     }
+    [HttpPut("{groupId}/status")]
+    [Authorize]
+    public async Task<IActionResult> UpdateStatus(int groupId, [FromBody] GroupStatus newStatus)
+    {
+        await _groupService.UpdateGroupStatusAsync(groupId, newStatus);
+        return NoContent();
+    }
+
+}

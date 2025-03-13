@@ -1,6 +1,7 @@
 
 using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Presentation.Utils;
@@ -73,7 +74,9 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
             Name = createQuizDto.Name,
             Image = !string.IsNullOrWhiteSpace(createQuizDto.Image) ? createQuizDto.Image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTadtxXyVjVDyg7TfbT8FJIdGSXdrT3ex9yqQ&s",
             GenreId = createQuizDto.GenreId ?? 0,
-            UserId = createQuizDto.UserId ?? 0
+            UserId = createQuizDto.UserId ?? 0,
+            NumberOfAttended = 0,
+            Status = QuizStatus.Public
         };
 
         await _quizzesService.CreateQuizAsync(quizEntity);

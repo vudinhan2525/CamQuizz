@@ -1,3 +1,5 @@
+using CamQuizzBE.Domain.Enums;
+
 namespace CamQuizzBE.Domain.Entities;
 
 [Table("quizzes")]
@@ -18,6 +20,13 @@ public class Quizzes
 
     [Column("duration")]
     public int Duration { get; set; } = 0;
+
+    [Column("status")]
+    [Required]
+    public QuizStatus Status { get; set; } = QuizStatus.Public;
+
+    [Column("attended_nums")]
+    public int NumberOfAttended { get; set; } = 0;
 
     [Column("question_nums")]
     public int NumberOfQuestions { get; set; } = 0;

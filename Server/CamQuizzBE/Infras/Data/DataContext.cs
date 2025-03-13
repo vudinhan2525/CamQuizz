@@ -103,10 +103,10 @@ IdentityDbContext<
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
 
-         #region StudySets-FlashCards Relationship
+        #region StudySets-FlashCards Relationship
         modelBuilder.Entity<FlashCard>()
             .HasOne(f => f.StudySet)
-            .WithMany(s => s.FlashCards )
+            .WithMany(s => s.FlashCards)
             .HasForeignKey(f => f.StudySetId)
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
@@ -118,5 +118,11 @@ IdentityDbContext<
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
+
+
+        // Convert Enum -> String
+        modelBuilder.Entity<Quizzes>()
+           .Property(q => q.Status)
+           .HasConversion<string>();
     }
 }

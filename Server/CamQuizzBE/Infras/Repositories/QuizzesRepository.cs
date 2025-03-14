@@ -1,3 +1,4 @@
+using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Infras.Data;
@@ -30,6 +31,8 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
             {
                 "name" => isDescending ? query.OrderByDescending(q => q.Name) : query.OrderBy(q => q.Name),
                 "created_at" => isDescending ? query.OrderByDescending(q => q.CreatedAt) : query.OrderBy(q => q.CreatedAt),
+                "question_num" => isDescending ? query.OrderByDescending(q => q.NumberOfQuestions) : query.OrderBy(q => q.NumberOfQuestions),
+                "anttend_num" => isDescending ? query.OrderByDescending(q => q.NumberOfAttended) : query.OrderBy(q => q.NumberOfAttended),
                 _ => query.OrderBy(q => q.Id) // Default sorting by Id
             };
         }
@@ -63,5 +66,17 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
             _context.Quizzes.Remove(quiz);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task UpdateAsync(Quizzes quiz)
+    {
+        _context.Quizzes.Update(quiz);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task IncrementQuestionCountAsync(int quizId)
+    {
+        await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE quizzes SET question_nums = question_nums + 1 WHERE Id = {0}", quizId);
     }
 }

@@ -1,5 +1,7 @@
 
 namespace CamQuizzBE.Domain.Interfaces;
+
+using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
 
 public interface IQuizzesService
@@ -8,4 +10,6 @@ public interface IQuizzesService
     Task<Quizzes?> GetQuizByIdAsync(int id);
     Task CreateQuizAsync(Quizzes quiz);
     Task DeleteQuizAsync(int id);
+
+    Task<Quizzes> UpdateQuizAsync(UpdateQuizDto updateQuiz);
 }

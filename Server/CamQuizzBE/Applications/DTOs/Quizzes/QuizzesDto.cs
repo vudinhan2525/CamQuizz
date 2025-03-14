@@ -7,6 +7,7 @@ public class QuizzesDto
     public string Image { get; set; } = string.Empty;
     public int Duration { get; set; } = 0;
     public int NumberOfQuestions { get; set; } = 0;
+    public int NumberOfAttended { get; set; } = 0;
     public string Description { get; set; } = string.Empty;
     public int GenreId { get; set; }
     public int UserId { get; set; }

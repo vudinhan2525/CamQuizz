@@ -9,11 +9,13 @@ public class QuestionsService : IQuestionsService
 {
     private readonly IConfiguration _config;
     private readonly IQuestionRepository _questionsRepo;
+    private readonly IQuizzesRepository _quizzesRepo;
 
-    public QuestionsService(IConfiguration config, IQuestionRepository questionsRepo)
+    public QuestionsService(IConfiguration config, IQuestionRepository questionsRepo, IQuizzesRepository quizzesRepo)
     {
         _config = config;
         _questionsRepo = questionsRepo;
+        _quizzesRepo = quizzesRepo;
     }
 
     public async Task<PagedResult<Questions>> GetAllQuestionsAsync(string? kw, int limit, int page, string? sort, int? quizId)
@@ -26,9 +28,13 @@ public class QuestionsService : IQuestionsService
         return await _questionsRepo.GetByIdAsync(id);
     }
 
-    public async Task CreateQuestionAsync(Questions questions)
+    public async Task CreateQuestionAsync(Questions question)
     {
-        await _questionsRepo.AddAsync(questions);
+        var createdQuestion = await _questionsRepo.AddAsync(question);
+        if (createdQuestion != null)
+        {
+            await _quizzesRepo.IncrementQuestionCountAsync(createdQuestion.QuizId);
+        }
     }
 
     public async Task DeleteQuestionAsync(int id)

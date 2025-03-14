@@ -19,7 +19,7 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
 
     // GET: api/v1/question
     [HttpGet]
-    public async Task<ActionResult<ApiResponse<IEnumerable<QuestionsDto>>>> GetAllQuizzes(
+    public async Task<ActionResult<ApiResponse<IEnumerable<QuestionsDto>>>> GetAllQuestions(
         [FromQuery] string? kw,
         [FromQuery] int limit = 10,
         [FromQuery] int page = 1,
@@ -90,7 +90,7 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
 
     // DELETE: api/v1/question/{id}
     [HttpDelete("{id}")]
-    public async Task<ActionResult> DelteQuestion(int id)
+    public async Task<ActionResult> DeleteQuestion(int id)
     {
         if (id <= 0)
         {

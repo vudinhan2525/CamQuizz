@@ -37,6 +37,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IStudySetService, StudySetService>();
         services.AddScoped<IFlashCardService, FlashCardService>();
         services.AddScoped<IQuestionsService, QuestionsService>();
+        services.AddScoped<IAnswerService, AnswerService>();
         services.AddScoped<GroupService>();
 
         // Repos
@@ -47,6 +48,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IStudySetRepository, StudySetRepository>();
         services.AddScoped<IFlashCardRepository, FlashCardRepository>();
         services.AddScoped<IQuestionRepository, QuestionsRepository>();
+        services.AddScoped<IAnswerRepository, AnswerRepository>();
 
 
 

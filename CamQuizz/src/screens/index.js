@@ -10,6 +10,8 @@ const SCREENS = {
     EXPLORE_TAB: "Tab khám phá",
     USER_TAB: "Tab người dùng",
     ADMIN_TAB: "Tab quản trị",
+    QUIZ_CREATION:"Tạo bài kiểm tra",
+    QUESTION_SETTING:"Cài đặt câu hỏi",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
   };

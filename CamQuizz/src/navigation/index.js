@@ -12,6 +12,8 @@ import { Explore } from '../screens/Users/Explore/Explore';
 import { Account } from '../screens/Account';
 import { StudyGroup } from '../screens/Users/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
+import QuizCreation from '../screens/Users/Quiz/QuizCreation';
+import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
 
 
@@ -24,6 +26,15 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.USER_TAB}
                 component={UserTabNavigator}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUIZ_CREATION}
+                component={QuizCreation}
+                options={{headerShown:false}}/>
+            <Stack.Screen 
+                name={SCREENS.QUESTION_SETTING} 
+                component={CreateQuestion}
                 options={{ headerShown: false }}
             />
 

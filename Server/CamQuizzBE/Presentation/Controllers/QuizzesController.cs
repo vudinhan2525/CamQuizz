@@ -89,6 +89,21 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
         return CreatedAtAction(nameof(GetQuizById), new { id = createdQuizDto.Id }, response);
     }
 
+    // PUT: api/v1/quiz
+    [HttpPut]
+    public async Task<ActionResult> UpdateQuiz([FromBody] UpdateQuizDto updateQuizDto)
+    {
+
+        var quiz = await _quizzesService.UpdateQuizAsync(updateQuizDto);
+
+        // Map back to DTO for response
+        var updatedQuiz = _mapper.Map<QuizzesDto>(quiz);
+
+        var response = new ApiResponse<QuizzesDto>(updatedQuiz);
+
+        return CreatedAtAction(nameof(GetQuizById), new { id = updatedQuiz.Id }, response);
+    }
+
     // DELETE: api/v1/quiz/{id}
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteQuiz(int id)

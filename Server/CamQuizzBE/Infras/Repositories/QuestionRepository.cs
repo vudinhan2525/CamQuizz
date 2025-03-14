@@ -1,9 +1,6 @@
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Infras.Data;
-using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CamQuizzBE.Infras.Repositories;
 
@@ -53,10 +50,12 @@ public class QuestionsRepository(DataContext context) : IQuestionRepository
         return await _context.Questions.Include(q => q.Answers).FirstOrDefaultAsync(q => q.Id == id);
     }
 
-    public async Task AddAsync(Questions question)
+    public async Task<Questions> AddAsync(Questions question)
     {
         await _context.Questions.AddAsync(question);
         await _context.SaveChangesAsync();
+
+        return question;
     }
 
     public async Task DeleteAsync(int id)

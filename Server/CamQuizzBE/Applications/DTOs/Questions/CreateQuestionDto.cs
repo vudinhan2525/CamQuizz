@@ -6,7 +6,6 @@ public class CreateQuestionDto
     [MinLength(3, ErrorMessage = "Name must be at least 3 characters long.")]
     [MaxLength(100, ErrorMessage = "Name must not exceed 100 characters.")]
     public string Name { get; set; } = string.Empty;
-    public int NumberOfAnswer { get; set; } = 0;
 
     [Required]
     [MinLength(10, ErrorMessage = "Description must be at least 10 characters long.")]

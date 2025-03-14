@@ -1,4 +1,6 @@
 namespace CamQuizzBE.Domain.Repositories;
+
+using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
 
 public interface IQuizzesRepository
@@ -7,4 +9,7 @@ public interface IQuizzesRepository
     Task<Quizzes?> GetByIdAsync(int id);
     Task AddAsync(Quizzes quiz);
     Task DeleteAsync(int id);
+
+    Task UpdateAsync(Quizzes quiz);
+    Task IncrementQuestionCountAsync(int quizId);
 }

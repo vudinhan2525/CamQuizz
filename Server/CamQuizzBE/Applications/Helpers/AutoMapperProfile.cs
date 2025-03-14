@@ -2,6 +2,8 @@ using CamQuizzBE.Applications.DTOs.Users;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Applications.DTOs.Files;
 using CamQuizzBE.Applications.DTOs.Quizzes;
+using CamQuizzBE.Applications.DTOs.Groups;
+using CamQuizzBE.Applications.DTOs.Answers;
 
 
 namespace CamQuizzBE.Applications.Helpers;
@@ -23,5 +25,11 @@ public class AutoMapperProfiles : Profile
                 r => r.MapFrom(x => x.FirstName.ToLower() + x.LastName.ToLower())
             );
         CreateMap<Quizzes, QuizzesDto>().ReverseMap();
+        CreateMap<Questions, QuestionsDto>().ReverseMap();
+        CreateMap<Answers, AnswerDto>().ReverseMap();
+
+
+        CreateMap<Member, MemberDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
     }
 }

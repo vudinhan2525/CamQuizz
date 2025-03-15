@@ -88,6 +88,22 @@ public class AnswerController(ILogger<AnswerController> _logger, IAnswerService 
         return CreatedAtAction(nameof(GetAnswerById), new { id = createdAns.Id }, response);
     }
 
+    // PUT: api/v1/answer
+    [HttpPut]
+    public async Task<ActionResult> UpdateAnswer([FromBody] UpdateAnswerDto updateAnswerDto)
+    {
+
+
+        var answer = await _answerService.UpdateAnswerAsync(updateAnswerDto);
+
+        // Map back to DTO for response
+        var createdAns = _mapper.Map<AnswerDto>(answer);
+
+        var response = new ApiResponse<AnswerDto>(createdAns);
+
+        return Ok(response);
+    }
+
     // DELETE: api/v1/answer/{id}
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteAnswer(int id)

@@ -17,7 +17,7 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
         {
             query = query.Where(q => q.Name.Contains(kw));
         }
-        if (genreId != 0)
+        if (genreId.HasValue && genreId != 0)
         {
             query = query.Where(q => q.GenreId.Equals(genreId));
         }

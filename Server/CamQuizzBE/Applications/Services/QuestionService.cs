@@ -1,4 +1,5 @@
 // Infrastructure/Services/QuizzesService.cs
+using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Repositories;
@@ -47,5 +48,22 @@ public class QuestionsService : IQuestionsService
         await _questionsRepo.DeleteAsync(id);
     }
 
+    public async Task<Questions> UpdateQuestionAsync(UpdateQuestionDto updateQuestionDto)
+    {
+        var existingQues = await _questionsRepo.GetByIdAsync(updateQuestionDto.QuestionId);
+        if (existingQues == null)
+        {
+            throw new KeyNotFoundException("Question not found.");
+        }
 
+        existingQues.Name = updateQuestionDto.Name ?? existingQues.Name;
+        existingQues.Description = updateQuestionDto.Description ?? existingQues.Description;
+        existingQues.Duration = updateQuestionDto.Duration ?? existingQues.Duration;
+        existingQues.Score = updateQuestionDto.Score ?? existingQues.Score;
+
+        existingQues.UpdatedAt = DateTime.UtcNow;
+
+        await _questionsRepo.UpdateAsync(existingQues);
+        return existingQues;
+    }
 }

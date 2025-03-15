@@ -25,7 +25,7 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
         [FromQuery] int page = 1,
         [FromQuery] int quizId = 0,
         [FromQuery] string? sort = "created_at")
-    {
+    {   
         var data = await _questionsService.GetAllQuestionsAsync(kw, limit, page, sort, quizId);
 
         var questionsDtos = _mapper.Map<IEnumerable<QuestionsDto>>(data.Items);
@@ -86,6 +86,22 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
         var response = new ApiResponse<QuestionsDto>(createdQuestionDto);
 
         return CreatedAtAction(nameof(GetQuestionById), new { id = createdQuestionDto.Id }, response);
+    }
+
+    // PUT: api/v1/question
+    [HttpPut]
+    public async Task<ActionResult> UpdateQuestion([FromBody] UpdateQuestionDto updateQuestionDto)
+    {
+
+    
+        var question =  await _questionsService.UpdateQuestionAsync(updateQuestionDto);
+
+        // Map back to DTO for response
+        var updatedQuestionDto = _mapper.Map<QuestionsDto>(question);
+
+        var response = new ApiResponse<QuestionsDto>(updatedQuestionDto);
+
+        return Ok(response);
     }
 
     // DELETE: api/v1/question/{id}

@@ -7,4 +7,7 @@ public interface IQuestionRepository
     Task<Questions?> GetByIdAsync(int id);
     Task<Questions> AddAsync(Questions question);
     Task DeleteAsync(int id);
+    Task UpdateAsync(Questions question);
+
+    Task IncrementAnswerCountAsync(int questionId);
 }

@@ -1,4 +1,5 @@
 // Infrastructure/Services/QuizzesService.cs
+using CamQuizzBE.Application.DTOs;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Repositories;
@@ -9,11 +10,13 @@ public class AnswerService : IAnswerService
 {
     private readonly IConfiguration _config;
     private readonly IAnswerRepository _answerRepo;
+    private readonly IQuestionRepository _questionRepo;
 
-    public AnswerService(IConfiguration config, IAnswerRepository answerRepo)
+    public AnswerService(IConfiguration config, IAnswerRepository answerRepo, IQuestionRepository questionRepo)
     {
         _config = config;
         _answerRepo = answerRepo;
+        _questionRepo = questionRepo;
     }
 
     public async Task<PagedResult<Answers>> GetAllAnswersAsync(int limit, int page, string? sort, int? questionId)
@@ -28,11 +31,16 @@ public class AnswerService : IAnswerService
 
     public async Task CreateAnswerAsync(Answers answer)
     {
-        await _answerRepo.AddAsync(answer);
+        var createdAns = await _answerRepo.AddAsync(answer);
+        if (createdAns != null)
+        {
+            await _questionRepo.IncrementAnswerCountAsync(answer.QuestionId);
+        }
     }
 
     public async Task DeleteAnswerAsync(int id)
     {
+
         var quiz = await _answerRepo.GetByIdAsync(id);
         if (quiz == null)
         {
@@ -41,5 +49,20 @@ public class AnswerService : IAnswerService
         await _answerRepo.DeleteAsync(id);
     }
 
+    public async Task<Answers> UpdateAnswerAsync(UpdateAnswerDto updateAnswerDto)
+    {
+        var existingAns = await _answerRepo.GetByIdAsync(updateAnswerDto.AnswerID);
+        if (existingAns == null)
+        {
+            throw new KeyNotFoundException("Answer not found.");
+        }
 
+        existingAns.Answer = updateAnswerDto.Answer ?? existingAns.Answer;
+        existingAns.IsCorrect = updateAnswerDto.IsCorrect ?? existingAns.IsCorrect;
+        existingAns.UpdatedAt = DateTime.UtcNow;
+
+
+        await _answerRepo.UpdateAsync(existingAns);
+        return existingAns;
+    }
 }

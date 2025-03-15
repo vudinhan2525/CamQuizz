@@ -43,19 +43,39 @@ public class AnswerRepository(DataContext context) : IAnswerRepository
         return await _context.Answers.FirstOrDefaultAsync(q => q.Id == id);
     }
 
-    public async Task AddAsync(Answers answer)
+    public async Task<Answers> AddAsync(Answers answer)
     {
         await _context.Answers.AddAsync(answer);
         await _context.SaveChangesAsync();
+        return answer;
     }
 
     public async Task DeleteAsync(int id)
     {
-        var answer = await GetByIdAsync(id);
-        if (answer != null)
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            _context.Answers.Remove(answer);
-            await _context.SaveChangesAsync();
+            var answer = await GetByIdAsync(id);
+            if (answer != null)
+            {
+                _context.Answers.Remove(answer);
+                await _context.SaveChangesAsync();
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE questions SET answer_number = answer_number - 1 WHERE Id = {0} AND answer_number > 0",
+                    answer.QuestionId);
+            }
+
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+    public async Task UpdateAsync(Answers answer)
+    {
+        _context.Answers.Update(answer);
+        await _context.SaveChangesAsync();
     }
 }

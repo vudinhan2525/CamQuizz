@@ -101,7 +101,7 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
 
         var response = new ApiResponse<QuizzesDto>(updatedQuiz);
 
-        return CreatedAtAction(nameof(GetQuizById), new { id = updatedQuiz.Id }, response);
+        return Ok(response);
     }
 
     // DELETE: api/v1/quiz/{id}

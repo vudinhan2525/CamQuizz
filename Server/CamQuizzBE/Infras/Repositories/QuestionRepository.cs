@@ -17,7 +17,7 @@ public class QuestionsRepository(DataContext context) : IQuestionRepository
             query = query.Where(q => q.Name.Contains(kw));
         }
 
-        if (quizId.HasValue)
+        if (quizId.HasValue && quizId.Value != 0)
         {
             query = query.Where(q => q.QuizId == quizId);
         }
@@ -60,11 +60,35 @@ public class QuestionsRepository(DataContext context) : IQuestionRepository
 
     public async Task DeleteAsync(int id)
     {
-        var question = await GetByIdAsync(id);
-        if (question != null)
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            _context.Questions.Remove(question);
-            await _context.SaveChangesAsync();
+            var question = await GetByIdAsync(id);
+            if (question != null)
+            {
+                _context.Questions.Remove(question);
+                await _context.SaveChangesAsync();
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE quizzes SET question_nums = question_nums - 1 WHERE Id = {0} AND question_nums > 0",
+                    question.QuizId);
+            }
+
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+    public async Task UpdateAsync(Questions question)
+    {
+        _context.Questions.Update(question);
+        await _context.SaveChangesAsync();
+    }
+    public async Task IncrementAnswerCountAsync(int questionId)
+    {
+        await _context.Database.ExecuteSqlRawAsync(
+            "UPDATE questions SET answer_number = answer_number + 1 WHERE Id = {0}", questionId);
     }
 }

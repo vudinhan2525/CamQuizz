@@ -124,5 +124,53 @@ IdentityDbContext<
         modelBuilder.Entity<Quizzes>()
            .Property(q => q.Status)
            .HasConversion<string>();
+
+
+        // USER SHARED
+        modelBuilder.Entity<UserShared>()
+            .HasKey(us => new { us.QuizId, us.UserId, us.OwnerId });
+
+        // Define foreign keys
+        modelBuilder.Entity<UserShared>()
+            .HasOne(us => us.Quiz)
+            .WithMany()
+            .HasForeignKey(us => us.QuizId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserShared>()
+            .HasOne(us => us.Owner)
+            .WithMany()
+            .HasForeignKey(us => us.OwnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserShared>()
+            .HasOne(us => us.User)
+            .WithMany()
+            .HasForeignKey(us => us.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // GROUP_SHARED
+        modelBuilder.Entity<GroupShared>()
+            .HasKey(gs => new { gs.QuizId, gs.OwnerId, gs.GroupId });
+
+        modelBuilder.Entity<GroupShared>()
+            .HasOne(gs => gs.Quiz)
+            .WithMany()
+            .HasForeignKey(gs => gs.QuizId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
+        modelBuilder.Entity<GroupShared>()
+            .HasOne(gs => gs.Owner)
+            .WithMany()
+            .HasForeignKey(gs => gs.OwnerId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
+        modelBuilder.Entity<GroupShared>()
+            .HasOne(gs => gs.Group)
+            .WithMany()
+            .HasForeignKey(gs => gs.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

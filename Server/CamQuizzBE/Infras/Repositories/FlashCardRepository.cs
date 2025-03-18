@@ -60,6 +60,19 @@ namespace CamQuizzBE.Infras.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+        public async Task UpdateAsync(FlashCard flashCard)
+                {
+                    var existingFlashCard = await _context.FlashCards.FindAsync(flashCard.Id);
+                    if (existingFlashCard == null)
+                    {
+                        throw new KeyNotFoundException("FlashCard not found.");
+                    }
 
+                    existingFlashCard.Question = flashCard.Question;
+                    existingFlashCard.Answer = flashCard.Answer;
+
+                    _context.FlashCards.Update(existingFlashCard);
+                    await _context.SaveChangesAsync();
+                }
     }
 }

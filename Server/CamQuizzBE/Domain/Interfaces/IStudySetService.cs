@@ -12,4 +12,5 @@ public interface IStudySetService
     Task<StudySetDto?> GetStudySetByIdAsync(int id);
     Task<StudySet> CreateStudySetAsync(CreateStudySetDto studySetDto);
     Task DeleteStudySetAsync(int id);
+    Task<StudySet> UpdateStudySetAsync(UpdateStudySetDto updateStudySet);
 }

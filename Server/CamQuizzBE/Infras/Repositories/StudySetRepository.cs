@@ -53,25 +53,13 @@ namespace CamQuizzBE.Infras.Repositories
         }
 
 
-        public async Task<StudySetDto?> GetStudySetByIdAsync(int id)
+        public async Task<StudySet?> GetStudySetByIdAsync(int id)
         {
             return await _context.StudySets
-                .Where(s => s.Id == id)
-                .Select(s => new StudySetDto
-                {
-                    Id = s.Id,
-                    Name = s.Name,
-                    UserId = s.UserId,
-                    CreatedAt = s.CreatedAt,
-                    FlashCards = s.FlashCards.Select(f => new FlashCardDto
-                    {
-                        Id = f.Id,
-                        Question = f.Question,
-                        Answer = f.Answer
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
+                .Include(s => s.FlashCards) // Ensure related data is loaded
+                .FirstOrDefaultAsync(s => s.Id == id);
         }
+
 
         public async Task AddAsync(StudySet studySet)
         {
@@ -159,6 +147,11 @@ namespace CamQuizzBE.Infras.Repositories
             }
 
             return await query.CountAsync();
+        }
+        public async Task UpdateAsync(StudySet studySet)
+        {
+            _context.StudySets.Update(studySet);
+            await _context.SaveChangesAsync();
         }
     }
 }

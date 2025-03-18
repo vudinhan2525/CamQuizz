@@ -3,6 +3,7 @@ using CamQuizzBE.Infras.Repositories;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Applications.DTOs.StudySets;
+using CamQuizzBE.Applications.DTOs.FlashCards;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -28,8 +29,26 @@ public class StudySetService : IStudySetService
 
     public async Task<StudySetDto?> GetStudySetByIdAsync(int id)
     {
-        return await _studySetRepository.GetStudySetByIdAsync(id);
+        var studySet = await _studySetRepository.GetStudySetByIdAsync(id);
+
+        if (studySet == null)
+            return null;
+
+        return new StudySetDto
+        {
+            Id = studySet.Id,
+            Name = studySet.Name,
+            UserId = studySet.UserId,
+            CreatedAt = studySet.CreatedAt,
+            FlashCards = studySet.FlashCards.Select(f => new FlashCardDto
+            {
+                Id = f.Id,
+                Question = f.Question,
+                Answer = f.Answer
+            }).ToList()
+        };
     }
+
 
     public async Task<StudySet> CreateStudySetAsync(CreateStudySetDto studySetDto)
     {
@@ -47,4 +66,24 @@ public class StudySetService : IStudySetService
     {
         await _studySetRepository.DeleteAsync(id);
     }
+    public async Task<StudySet> UpdateStudySetAsync(UpdateStudySetDto updateStudySetDto)
+    {
+        var studySet = await _studySetRepository.GetStudySetByIdAsync(updateStudySetDto.Id);
+
+        if (studySet == null)
+            throw new KeyNotFoundException("Study set not found");
+
+        studySet.Name = updateStudySetDto.Name;
+
+        if (updateStudySetDto.GetType().GetProperty("UserId") != null)
+        {
+            studySet.UserId = updateStudySetDto.UserId ?? studySet.UserId;
+        }
+
+        await _studySetRepository.UpdateAsync(studySet);
+
+        return studySet;
+    }
+
+
 }

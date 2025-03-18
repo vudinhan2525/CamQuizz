@@ -22,9 +22,10 @@ public class StudySetFlashCardTests
         _flashCardServiceMock = new Mock<IFlashCardService>();
         _mapperMock = new Mock<IMapper>();
 
-        _studySetController = new StudySetController(_studySetServiceMock.Object);
+        _studySetController = new StudySetController(_studySetServiceMock.Object, _mapperMock.Object);
         _flashCardController = new FlashCardController(_flashCardServiceMock.Object);
     }
+
 
     [Fact]
     public async Task CreateStudySet_ReturnsCreatedAtAction_WhenModelIsValid()
@@ -78,4 +79,25 @@ public class StudySetFlashCardTests
         Assert.Equal(nameof(_flashCardController.GetFlashCardById), result?.ActionName);
         Assert.IsType<FlashCard>(result?.Value);
     }
+    [Fact]
+    public async Task UpdateStudySet_ReturnsOk_WhenUpdateIsSuccessful()
+    {
+        var updateDto = new UpdateStudySetDto { Name = "Updated Study Set" };
+        var updatedStudySet = new StudySet { Id = 1, Name = updateDto.Name };
+        var updatedStudySetDto = new StudySetDto { Id = 1, Name = updateDto.Name };
+
+        _studySetServiceMock.Setup(s => s.UpdateStudySetAsync(updateDto))
+            .ReturnsAsync(updatedStudySet);  // Ensure it returns a valid object
+
+        _mapperMock.Setup(m => m.Map<StudySetDto>(updatedStudySet))
+            .Returns(updatedStudySetDto);  // Mock the mapping
+
+        var result = await _studySetController.UpdateStudySet(updateDto) as OkObjectResult;
+
+        Assert.NotNull(result);
+        Assert.Equal(200, result.StatusCode);
+        Assert.IsType<StudySetDto>(result.Value);
+    }
+
+
 }

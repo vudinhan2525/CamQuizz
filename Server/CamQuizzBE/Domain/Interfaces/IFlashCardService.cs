@@ -11,4 +11,6 @@ public interface IFlashCardService
     Task<FlashCardDto?> GetByIdAsync(int id);
     Task<FlashCard> CreateAsync(CreateFlashCardDto flashCardDto);
     Task DeleteAsync(int id);
+    Task<FlashCard> UpdateFlashCardAsync(UpdateFlashCardDto updateFlashCard);
+
 }

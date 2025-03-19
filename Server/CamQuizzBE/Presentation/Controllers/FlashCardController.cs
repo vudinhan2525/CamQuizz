@@ -10,14 +10,10 @@ namespace CamQuizzBE.Presentation.Controllers
 {
     [Route("api/v1/flashcards")]
     [ApiController]
-    public class FlashCardController : ControllerBase
+    public class FlashCardController(IFlashCardService flashcardService, IMapper mapper) : ControllerBase
     {
-        private readonly IFlashCardService _flashCardService;
-
-        public FlashCardController(IFlashCardService flashCardService)
-        {
-            _flashCardService = flashCardService;
-        }
+        private readonly IFlashCardService _flashCardService = flashcardService;
+        private readonly IMapper _mapper = mapper;
 
         [HttpGet("study-set/{studySetId}")]
         public async Task<IActionResult> GetFlashCardsByStudySetId(int studySetId)
@@ -54,6 +50,19 @@ namespace CamQuizzBE.Presentation.Controllers
         {
             await _flashCardService.DeleteAsync(id);
             return NoContent();
+        }
+        [HttpPut]
+        [Authorize]
+        public async Task<IActionResult> UpdateFlashCard([FromBody] UpdateFlashCardDto updateFlashCardDto)
+        {
+            var flashcard = await _flashCardService.UpdateFlashCardAsync(updateFlashCardDto);
+            
+            if (flashcard == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(_mapper.Map<FlashCardDto>(flashcard));
         }
     }
 }

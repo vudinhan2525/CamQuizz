@@ -23,7 +23,7 @@ public class StudySetFlashCardTests
         _mapperMock = new Mock<IMapper>();
 
         _studySetController = new StudySetController(_studySetServiceMock.Object, _mapperMock.Object);
-        _flashCardController = new FlashCardController(_flashCardServiceMock.Object);
+        _flashCardController = new FlashCardController(_flashCardServiceMock.Object, _mapperMock.Object);
     }
 
 
@@ -97,6 +97,46 @@ public class StudySetFlashCardTests
         Assert.NotNull(result);
         Assert.Equal(200, result.StatusCode);
         Assert.IsType<StudySetDto>(result.Value);
+    }
+    [Fact]
+    public async Task UpdateFlashCard_ReturnsOk_WhenUpdateIsSuccessful()
+    {
+        // Arrange
+        var updateDto = new UpdateFlashCardDto { Id = 1, Question = "Updated Question", Answer = "Updated Answer" };
+        var updatedFlashCard = new FlashCard { Id = 1, Question = updateDto.Question, Answer = updateDto.Answer };
+        var updatedFlashCardDto = new FlashCardDto { Id = 1, Question = updateDto.Question, Answer = updateDto.Answer };
+
+        _flashCardServiceMock.Setup(s => s.UpdateFlashCardAsync(updateDto))
+            .ReturnsAsync(updatedFlashCard);  // Mock service response
+
+        _mapperMock.Setup(m => m.Map<FlashCardDto>(updatedFlashCard))
+            .Returns(updatedFlashCardDto);  // Mock the mapping
+
+        // Act
+        var result = await _flashCardController.UpdateFlashCard(updateDto) as OkObjectResult;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(200, result.StatusCode);
+        Assert.IsType<FlashCardDto>(result.Value);
+        Assert.Equal(updatedFlashCardDto, result.Value);
+    }
+
+    [Fact]
+    public async Task UpdateFlashCard_ReturnsNotFound_WhenFlashCardDoesNotExist()
+    {
+        // Arrange
+        var updateDto = new UpdateFlashCardDto { Id = 99, Question = "Nonexistent", Answer = "N/A" };
+
+        _flashCardServiceMock.Setup(s => s.UpdateFlashCardAsync(updateDto))
+            .ReturnsAsync((FlashCard)null);  // Simulate not found
+
+        // Act
+        var result = await _flashCardController.UpdateFlashCard(updateDto) as NotFoundResult;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(404, result.StatusCode);
     }
 
 

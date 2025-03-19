@@ -13,6 +13,6 @@ public class AppUser : IdentityUser<int>
     public ICollection<AppUserRole> UserRoles { get; set; } = [];
     public ICollection<Quizzes> Quizzes { get; set; } = [];
 
-     public ICollection<Member> Members { get; set; } = new List<Member>();
-       public ICollection<StudySet> StudySets { get; set; } = new HashSet<StudySet>();
+    public ICollection<Member> Members { get; set; } = new List<Member>();
+    public ICollection<StudySet> StudySets { get; set; } = new HashSet<StudySet>();
 }

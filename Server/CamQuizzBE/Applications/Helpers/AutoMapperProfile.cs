@@ -25,6 +25,9 @@ public class AutoMapperProfiles : Profile
                 u => u.UserName,
                 r => r.MapFrom(x => x.FirstName.ToLower() + x.LastName.ToLower())
             );
+        CreateMap<UpdateUserDto, AppUser>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore()) 
+            .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
         CreateMap<Quizzes, QuizzesDto>().ReverseMap();
         CreateMap<Questions, QuestionsDto>().ReverseMap();
         CreateMap<Answers, AnswerDto>().ReverseMap();

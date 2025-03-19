@@ -39,7 +39,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IQuestionsService, QuestionsService>();
         services.AddScoped<IAnswerService, AnswerService>();
         services.AddScoped<GroupService>();
-
+        services.AddScoped<IUserService, UserService>();
         // Repos
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IQuizzesRepository, QuizzesRepository>();

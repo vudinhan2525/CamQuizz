@@ -6,4 +6,10 @@ namespace CamQuizzBE.Domain.Enums
         Private,
         Option
     }
+    public enum GroupStatus
+    {
+        Active,
+        Deleted,
+        OnHold
+    }
 }

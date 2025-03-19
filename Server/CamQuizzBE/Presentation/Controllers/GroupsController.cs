@@ -60,10 +60,16 @@ public class GroupController : ControllerBase
     }
     [HttpPut("{groupId}/status")]
     [Authorize]
-    public async Task<IActionResult> UpdateStatus(int groupId, [FromBody] GroupStatus newStatus)
+    public async Task<IActionResult> UpdateStatus(int groupId, [FromBody] UpdateGroupStatusDto newStatus)
     {
-        await _groupService.UpdateGroupStatusAsync(groupId, newStatus);
-        return NoContent();
+        try
+        {
+            await _groupService.UpdateStatusAsync(groupId, newStatus);
+            return Ok();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
     }
-
 }

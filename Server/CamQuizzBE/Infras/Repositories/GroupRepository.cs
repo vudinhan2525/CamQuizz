@@ -56,7 +56,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
             await _context.SaveChangesAsync();
         }
     }
-   public async Task UpdateStatusAsync(int groupId, UpdateGroupStatusDto newStatus)
+    public async Task UpdateStatusAsync(int groupId, UpdateGroupStatusDto newStatus)
     {
         var group = await _context.Groups.FindAsync(groupId);
         if (group != null)

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import COLORS from '../../constant/colors';
 const TestCard = ({ test, onViewReport }) => {
   const totalAttempts = test.attempts;
   const totalResults = test.results.length;
@@ -41,7 +42,7 @@ const TestCard = ({ test, onViewReport }) => {
       {/* Header */}
       <View style={{ marginBottom: 8 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Ionicons name="documents-outline" size={20} color="#6b46c1" />
+          <Ionicons name="documents-outline" size={20} color={COLORS.BLUE} />
           <Text style={{ fontSize: 18, marginLeft: 8, fontWeight: 'bold' }}>
             {test.title}
           </Text>
@@ -53,7 +54,7 @@ const TestCard = ({ test, onViewReport }) => {
       <View style={{ marginTop: 8 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <MaterialCommunityIcons name="account-multiple-outline" size={16} color="#6b7280" />
+            <MaterialCommunityIcons name="account-multiple-outline" size={16} color={COLORS.BLUE} />
             <Text style={{ marginLeft: 4 }}>Số lượt làm bài</Text>
           </View>
           <Text style={{ fontWeight: '600' }}>{totalAttempts}</Text>
@@ -61,22 +62,22 @@ const TestCard = ({ test, onViewReport }) => {
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <MaterialCommunityIcons name="percent-outline" size={16} color="#6b7280" />
+            <MaterialCommunityIcons name="percent-outline" size={16} color={COLORS.BLUE} />
             <Text style={{ marginLeft: 4 }}>Điểm trung bình</Text>
           </View>
           <Text style={{ fontWeight: '600' }}>{averageScore}%</Text>
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-          <Text>Questions</Text>
+          <Text>Số câu hỏi</Text>
           <Text style={{ fontWeight: '600' }}>{test.questions.length}</Text>
         </View>
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-          <Text>Pass Rate</Text>
+          <Text>Tỉ lệ vượt qua</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {passRate >= 70 ? (
-              <MaterialCommunityIcons name="check-circle-outline" size={16} color="#10b981" />
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color={COLORS.BLUE} />
             ) : (
               <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
             )}
@@ -85,7 +86,7 @@ const TestCard = ({ test, onViewReport }) => {
         </View>
       </View>
 
-      {/* Badges */}
+      {/* Badges
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
         <View
           style={{
@@ -130,7 +131,7 @@ const TestCard = ({ test, onViewReport }) => {
             <Text style={{ color: '#b91c1c' }}>Low pass rate</Text>
           </View>
         )}
-      </View>
+      </View> */}
 
       {/* Nút View Report */}
       <TouchableOpacity

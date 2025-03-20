@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, Platform, ProgressBarAndroid, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import COLORS from '../../constant/colors';
 
@@ -18,7 +17,7 @@ const AuthorTestReport = ({ tests, onGoBack }) => {
   if (!selectedTest) {
     return (
       <View style={styles.centered}>
-        <Text>Select a test to view reports.</Text>
+        <Text>Chọn 1 bài thi để xem báo cáo.</Text>
       </View>
     );
   }
@@ -45,9 +44,9 @@ const AuthorTestReport = ({ tests, onGoBack }) => {
     <View style={styles.container}>
 
       <TouchableOpacity style={styles.backButton} onPress={() => onGoBack && onGoBack()}>
-              <Ionicons name="arrow-back" size={24} color={COLORS.BLUE} />
-              <Text style={styles.backText}>Trở về</Text>
-            </TouchableOpacity>
+          <Ionicons name="arrow-back" size={24} color={COLORS.BLUE} />
+          <Text style={styles.backText}>Trở về</Text>
+      </TouchableOpacity>
 
       {/* Statistic Cards */}
       <View style={styles.statisticsContainer}>
@@ -71,7 +70,7 @@ const AuthorTestReport = ({ tests, onGoBack }) => {
       </View>
 
       {/* Question Performance */}
-      <Text style={styles.sectionTitle}>Question Performance</Text>
+      <Text style={styles.sectionTitle}>Tỉ lệ đúng của mỗi câu hỏi</Text>
       <FlatList
         data={selectedTest.questions}
         keyExtractor={(item) => item.id}
@@ -133,9 +132,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 10,
     borderRadius: 8,
+    borderWidth: 1,
     alignItems: 'center',
     elevation: 2,
     width: 100,
+    borderColor: COLORS.BLUE,
   },
   statText: {
     marginTop: 8,
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   questionCard: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: COLORS.BLUE_LIGHT,
     padding: 16,
     marginVertical: 8,
     borderRadius: 8,
@@ -179,6 +180,16 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
+  backButton: {
+    flexDirection: 'row',
+    marginBottom: 20
+  },
+  backText: {
+    marginLeft: 8,        
+    fontSize: 16,         
+    
+  },
+
 });
 
 export default AuthorTestReport;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { BarChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
@@ -20,7 +20,7 @@ const chartConfig = {
 };
 
 
-const OrganizationTestReport = ({ tests }) => {
+const OrganizationTestReport = ({ tests, onGoBack }) => {
   const [selectedTest, setSelectedTest] = useState(tests.length > 0 ? tests[0] : null);
 
   if (tests.length === 0) {
@@ -52,7 +52,11 @@ const OrganizationTestReport = ({ tests }) => {
   };
 
   return (
-    <ScrollView>
+    <ScrollView contentContainerStyle={{ paddingBottom: 80}}>
+      <TouchableOpacity style={styles.backButton} onPress={() => onGoBack && onGoBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.BLUE} />
+          <Text style={styles.backText}>Trở về</Text>
+      </TouchableOpacity>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginHorizontal: 16 }}>
         <View style={styles.summaryBox}>
           <Ionicons name="bar-chart-outline" size={20} color={COLORS.BLUE}  />
@@ -93,13 +97,13 @@ const OrganizationTestReport = ({ tests }) => {
         <Text style={{ fontSize: 18, marginBottom: 8 }}>Điểm trung bình</Text>
         <BarChart
           data={{
-            labels: generateTestScoreStats().map(item => item.name),
+            labels: generateTestScoreStats().map(item => "Điểm trung bình"),
             datasets: [{ data: generateTestScoreStats().map(item => item.avgScore) }],
           }}
           width={screenWidth - 32}
           height={220}
           chartConfig={chartConfig}
-          verticalLabelRotation={30}
+          verticalLabelRotation={0}
           fromZero={true}               
           yAxisSuffix=""                
           yAxisLabel=""                 
@@ -113,7 +117,8 @@ const OrganizationTestReport = ({ tests }) => {
 };
 
 // Styles cho phần tổng hợp
-const styles = {
+
+const styles = StyleSheet.create({
   summaryBox: {
     backgroundColor: '#fff',
     padding: 16,
@@ -123,6 +128,8 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE,
   },
   summaryTitle: {
     fontSize: 13,
@@ -133,6 +140,16 @@ const styles = {
     fontSize: 16,
     fontWeight: 'bold',
   },
-};
+  backButton: {
+    flexDirection: 'row',
+    marginBottom: 20
+  },
+  backText: {
+    marginLeft: 8,        
+    fontSize: 16,         
+    
+  },
+});
+
 
 export default OrganizationTestReport;

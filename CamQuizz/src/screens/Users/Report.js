@@ -76,7 +76,7 @@ export const Report = ({ navigation }) => {
             <TestFilter
               tests={allTests}
               onSelect={handleFilterSelect}
-              placeholder={`Search ${activeView ? activeView : ''} tests`}
+              placeholder={"Tìm kiếm bài thi"}
             />
           </View>
           {searchFilter && (
@@ -97,10 +97,10 @@ export const Report = ({ navigation }) => {
             ) : (
               <View style={{ alignItems: 'center', padding: 20 }}>
                 <Ionicons name="document-text-outline" size={48} color="#aaa" />
-                <Text>No tests found for this category</Text>
+                <Text>Không tìm thấy bài kiểm tra trong mục này</Text>
                 {searchFilter && (
                   <TouchableOpacity variant="link" onPress={handleClearFilter}>
-                    Clear filter and try again
+                    Làm mới và thử lại
                   </TouchableOpacity>
                 )}
               </View>
@@ -114,9 +114,9 @@ export const Report = ({ navigation }) => {
       case 'author':
         return <AuthorTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
       case 'organization':
-        return <OrganizationTestReport tests={[selectedTest]} />;
+        return <OrganizationTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
       case 'candidate':
-        return <CandidateTestReport tests={[selectedTest]} />;
+        return <CandidateTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
       default:  
         return null;
     }
@@ -128,27 +128,26 @@ export const Report = ({ navigation }) => {
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <View style={{ padding: 16 }}>
          {/* ComboBox để chọn View */}
-        <View style={{ marginBottom: 16 }}>
+        <View style={{ marginBottom: 16}}>
           <Text style={{ marginBottom: 8, fontWeight: 'bold' }}>Chọn kiểu báo cáo</Text>
           <View style={{ 
             backgroundColor: '#fff', 
             borderRadius: 8, 
             overflow: 'hidden',   
             borderWidth: 1, 
-            borderColor: '#ddd',
-            width: '70%'
-          }}>
-      <Picker
-        selectedValue={activeView}
-        onValueChange={(itemValue) => handleViewChange(itemValue)}
-        style={{ height: 50, width: '100%' }}
-        itemStyle={{ fontSize: 14 }}
-      >
-        <Picker.Item label="Author Tests" value="author" />
-        <Picker.Item label="Organization Tests" value="organization" />
-        <Picker.Item label="Candidate Tests" value="candidate" />
-      </Picker>
-    </View>
+            borderColor: COLORS.BLUE,
+            width: '50%',
+          }}>        
+          <Picker
+            selectedValue={activeView}
+            onValueChange={(itemValue) => handleViewChange(itemValue)}
+            style={{ height: 50, width: '100%' }}
+          >
+            <Picker.Item label="Tác giả" value="author" style={{ fontSize: 14 }} />
+            <Picker.Item label="Người tổ chức" value="organization" style={{ fontSize: 14 }} />
+            <Picker.Item label="Bài làm cũ" value="candidate" style={{ fontSize: 14 }} />
+          </Picker>
+      </View>
   </View>
         
         {renderReport()}

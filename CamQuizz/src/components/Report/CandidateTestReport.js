@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import COLORS from '../../constant/colors';
 
-const CandidateTestReport = ({ tests }) => {
+const CandidateTestReport = ({ tests, onGoBack }) => {
   if (!tests || tests.length === 0) {
     return (
       <View style={{ alignItems: 'center', paddingVertical: 32 }}>
@@ -11,7 +12,6 @@ const CandidateTestReport = ({ tests }) => {
     );
   }
 
-  // Giả sử candidateId được cố định ở đây (trong thực tế sẽ là user đã đăng nhập)
   const candidateId = 'user-2';
 
   const getTestResult = (test) => {
@@ -20,6 +20,11 @@ const CandidateTestReport = ({ tests }) => {
 
   return (
     <ScrollView style={{ padding: 16 }}>
+      <TouchableOpacity style={styles.backButton} onPress={() => onGoBack && onGoBack()}>
+          <Ionicons name="arrow-back" size={24} color={COLORS.BLUE} />
+          <Text style={styles.backText}>Trở về</Text>
+      </TouchableOpacity>
+
       <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16 }}>Lịch sử làm bài của bạn</Text>
 
       {tests.map(test => {
@@ -32,14 +37,14 @@ const CandidateTestReport = ({ tests }) => {
         return (
           <View key={test.id} style={{ backgroundColor: 'white', padding: 16, borderRadius: 8, marginBottom: 16, elevation: 3 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, width: 200 }}>
-              <View>
+              <View style={{width: 150}}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{test.title}</Text>
                 <Text style={{ fontSize: 12, color: '#6B7280' }}>
                   Hoàn thành {new Date(result.completedAt).toLocaleDateString()}
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: scoreColor, marginLeft: 60 }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: COLORS.BLUE, marginLeft: 50 }}>
                   Điểm: {scorePercentage}%
                 </Text>
                 <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
@@ -49,7 +54,7 @@ const CandidateTestReport = ({ tests }) => {
             </View>
 
             <View style={{ marginTop: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>Question Breakdown</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>Câu trả lời</Text>
               {test.questions.map(question => {
                 const answer = result.answers.find(a => a.questionId === question.id);
                 if (!answer) return null;
@@ -61,9 +66,9 @@ const CandidateTestReport = ({ tests }) => {
                   <View key={question.id} style={{ backgroundColor: '#F3F4F6', padding: 12, borderRadius: 6, marginBottom: 8 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                       <Ionicons
-                        name={answer.isCorrect ? 'checkmark-circle-outline' : 'cancel'}
+                        name={answer.isCorrect ? 'checkmark-circle-outline' : 'close-circle-outline'}
                         size={20}
-                        color={answer.isCorrect ? '#10B981' : '#EF4444'}
+                        color={answer.isCorrect ? COLORS.BLUE : '#EF4444'}
                         style={{ marginRight: 8 }}
                       />
                       <Text style={{ fontSize: 14, color: '#111827', marginRight: 20 }}>{question.text}</Text>
@@ -71,12 +76,12 @@ const CandidateTestReport = ({ tests }) => {
 
                     <View style={{ marginLeft: 28 }}>
                       {selectedChoice && (
-                        <Text style={{ fontSize: 14, color: answer.isCorrect ? '#10B981' : '#EF4444' }}>
+                        <Text style={{ fontSize: 14, color: answer.isCorrect ? COLORS.BLUE : '#EF4444' }}>
                           Đáp án của bạn: {selectedChoice.text}
                         </Text>
                       )}
                       {!answer.isCorrect && correctChoice && (
-                        <Text style={{ fontSize: 14, color: '#10B981', marginTop: 4 }}>
+                        <Text style={{ fontSize: 14, color: COLORS.BLUE, marginTop: 4 }}>
                           Đáp án đúng: {correctChoice.text}
                         </Text>
                       )}
@@ -91,5 +96,17 @@ const CandidateTestReport = ({ tests }) => {
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  backButton: {
+    flexDirection: 'row',
+    marginBottom: 20
+  },
+  backText: {
+    marginLeft: 8,        
+    fontSize: 16,         
+    
+  },
+});
 
 export default CandidateTestReport;

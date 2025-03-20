@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
+import COLORS from '../../constant/colors';
 
 const TestFilter = ({ tests, onSelect, placeholder = 'Search tests' }) => {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,7 @@ const TestFilter = ({ tests, onSelect, placeholder = 'Search tests' }) => {
       <TouchableOpacity
         style={{
           borderWidth: 1,
-          borderColor: '#ddd',
+          borderColor: COLORS.BLUE,
           padding: 12,
           borderRadius: 8,
           justifyContent: 'space-between',
@@ -59,7 +60,7 @@ const TestFilter = ({ tests, onSelect, placeholder = 'Search tests' }) => {
               onChangeText={setSearchQuery}
               style={{
                 borderWidth: 1,
-                borderColor: '#ddd',
+                borderColor: COLORS.BLUE,
                 padding: 8,
                 borderRadius: 8,
                 marginBottom: 8,
@@ -67,7 +68,7 @@ const TestFilter = ({ tests, onSelect, placeholder = 'Search tests' }) => {
               }}
             />
             {filteredTests.length === 0 ? (
-              <Text style={{ textAlign: 'center', color: 'gray' }}>No test found.</Text>
+              <Text style={{ textAlign: 'center', color: 'gray' }}>Không tìm thấy bài thi</Text>
             ) : (
               <FlatList
                 data={filteredTests}
@@ -105,7 +106,7 @@ const TestFilter = ({ tests, onSelect, placeholder = 'Search tests' }) => {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: 'white' }}>Close</Text>
+              <Text style={{ color: 'white' }}>Đóng</Text>
             </TouchableOpacity>
           </View>
         </View>

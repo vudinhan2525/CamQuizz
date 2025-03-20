@@ -6,8 +6,6 @@ import { useToast } from '../../../hooks/use-toast';
 import PropTypes from 'prop-types';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
-import FlashcardEditor from '../../../components/Flash-Card/FlashcardEditor';
-import FlashcardView from '../../../components/Flash-Card/FlashcardView';
 
 const FlashCardPage = () => {
   const navigation = useNavigation();

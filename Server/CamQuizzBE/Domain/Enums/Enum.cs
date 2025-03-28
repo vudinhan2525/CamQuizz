@@ -12,4 +12,10 @@ namespace CamQuizzBE.Domain.Enums
         Deleted,
         OnHold
     }
+    public enum MemberStatus
+    {
+        Pending,
+        Approved,
+        Rejected
+    }
 }

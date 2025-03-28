@@ -3,17 +3,18 @@ using CamQuizzBE.Applications.DTOs.Groups;
 using CamQuizzBE.Domain.Entities; 
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Applications.Services;
+using CamQuizzBE.Presentation.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 [Route("api/v1/groups")]
 [ApiController]
 public class GroupController : ControllerBase
 {
-    private readonly GroupService _groupService;
-    public GroupController(GroupService groupService)
-        {
-            _groupService = groupService;
-        }
+    private readonly IGroupService _groupService;
+    public GroupController(IGroupService groupService)
+    {
+        _groupService = groupService;
+    }
     // [HttpGet]
     // public async Task<ActionResult<IEnumerable<GroupDto>>> GetAllGroups()
     // {
@@ -46,17 +47,22 @@ public class GroupController : ControllerBase
         {
             return BadRequest("Invalid group data.");
         }
-
         var createdGroup = await _groupService.CreateGroupAsync(groupDto);
         return CreatedAtAction(nameof(GetGroupById), new { id = createdGroup.Id }, createdGroup);
     }
-
     [HttpDelete("{id}")]
     [Authorize]
     public async Task<IActionResult> DeleteGroup(int id)
     {
-        await _groupService.DeleteGroupAsync(id);
-        return NoContent();
+        try
+        {
+            await _groupService.DeleteGroupAsync(id);
+            return NoContent();
+        }
+        catch (ValidatorException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
     [HttpPut("{groupId}/status")]
     [Authorize]
@@ -64,12 +70,19 @@ public class GroupController : ControllerBase
     {
         try
         {
-            await _groupService.UpdateStatusAsync(groupId, newStatus);
+            await _groupService.UpdateGroupStatusAsync(groupId, newStatus); // Fixed method name
             return Ok();
         }
         catch (KeyNotFoundException ex)
         {
             return NotFound(ex.Message);
         }
+    }
+    [HttpGet("{groupId}/pending-members")]
+    [Authorize]
+    public async Task<IActionResult> GetPendingMembers(int groupId)
+    {
+        var pendingMembers = await _groupService.GetPendingMembersAsync(groupId);
+        return Ok(pendingMembers);
     }
 }

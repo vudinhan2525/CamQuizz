@@ -1,5 +1,6 @@
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public class MemberRepository(DataContext context) : IMemberRepository
 
     public async Task AddMemberAsync(Member member)
     {
-        member.Status = MembershipStatus.Pending; // Ensure all new members start as Pending
+        member.Status = MemberStatus.Pending; // Ensure all new members start as Pending
         await _context.Members.AddAsync(member);
         await _context.SaveChangesAsync();
     }
@@ -45,7 +46,7 @@ public class MemberRepository(DataContext context) : IMemberRepository
             .FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
         if (member != null)
         {
-            member.Status = MembershipStatus.Approved;
+            member.Status = MemberStatus.Approved;
             await _context.SaveChangesAsync();
         }
     }
@@ -53,7 +54,7 @@ public class MemberRepository(DataContext context) : IMemberRepository
     public async Task<IEnumerable<Member>> GetPendingMembersAsync(int groupId)
     {
         return await _context.Members
-            .Where(m => m.GroupId == groupId && m.Status == MembershipStatus.Pending)
+            .Where(m => m.GroupId == groupId && m.Status == MemberStatus.Pending)
             .ToListAsync();
     }
 }

@@ -38,7 +38,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IFlashCardService, FlashCardService>();
         services.AddScoped<IQuestionsService, QuestionsService>();
         services.AddScoped<IAnswerService, AnswerService>();
-        services.AddScoped<GroupService>();
+        services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IUserService, UserService>();
         // Repos
         services.AddScoped<IUserRepository, UserRepository>();

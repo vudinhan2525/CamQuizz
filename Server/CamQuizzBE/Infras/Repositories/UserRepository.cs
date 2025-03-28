@@ -63,7 +63,8 @@ public class UserRepository(
         // Remove current user
         if (!string.IsNullOrEmpty(userParams.CurrentEmail))
         {
-            query = query.Where(u => u.NormalizedEmail != userParams.CurrentEmail.ToUpper());
+            var normalizedEmail = userParams.CurrentEmail?.ToUpper();
+            query = query.Where(u => u.NormalizedEmail != normalizedEmail);
         }
 
         // Filtering

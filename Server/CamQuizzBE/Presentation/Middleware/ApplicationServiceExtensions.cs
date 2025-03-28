@@ -14,7 +14,6 @@ public static class ApplicationServiceExtensions
         // CORS
         services.AddCors();
 
-
         // Register DB
         services.AddDbContext<DataContext>(opt =>
         {
@@ -22,12 +21,8 @@ public static class ApplicationServiceExtensions
          ServerVersion.AutoDetect(config.GetConnectionString("DefaultConnection")));
         });
 
-
-
-
         // Register Controller
         services.AddControllers();
-
 
         // Register DI
         // Service
@@ -49,11 +44,6 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IFlashCardRepository, FlashCardRepository>();
         services.AddScoped<IQuestionRepository, QuestionsRepository>();
         services.AddScoped<IAnswerRepository, AnswerRepository>();
-
-
-
-
-
 
         // Register Auto Mapper
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

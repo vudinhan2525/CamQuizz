@@ -34,7 +34,6 @@ public class AutoMapperProfiles : Profile
         CreateMap<StudySet, StudySetDto>().ReverseMap();
         CreateMap<FlashCard, FlashCardDto>().ReverseMap();
 
-        CreateMap<Member, MemberDto>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+       CreateMap<Member, MemberDto>();
     }
 }

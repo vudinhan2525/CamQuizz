@@ -1,7 +1,10 @@
 namespace CamQuizzBE.Presentation.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Enums;
+using CamQuizzBE.Applications.DTOs.Groups;
 
 [Route("api/v1/members")]
 [ApiController]
@@ -49,13 +52,18 @@ public class MemberController : ControllerBase
         }
     }
 
-    [HttpPost("approve/{groupId}/{userId}")]
-    public async Task<IActionResult> ApproveMember(int groupId, int userId, [FromQuery] int ownerId)
+    [HttpPut("{groupId}/{userId}/status")]
+    [Authorize]
+    public async Task<IActionResult> UpdateMemberStatus(
+        int groupId,
+        int userId,
+        [FromQuery] int ownerId,
+        [FromBody] UpdateMemberStatusDto updateDto)
     {
         try
         {
-            await _memberService.ApproveMemberAsync(groupId, userId, ownerId);
-            return Ok(new { message = "Member approved successfully" });
+            await _memberService.UpdateMemberStatusAsync(groupId, userId, ownerId, updateDto.Status);
+            return Ok(new { message = "Member status updated successfully" });
         }
         catch (UnauthorizedAccessException)
         {
@@ -65,13 +73,10 @@ public class MemberController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
-    }
-
-    [HttpPost("reject/{groupId}/{userId}")]
-    public async Task<IActionResult> RejectMember(int groupId, int userId, [FromQuery] int ownerId)
-    {
-        await _memberService.RejectMemberAsync(groupId, userId, ownerId);
-        return Ok(new { message = "Member rejected successfully" });
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
     [HttpDelete("leave/{groupId}")]

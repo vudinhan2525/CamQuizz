@@ -19,6 +19,11 @@ public class GroupService : IGroupService
         _userRepo = userRepo ?? throw new ArgumentNullException(nameof(userRepo));
     }
 
+    public async Task<IEnumerable<GroupDto>> GetAllGroupsAsync()
+    {
+        return await _groupRepo.GetAllGroupsAsync();
+    }
+
     public async Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId)
     {
         if (userId <= 0)
@@ -117,6 +122,27 @@ public class GroupService : IGroupService
 
         await _groupRepo.UpdateStatusAsync(groupId, dto);
         await _groupRepo.SaveChangesAsync();
+    }
+
+    public async Task<GroupDto> UpdateGroupAsync(int id, UpdateGroupDto updateGroupDto)
+    {
+        if (id <= 0)
+            throw new ValidatorException("Invalid group ID");
+
+        if (updateGroupDto == null)
+            throw new ArgumentNullException(nameof(updateGroupDto));
+
+        if (string.IsNullOrWhiteSpace(updateGroupDto.Name))
+            throw new ValidatorException("Group name is required");
+
+        var group = await _groupRepo.GetGroupByIdAsync(id);
+        if (group == null)
+            throw new NotFoundException("Group not found");
+
+        await _groupRepo.UpdateAsync(id, updateGroupDto);
+
+        return await _groupRepo.GetGroupByIdAsync(id) ??
+            throw new NotFoundException("Group not found after update");
     }
 
     public async Task<IEnumerable<MemberDto>> GetPendingMembersAsync(int groupId)

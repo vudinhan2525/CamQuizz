@@ -15,12 +15,20 @@ public class GroupController : ControllerBase
     {
         _groupService = groupService;
     }
-    // [HttpGet]
-    // public async Task<ActionResult<IEnumerable<GroupDto>>> GetAllGroups()
-    // {
-    //     var groups = await _groupService.GetAllGroupsAsync();
-    //     return Ok(groups);
-    // }
+    [HttpGet]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<GroupDto>>> GetAllGroups()
+    {
+        try
+        {
+            var groups = await _groupService.GetAllGroupsAsync();
+            return Ok(groups);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, "An error occurred while retrieving groups");
+        }
+    }
 
     [HttpGet("my-groups/{userId}")]
     [Authorize]  
@@ -70,10 +78,29 @@ public class GroupController : ControllerBase
     {
         try
         {
-            await _groupService.UpdateGroupStatusAsync(groupId, newStatus); // Fixed method name
+            await _groupService.UpdateGroupStatusAsync(groupId, newStatus);
             return Ok();
         }
         catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+    }
+
+    [HttpPut("{id}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateGroup(int id, [FromBody] UpdateGroupDto updateGroupDto)
+    {
+        try
+        {
+            var updatedGroup = await _groupService.UpdateGroupAsync(id, updateGroupDto);
+            return Ok(updatedGroup);
+        }
+        catch (ValidatorException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (NotFoundException ex)
         {
             return NotFound(ex.Message);
         }

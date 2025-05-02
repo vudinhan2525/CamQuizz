@@ -3,6 +3,7 @@ namespace CamQuizzBE.Applications.Services;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Enums;
+using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Applications.DTOs.Groups;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -88,37 +89,35 @@ public class MemberService : IMemberService
         await _memberRepository.SaveChangesAsync();
     }
 
-    // Owner approves a member request
-    public async Task ApproveMemberAsync(int groupId, int userId, int ownerId)
+    public async Task UpdateMemberStatusAsync(int groupId, int userId, int ownerId, MemberStatus newStatus)
     {
         await ValidateGroupAndStatus(groupId);
         
         var group = await _groupRepository.GetGroupByIdAsync(groupId);
+        if (group == null)
+            throw new NotFoundException("Group not found");
+            
         if (group.OwnerId != ownerId)
-            throw new UnauthorizedAccessException("Only the group owner can approve members.");
+            throw new UnauthorizedAccessException("Only the group owner can update member status.");
 
         var member = await _memberRepository.GetByIdAsync(groupId, userId);
-        if (member == null || member.Status != MemberStatus.Pending)
-            throw new InvalidOperationException("No pending request found for this member.");
+        if (member == null)
+            throw new NotFoundException("Member not found");
 
-        await _memberRepository.UpdateMemberStatusAsync(groupId, userId, MemberStatus.Approved);
-        await _memberRepository.SaveChangesAsync();
-    }
+        // Validate status transitions
+        bool isValidTransition = (member.Status, newStatus) switch
+        {
+            (MemberStatus.Pending, MemberStatus.Approved) => true,
+            (MemberStatus.Pending, MemberStatus.Rejected) => true,
+            (MemberStatus.Rejected, MemberStatus.Pending) => true,
+            (MemberStatus.Approved, MemberStatus.Rejected) => true,
+            _ => false
+        };
 
-    // Owner rejects a member request
-    public async Task RejectMemberAsync(int groupId, int userId, int ownerId)
-    {
-        await ValidateGroupAndStatus(groupId);
-        
-        var group = await _groupRepository.GetGroupByIdAsync(groupId);
-        if (group.OwnerId != ownerId)
-            throw new UnauthorizedAccessException("Only the group owner can reject members.");
+        if (!isValidTransition)
+            throw new InvalidOperationException($"Invalid status transition from {member.Status} to {newStatus}");
 
-        var member = await _memberRepository.GetByIdAsync(groupId, userId);
-        if (member == null || member.Status != MemberStatus.Pending)
-            throw new InvalidOperationException("No pending request found for this member.");
-
-        await _memberRepository.UpdateMemberStatusAsync(groupId, userId, MemberStatus.Rejected);
+        await _memberRepository.UpdateMemberStatusAsync(groupId, userId, newStatus);
         await _memberRepository.SaveChangesAsync();
     }
 
@@ -140,24 +139,10 @@ public class MemberService : IMemberService
         await _memberRepository.SaveChangesAsync();
     }
 
-    // Owner removes a member
+    // Owner removes a member by setting status to Rejected
     public async Task RemoveMemberAsync(int groupId, int userId, int ownerId)
     {
-        await ValidateGroupAndStatus(groupId);
-        
-        var group = await _groupRepository.GetGroupByIdAsync(groupId);
-        if (group.OwnerId != ownerId)
-            throw new UnauthorizedAccessException("Only the group owner can remove members.");
-        if (userId == ownerId)
-            throw new InvalidOperationException("Group owner cannot be removed.");
-
-        var member = await _memberRepository.GetByIdAsync(groupId, userId);
-        if (member == null)
-            throw new InvalidOperationException("User is not a member of this group.");
-        if (member.Status != MemberStatus.Approved)
-            throw new InvalidOperationException("Only approved members can be removed.");
-
-        await _memberRepository.RemoveMemberAsync(groupId, userId);
-        await _memberRepository.SaveChangesAsync();
+        // We'll reuse our status update logic but enforce Rejected status
+        await UpdateMemberStatusAsync(groupId, userId, ownerId, MemberStatus.Rejected);
     }
 }

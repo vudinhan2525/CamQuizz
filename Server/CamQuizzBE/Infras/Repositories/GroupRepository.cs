@@ -4,7 +4,7 @@ using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Applications.DTOs.Groups;
 using CamQuizzBE.Infras.Data;
-using CamQuizzBE.Domain.Enums; 
+using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Presentation.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -14,6 +14,24 @@ using System.Threading.Tasks;
 public class GroupRepository(DataContext context) : IGroupRepository
 {
     private readonly DataContext _context = context;
+
+    public async Task<IEnumerable<GroupDto>> GetAllGroupsAsync()
+    {
+        return await _context.Groups
+            .Include(g => g.Members)
+            .Select(g => new GroupDto
+            {
+                Id = g.Id,
+                Name = g.Name,
+                Description = g.Description,
+                OwnerId = g.OwnerId,
+                Status = g.Status,
+                CreatedAt = g.CreatedAt,
+                MemberIds = g.Members.Select(m => m.UserId).ToList()
+            })
+            .AsNoTracking()
+            .ToListAsync();
+    }
 
     public async Task<Member?> GetMemberAsync(int groupId, int userId)
     {
@@ -87,6 +105,17 @@ public class GroupRepository(DataContext context) : IGroupRepository
             group.Status = newStatus.Status; // Extract Status from DTO
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task UpdateAsync(int id, UpdateGroupDto updateGroupDto)
+    {
+        var group = await _context.Groups.FindAsync(id);
+        if (group == null)
+            throw new NotFoundException($"Group with ID {id} not found");
+
+        group.Name = updateGroupDto.Name;
+        group.Description = updateGroupDto.Description;
+        await _context.SaveChangesAsync();
     }
     public async Task<IEnumerable<MemberDto>> GetPendingMembersAsync(int groupId)
     {

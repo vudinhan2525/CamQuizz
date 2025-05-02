@@ -56,56 +56,70 @@ public class UserRepository(
             .SingleOrDefaultAsync(u => u.Id == id);
     }
 
-    public async Task<PagedList<UserDto>> GetUsersAsync(UserParams userParams)
+    public async Task<PagedResult<UserDto>> GetUsersAsync(UserParams userParams, string? kw, int limit, int page, string? sort)
     {
         var query = context.Users.AsQueryable();
 
         // Remove current user
-        query = query.Where(u => u.NormalizedEmail != userParams.CurrentEmail!.ToUpper());
-
-        // Filter by gender
-        if (userParams.Gender != null)
+        if (!string.IsNullOrEmpty(userParams.CurrentEmail))
         {
+            var normalizedEmail = userParams.CurrentEmail?.ToUpper();
+            query = query.Where(u => u.NormalizedEmail != normalizedEmail);
+        }
+
+        // Filtering
+        if (!string.IsNullOrEmpty(userParams.Gender))
             query = query.Where(u => u.Gender == userParams.Gender);
-        }
 
-        // Filter by first name
-        if (userParams.FirstName != null)
-        {
+        if (!string.IsNullOrEmpty(userParams.FirstName))
             query = query.Where(u => u.FirstName.Contains(userParams.FirstName));
-        }
 
-        // Filter by last name
-        if (userParams.LastName != null)
-        {
+        if (!string.IsNullOrEmpty(userParams.LastName))
             query = query.Where(u => u.LastName.Contains(userParams.LastName));
-        }
 
-        // Filter by email
-        if (userParams.Email != null)
-        {
+        if (!string.IsNullOrEmpty(userParams.Email))
             query = query.Where(u => u.NormalizedEmail == userParams.Email.ToUpper());
+
+        // Keyword search
+        if (!string.IsNullOrEmpty(kw))
+        {
+            query = query.Where(u =>
+                u.FirstName.Contains(kw) ||
+                u.LastName.Contains(kw) ||
+                u.Email.Contains(kw));
         }
 
-        // Order
-        query = userParams.OrderBy switch
+        // Sorting (Handles sort parameter separately)
+        query = sort switch
         {
-            "email" => userParams.SortBy == "asc"
-                        ? query.OrderBy(u => u.Email)
-                        : query.OrderByDescending(u => u.Email),
-            "firstName" => userParams.SortBy == "asc"
-                        ? query.OrderBy(u => u.FirstName)
-                        : query.OrderByDescending(u => u.FirstName),
-            "lastName" => userParams.SortBy == "asc"
-                        ? query.OrderBy(u => u.LastName)
-                        : query.OrderByDescending(u => u.LastName),
+            "email" => query.OrderBy(u => u.Email),
+            "email_desc" => query.OrderByDescending(u => u.Email),
+            "firstName" => query.OrderBy(u => u.FirstName),
+            "firstName_desc" => query.OrderByDescending(u => u.FirstName),
+            "lastName" => query.OrderBy(u => u.LastName),
+            "lastName_desc" => query.OrderByDescending(u => u.LastName),
             _ => query.OrderBy(u => u.Email)
         };
 
-        return await PagedList<UserDto>.CreateAsync(
-            query.ProjectTo<UserDto>(mapper.ConfigurationProvider),
-            userParams.PageNumber,
-            userParams.PageSize
-        );
+        // Pagination
+        var totalItems = await query.CountAsync();
+        var items = await query
+            .ProjectTo<UserDto>(mapper.ConfigurationProvider)
+            .Skip((page - 1) * limit)
+            .Take(limit)
+            .ToListAsync();
+
+        return new PagedResult<UserDto>(items, totalItems, page, limit);
     }
+
+    public async Task<IdentityResult> UpdateUserAsync(AppUser user)
+    {
+        return await userManager.UpdateAsync(user);
+    }
+
+    public async Task<IdentityResult> DeleteUserAsync(AppUser user)
+    {
+        return await userManager.DeleteAsync(user);
+    }
+
 }

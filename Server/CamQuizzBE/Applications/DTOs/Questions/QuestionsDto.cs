@@ -1,3 +1,5 @@
+using CamQuizzBE.Applications.DTOs.Answers;
+
 namespace CamQuizzBE.Applications.DTOs.Quizzes;
 
 public class QuestionsDto
@@ -9,6 +11,7 @@ public class QuestionsDto
     public int Duration { get; set; } = 0;
     public int Score { get; set; } = 0;
     public int QuizId { get; set; }
+    public List<AnswerDto> Answers { get; set; } = new();
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

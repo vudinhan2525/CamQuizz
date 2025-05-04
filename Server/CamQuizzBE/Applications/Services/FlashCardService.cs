@@ -43,4 +43,26 @@ public class FlashCardService : IFlashCardService
     {
         await _flashCardRepository.DeleteAsync(id);
     }
+    public async Task<FlashCard> UpdateFlashCardAsync(UpdateFlashCardDto updateFlashCard)
+    {
+        var existingFlashCard = await _flashCardRepository.GetFlashCardByIdAsync(updateFlashCard.Id);
+        if (existingFlashCard == null)
+        {
+            throw new KeyNotFoundException("FlashCard not found.");
+        }
+
+        // Convert FlashCardDto to FlashCard entity
+        var flashCardEntity = new FlashCard
+        {
+            Id = existingFlashCard.Id,
+            StudySetId = existingFlashCard.StudySetId,
+            Question = updateFlashCard.Question,
+            Answer = updateFlashCard.Answer,
+            CreatedAt = existingFlashCard.CreatedAt
+        };
+
+        await _flashCardRepository.UpdateAsync(flashCardEntity);
+        return flashCardEntity;
+    }
+
 }

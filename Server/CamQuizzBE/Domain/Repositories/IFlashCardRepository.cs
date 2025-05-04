@@ -11,4 +11,5 @@ public interface IFlashCardRepository
     Task<FlashCardDto?> GetFlashCardByIdAsync(int id);
     Task AddAsync(FlashCard flashCard);
     Task DeleteAsync(int id);
+    Task UpdateAsync(FlashCard flashCard);
 }

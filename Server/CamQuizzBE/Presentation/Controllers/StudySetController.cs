@@ -9,14 +9,11 @@ using System.Threading.Tasks;
 
 [Route("api/v1/study-sets")]
 [ApiController]
-public class StudySetController : ControllerBase
+public class StudySetController(IStudySetService studysetService, IMapper mapper) : ControllerBase
 {
-    private readonly IStudySetService _studySetService;
-
-    public StudySetController(IStudySetService studySetService) // Inject Interface
-    {
-        _studySetService = studySetService;
-    }
+    private readonly IStudySetService _studySetService = studysetService;
+    private readonly IMapper _mapper = mapper;
+   
 
 
     [HttpGet("my-study-sets/{userId}")]
@@ -63,5 +60,17 @@ public class StudySetController : ControllerBase
     {
         await _studySetService.DeleteStudySetAsync(id);
         return NoContent();
+    }
+    [HttpPut]
+    public async Task<IActionResult> UpdateStudySet([FromBody] UpdateStudySetDto updateStudySetDto)
+    {
+        var studySet = await _studySetService.UpdateStudySetAsync(updateStudySetDto);
+        
+        if (studySet == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(_mapper.Map<StudySetDto>(studySet));
     }
 }

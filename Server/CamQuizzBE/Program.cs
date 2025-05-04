@@ -8,13 +8,25 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
-// // Log config
-builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+// Configure logging using Serilog
+builder.Host.UseSerilog((context, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .MinimumLevel.Debug()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+    )
+);
 
-// Add SignalR
-builder.Services.AddSignalR(options =>
+// Add SignalR with handshake configuration
+builder.Services.AddSignalR(hubOptions =>
 {
-    options.EnableDetailedErrors = true;
+    hubOptions.EnableDetailedErrors = true;
+    hubOptions.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(15);
+})
+.AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = null;
 });
 
 builder.Services.AddCors(options =>
@@ -41,10 +53,7 @@ builder.Services.AddIdentityServices(builder.Configuration);
 
 IdentityModelEventSource.ShowPII = true;
 builder.Services.AddSwaggerGen();
-builder.Logging.AddConsole(options =>
-{
-    options.LogToStandardErrorThreshold = LogLevel.Information;
-});
+// Remove duplicate logging configuration
 var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -57,8 +66,9 @@ logger.LogInformation("🚀 Application starting on {Addresses}", kestrelUrl);
 app.UseMiddleware<ExceptionMiddleware>();
 // app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
 //     .WithOrigins("http://localhost:3000"));
-app.UseRouting();
 app.UseCors();
+app.UseRouting();
+
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -74,11 +84,16 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
     c.RoutePrefix = string.Empty;
 });
+// Add endpoints
+// Configure endpoints
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
     endpoints.MapHub<QuizHub>("/quizHub");
+    endpoints.MapHub<TmpHub>("/tmpHub");
 });
+
+
 
 
 

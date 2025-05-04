@@ -66,4 +66,22 @@ public class QuestionsService : IQuestionsService
         await _questionsRepo.UpdateAsync(existingQues);
         return existingQues;
     }
+    public async Task<bool> AnswerQuestionAsync(AnswerQuestionDto answerQuestionDto)
+    {
+        var question = await _questionsRepo.GetByIdAsync(answerQuestionDto.QuestionId);
+        if (question == null)
+        {
+            throw new KeyNotFoundException("Question not found.");
+        }
+
+        // Check if submitted answers match correct answers
+        var correctAnswers = question.Answers.Where(a => a.IsCorrect).Select(a => a.Id).OrderBy(id => id);
+        var submittedAnswers = answerQuestionDto.AnswerSubmit.OrderBy(id => id);
+
+        var isCorrect = correctAnswers.SequenceEqual(submittedAnswers);
+
+        await _questionsRepo.IncrementAnswerCountAsync(question.Id);
+
+        return isCorrect;
+    }
 }

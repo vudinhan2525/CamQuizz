@@ -11,4 +11,5 @@ public interface IQuestionsService
     Task CreateQuestionAsync(Questions question);
     Task<Questions> UpdateQuestionAsync(UpdateQuestionDto updateQuestionDto);
     Task DeleteQuestionAsync(int id);
+    Task<bool> AnswerQuestionAsync(AnswerQuestionDto answerQuestionDto);
 }

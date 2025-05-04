@@ -88,6 +88,17 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
         return CreatedAtAction(nameof(GetQuestionById), new { id = createdQuestionDto.Id }, response);
     }
 
+    // POST: api/v1/question/answer
+    [HttpPost("answer")]
+    public async Task<ActionResult> AnswerQuestion([FromBody] AnswerQuestionDto answerQuestionDto)
+    {
+        var isCorrect = await _questionsService.AnswerQuestionAsync(answerQuestionDto);
+
+        var response = new ApiResponse<bool>(isCorrect);
+
+        return Ok(response);
+    }
+
     // PUT: api/v1/question
     [HttpPut]
     public async Task<ActionResult> UpdateQuestion([FromBody] UpdateQuestionDto updateQuestionDto)

@@ -6,17 +6,26 @@ import FlashCardPage from "../Users/FlashCard/FlashCardPage";
 import SharedQuizz from "../Users/Library/SharedQuizz";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
+import { useNavigation } from '@react-navigation/native';
+import SCREENS from '../../navigation/index';
 
 export const Library = () => {
   const [activeTab, setActiveTab] = useState("myLibrary");
+  const navigation = useNavigation();
+
+  // Hàm xử lý khi tab được chọn
+  const handleTabPress = (tabName) => {
+    setActiveTab(tabName);
+    
+    if (tabName === "flashcard") {
+      navigation.navigate(SCREENS.FlashCardPage);
+    } else if (tabName === "collections") {
+      navigation.navigate(SCREENS.SharedQuizz);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Status Indicator */}
-      {/* <View style={styles.statusBar}>
-        <View style={styles.statusIndicator} />
-      </View> */}
-
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>

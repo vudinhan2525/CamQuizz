@@ -1,28 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';  
 import TestCard from '../../components/Report/TestCard';
 import TestFilter from '../../components/Report/TestFilter';
-import AuthorTestReport from '../../components/Report/AuthorTestReport';
-import OrganizationTestReport from '../../components/Report/OrganizationTestReport';
-import CandidateTestReport from '../../components/Report/CandidateTestReport';
 import { getCurrentUserTests, getOrganizationTests, getCandidateAttemptedTests } from '../../components/data/MocTests';
 import COLORS from '../../constant/colors';
 
-const Stack = createStackNavigator();
-
 export const Report = ({ navigation }) => {
   const [activeView, setActiveView] = useState('author');
-  const [selectedTest, setSelectedTest] = useState(null);
   const [searchFilter, setSearchFilter] = useState(null);
-
-  const [showReport, setShowReport] = useState(false);
-
-  const handleGoBack = () => {
-    setSelectedTest(null);
-  };
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedView, setSelectedView] = useState('author');
 
   const getTests = () => {
     switch (activeView) {
@@ -45,16 +33,15 @@ export const Report = ({ navigation }) => {
   }, [allTests, searchFilter]);
 
   const handleViewReport = (test) => {
-    setSelectedTest(test);
-  };
-
-  const handleBackToList = () => {
-    setSelectedTest(null);
+    // Navigate to ReportDetail screen with test data and view type
+    navigation.navigate('ReportDetail', {
+      test: test,
+      viewType: activeView
+    });
   };
 
   const handleFilterSelect = (test) => {
     setSearchFilter(test);
-    setSelectedTest(null);
   };
 
   const handleClearFilter = () => {
@@ -63,31 +50,113 @@ export const Report = ({ navigation }) => {
 
   const handleViewChange = (value) => {
     setActiveView(value);
-    setSelectedTest(null);
     setSearchFilter(null);
   };
 
-  const renderReport = () => {
-    if (!selectedTest) {
-      return (
+  const options = [
+    { label: 'Tác giả', value: 'author' },
+    { label: 'Người tổ chức', value: 'organization' },
+    { label: 'Bài làm cũ', value: 'candidate' }
+  ];
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={{ padding: 16 }}>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: 'bold' }}>Chọn kiểu báo cáo</Text>
+
+          <TouchableOpacity 
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: COLORS.BLUE,
+              padding: 12,
+              flexDirection: 'row',  
+              alignItems: 'center',   
+              justifyContent: 'space-between' 
+            }}
+            onPress={() => setModalVisible(true)}
+          >
+            <Text style={{ fontSize: 16 }}>
+              {options.find(opt => opt.value === selectedView)?.label}
+            </Text>
+            <Ionicons name="options-outline" size={22} color={COLORS.GRAY} />
+          </TouchableOpacity>
+
+                      {/* Modal hiển thị ở phía dưới */}
+                      <Modal
+              animationType="slide"
+              transparent={true}
+              visible={modalVisible}
+              onRequestClose={() => setModalVisible(false)}
+            >
+              <View style={{
+                flex: 1,
+                justifyContent: 'flex-end',
+                backgroundColor: 'rgba(0,0,0,0.5)'
+              }}>
+                <View style={{
+                  backgroundColor: '#fff',
+                  width: '100%',
+                  borderTopLeftRadius: 16,
+                  borderTopRightRadius: 16,
+                  padding: 16,
+                  paddingBottom: 30,
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Chọn kiểu báo cáo</Text>
+                  
+
+                  {/* Danh sách tùy chọn */}
+                  {options.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingVertical: 12,
+                        borderBottomWidth: 1,
+                        borderBottomColor: '#ddd'
+                      }}
+                      onPress={() => {
+                        setSelectedView(option.value);
+                        setActiveView(option.value)
+                        setModalVisible(false);
+                      }}
+                    >
+                      <Text style={{ fontSize: 16 }}>{option.label}</Text>
+
+                      {/* Checkbox nằm bên phải */}
+                      <Ionicons 
+                        name={selectedView === option.value ? "radio-button-on" : "radio-button-off"} 
+                        size={20} 
+                        color={selectedView === option.value ? COLORS.BLUE : "#ccc"} 
+                      />
+                    </TouchableOpacity>
+                  ))}
+
+                </View>
+              </View>
+            </Modal>
+          </View>
+
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ width: 250 }}>
-            <TestFilter
-              tests={allTests}
-              onSelect={handleFilterSelect}
-              placeholder={"Tìm kiếm bài thi"}
-            />
+            <View style={{ width: 250 }}>
+              <TestFilter
+                tests={allTests}
+                onSelect={handleFilterSelect}
+                placeholder={"Tìm kiếm bài thi"}
+              />
+            </View>
+            {searchFilter && (
+              <TouchableOpacity onPress={handleClearFilter} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                <Ionicons name="refresh" size={16} color={COLORS.BLUE} />
+                <Text>Làm mới</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          {searchFilter && (
-            <TouchableOpacity onPress={handleClearFilter} style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
-              <Ionicons name="refresh" size={16} color={COLORS.BLUE} />
-              <Text>Làm mới</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-
 
           <View>
             {filteredTests.length > 0 ? (
@@ -107,50 +176,6 @@ export const Report = ({ navigation }) => {
             )}
           </View>
         </View>
-      );
-    }
-
-    switch (activeView) {
-      case 'author':
-        return <AuthorTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
-      case 'organization':
-        return <OrganizationTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
-      case 'candidate':
-        return <CandidateTestReport tests={[selectedTest]} onGoBack={handleGoBack} />;
-      default:  
-        return null;
-    }
-  };
-
-  return (
-
-    
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <View style={{ padding: 16 }}>
-         {/* ComboBox để chọn View */}
-        <View style={{ marginBottom: 16}}>
-          <Text style={{ marginBottom: 8, fontWeight: 'bold' }}>Chọn kiểu báo cáo</Text>
-          <View style={{ 
-            backgroundColor: '#fff', 
-            borderRadius: 8, 
-            overflow: 'hidden',   
-            borderWidth: 1, 
-            borderColor: COLORS.BLUE,
-            width: '50%',
-          }}>        
-          <Picker
-            selectedValue={activeView}
-            onValueChange={(itemValue) => handleViewChange(itemValue)}
-            style={{ height: 50, width: '100%' }}
-          >
-            <Picker.Item label="Tác giả" value="author" style={{ fontSize: 14 }} />
-            <Picker.Item label="Người tổ chức" value="organization" style={{ fontSize: 14 }} />
-            <Picker.Item label="Bài làm cũ" value="candidate" style={{ fontSize: 14 }} />
-          </Picker>
-      </View>
-  </View>
-        
-        {renderReport()}
       </View>
     </View>
   );

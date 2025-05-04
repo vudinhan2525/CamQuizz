@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Home, Search, Menu, Plus, Cloud, BarChart, Settings, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useToast } from '../../../hooks/use-toast';
+import Toast from 'react-native-toast-message';
 import PropTypes from 'prop-types';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
 
 const FlashCardPage = () => {
   const navigation = useNavigation();
-  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newSetName, setNewSetName] = useState('');
   const [flashcardSets, setFlashcardSets] = useState([
@@ -23,7 +22,11 @@ const FlashCardPage = () => {
 
   const handleCreateSet = () => {
     if (!newSetName.trim()) {
-      toast({ title: 'Error', description: 'Set name cannot be empty', variant: 'destructive' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Set name cannot be empty'
+      });
       return;
     }
 
@@ -40,7 +43,11 @@ const FlashCardPage = () => {
     setNewSetName('');
     setIsCreateDialogOpen(false);
 
-    toast({ title: 'Success', description: `Flashcard set "${newSetName}" created successfully` });
+    Toast.show({
+      type: 'success',
+      text1: 'Success',
+      text2: `Flashcard set "${newSetName}" created successfully`
+    });
   };
 
   return (
@@ -118,7 +125,7 @@ export default FlashCardPage;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F3F4F6' 
+    backgroundColor: '#fff' 
   },
   header: { 
     flexDirection: 'row', 
@@ -127,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', 
     padding: 16, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#DDD' 
+    borderBottomColor: COLORS.BLUE
   },
   headerTitle: { 
     fontSize: 22, 
@@ -186,7 +193,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', 
     padding: 16, 
     borderRadius: 8, 
-    marginBottom: 16 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE 
   },
   flashcardHeader: { 
     flexDirection: 'row', 

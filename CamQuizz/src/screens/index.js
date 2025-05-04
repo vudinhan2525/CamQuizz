@@ -12,6 +12,9 @@ const SCREENS = {
     ADMIN_TAB: "Tab quản trị",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
+    FlashCardPage: 'FlashCardPage',
+    SharedQuizz: 'SharedQuizz',
+    ReportDetail: 'Chi tiết báo cáo',
   };
   
   export default SCREENS;

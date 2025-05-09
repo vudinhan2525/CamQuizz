@@ -74,7 +74,8 @@ public class QuestionController(ILogger<QuestionController> _logger, IQuestionsS
             Name = createQuestionDto.Name,
             Description = createQuestionDto.Description,
             QuizId = createQuestionDto.QuizId,
-            Score = createQuestionDto.Score ?? 0,
+            Score = createQuestionDto.Score ?? 10,  // Default 10 points if not specified
+            Duration = createQuestionDto.Duration,  // Uses the default 30 seconds from DTO
 
         };
 

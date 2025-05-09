@@ -107,7 +107,9 @@ try
     var scopedLogger = services.GetRequiredService<ILogger<Program>>();
 
     await context.Database.MigrateAsync();
+    await Seed.SeedGenres(context);  // Seed genres first
     await Seed.SeedUsers(context, userManager, roleManager);
+
 }
 catch (Exception ex)
 {

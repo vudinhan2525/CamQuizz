@@ -17,6 +17,4 @@ public class Genres
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-
 }

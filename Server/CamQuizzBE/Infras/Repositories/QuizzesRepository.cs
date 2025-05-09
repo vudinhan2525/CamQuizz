@@ -10,7 +10,10 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
 
     public async Task<PagedResult<Quizzes>> GetAllAsync(string? kw, int limit, int page, string? sort, int? genreId)
     {
-        var query = _context.Quizzes.AsQueryable();
+        var query = _context.Quizzes
+            .Include(q => q.Questions)
+                .ThenInclude(q => q.Answers)
+            .AsQueryable();
 
 
         if (!string.IsNullOrWhiteSpace(kw))
@@ -49,7 +52,10 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
     }
     public async Task<Quizzes?> GetByIdAsync(int id)
     {
-        return await _context.Quizzes.FirstOrDefaultAsync(q => q.Id == id);
+        return await _context.Quizzes
+            .Include(q => q.Questions)
+                .ThenInclude(q => q.Answers)
+            .FirstOrDefaultAsync(q => q.Id == id);
     }
 
     public async Task AddAsync(Quizzes quiz)

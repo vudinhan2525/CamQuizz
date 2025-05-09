@@ -14,4 +14,5 @@ public class QuizzesDto
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public List<QuestionsDto> Questions { get; set; } = new();
 }

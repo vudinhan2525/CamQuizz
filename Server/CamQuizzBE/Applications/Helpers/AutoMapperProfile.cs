@@ -28,8 +28,12 @@ public class AutoMapperProfiles : Profile
         CreateMap<UpdateUserDto, AppUser>()
             .ForMember(dest => dest.Id, opt => opt.Ignore()) 
             .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
-        CreateMap<Quizzes, QuizzesDto>().ReverseMap();
-        CreateMap<Questions, QuestionsDto>().ReverseMap();
+        CreateMap<Quizzes, QuizzesDto>()
+            .ForMember(dest => dest.Questions, opt => opt.MapFrom(src => src.Questions))
+            .ReverseMap();
+        CreateMap<Questions, QuestionsDto>()
+            .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.Answers))
+            .ReverseMap();
         CreateMap<Answers, AnswerDto>().ReverseMap();
         CreateMap<StudySet, StudySetDto>().ReverseMap();
         CreateMap<FlashCard, FlashCardDto>().ReverseMap();

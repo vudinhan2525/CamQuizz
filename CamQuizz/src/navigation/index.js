@@ -23,6 +23,12 @@ import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
 import SharedQuizz from '../screens/Users/Library/SharedQuizz';
 import { ReportDetail } from '../components/Report/ReportDetail';
 
+import Lobby from '../screens/Users/QuizPlay/Lobby';
+import QuestionPlay from '../screens/Users/QuizPlay/QuestionPlay';
+import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
+import QuizReport from '../screens/Users/QuizPlay/QuizReport';
+import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
+
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -70,6 +76,33 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.GROUP_MESSAGE}
                 component={GroupMessage}
+                options={{ headerShown: false }}
+            />
+
+            {/* Thêm các màn hình QuizPlay */}
+            <Stack.Screen
+                name={SCREENS.LOBBY}
+                component={Lobby}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY}
+                component={QuestionPlay}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.ENDQUIZ}
+                component={EndQuiz}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUIZ_REPORT}
+                component={QuizReport}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUIZ_DETAIL}
+                component={QuizDetail}
                 options={{ headerShown: false }}
             />
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
@@ -9,12 +9,20 @@ const QuizDetail = ({ navigation, route }) => {
     
     return (
         <View style={styles.container}>
-            <ScrollView>
-                {/* Quiz Image */}
-                <Image 
-                    source={{ uri: quiz.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }} 
-                    style={styles.quizImage} 
-                />
+            <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Quiz Image with Back Button */}
+                <View style={styles.imageContainer}>
+                    <Image 
+                        source={{ uri: quiz.Image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }} 
+                        style={styles.quizImage} 
+                    />
+                    <TouchableOpacity 
+                        style={styles.backButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Ionicons name="arrow-back" size={24} color={COLORS.WHITE} />
+                    </TouchableOpacity>
+                </View>
                 
                 {/* Quiz Info */}
                 <View style={styles.infoContainer}>
@@ -81,11 +89,26 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.WHITE,
+        paddingTop: StatusBar.currentHeight || 0,
+    },
+    imageContainer: {
+        position: 'relative',
+        width: '100%',
+        height: 200,
     },
     quizImage: {
         width: '100%',
-        height: 200,
+        height: '100%',
         resizeMode: 'cover',
+    },
+    backButton: {
+        position: 'absolute',
+        top: 16,
+        left: 16,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        borderRadius: 20,
+        padding: 8,
+        zIndex: 10,
     },
     infoContainer: {
         padding: 16,

@@ -1,18 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet,Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet,Dimensions, Image, TouchableOpacity } from 'react-native';
 import COLORS from '../constant/colors';
 const tmpUrl='https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
 const { width } = Dimensions.get('window'); 
-const QuizCard = ({ quiz, attemptText = "lượt thi" }) => {
+const QuizCard = ({ quiz, attemptText = "lượt thi", onPress }) => {
   return (
-    <View style={styles.quizCard}>
+    <TouchableOpacity style={styles.quizCard} onPress={onPress}>
       <Image source={{ uri: tmpUrl||quiz.image }} style={styles.quizImage} />
       <View style={styles.quizInfo}>
         <Text style={styles.quizTitle}>{quiz.title}</Text>
         <Text style={styles.quizQuestions}>{quiz.questions} câu hỏi</Text>
         <Text style={styles.quizAttempts}>{quiz.attempts} {attemptText}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

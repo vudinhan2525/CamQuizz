@@ -1,62 +1,152 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Modal, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Modal, ScrollView, Alert } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
+import { mockPlayers, generateRoomCode, mockQuiz } from '../../../components/data/MockQuizPlayData';
 
 const Lobby = ({ navigation, route }) => {
-    const { quizId, isHost = true } = route.params;
-    const [gameCode, setGameCode] = useState('ABCD123');
+    const { quizId, isHost = true, roomCode } = route.params;
+    const [gameCode, setGameCode] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
+    const [players, setPlayers] = useState([]);
+    const [quiz, setQuiz] = useState(null);
     
-    // Mock data for players
-    const [players, setPlayers] = useState([
-        { id: 1, name: 'Player 1', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 2, name: 'Player 2', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 3, name: 'Player 3', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 4, name: 'Player 4', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 5, name: 'Player 5', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 6, name: 'Player 6', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 7, name: 'Player 7', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 8, name: 'Player 8', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 9, name: 'Player 9', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 10, name: 'Player 10', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 11, name: 'Player 11', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-        { id: 12, name: 'Player 12', avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
-    ]);
+    useEffect(() => {
+        // Nếu là host, tạo mã phòng mới
+        // Nếu là người chơi, sử dụng mã phòng đã được cung cấp
+        if (isHost) {
+            setGameCode(generateRoomCode());
+        } else {
+            setGameCode(roomCode || '');
+        }
+        
+        // Giả lập người chơi tham gia phòng
+        setPlayers(mockPlayers);
+        
+        // Giả lập lấy thông tin quiz
+        setQuiz(mockQuiz);
+        
+        // Giả lập người chơi tham gia sau một khoảng thời gian
+        if (!isHost) {
+            // Thêm người chơi hiện tại vào danh sách
+            const currentPlayer = {
+                id: 'current-player',
+                name: 'Bạn',
+                avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
+                score: 0,
+                isCurrentPlayer: true
+            };
+            
+            setPlayers(prevPlayers => [...prevPlayers, currentPlayer]);
+        }
+    }, [isHost, roomCode]);
 
     const handleStartGame = () => {
-        // Navigate to the first question
+        if (players.length < 2) {
+            Alert.alert('Thông báo', 'Cần ít nhất 2 người chơi để bắt đầu trò chơi');
+            return;
+        }
+        
+        // Điều hướng đến màn hình câu hỏi đầu tiên
         navigation.navigate(SCREENS.QUESTION_PLAY, {
-            duration: 60,
-            isHost: true,
-            multipleCorrect: false,
-            question: 'What is the capital of France?',
-            answers: ['Paris', 'London', 'Berlin', 'Madrid'],
-            showRankingAfterEnd: true,
-            rankingDisplayTime: 10
+            quizId,
+            isHost,
+            currentQuestionIndex: 0,
+            players
         });
     };
+    
+    const handleLeaveRoom = () => {
+        // Xử lý khi người chơi rời phòng
+        Alert.alert(
+            'Xác nhận',
+            'Bạn có chắc muốn rời khỏi phòng chơi?',
+            [
+                {
+                    text: 'Hủy',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Rời phòng',
+                    onPress: () => navigation.goBack()
+                }
+            ]
+        );
+    };
+
+    const handleCopyCode = () => {
+        // Trong môi trường thực tế, bạn sẽ sử dụng Clipboard API
+        // Clipboard.setString(gameCode);
+        Alert.alert('Thông báo', 'Đã sao chép mã phòng: ' + gameCode);
+    };
+
 
     const renderPlayerItem = ({ item }) => (
-        <View style={styles.playerItem}>
+        <View style={[
+            styles.playerItem,
+            item.isCurrentPlayer && styles.currentPlayerItem
+        ]}>
             <Image source={{ uri: item.avatar }} style={styles.playerAvatar} />
-            <Text style={styles.playerName}>{item.name}</Text>
+            <Text style={styles.playerName}>
+                {item.isCurrentPlayer ? 'Bạn' : item.name}
+            </Text>
         </View>
     );
 
+    const handleKickPlayer = (playerId) => {
+        // Xử lý khi host đuổi người chơi
+        Alert.alert(
+            'Xác nhận',
+            'Bạn có chắc muốn đuổi người chơi này?',
+            [
+                {
+                    text: 'Hủy',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Đuổi',
+                    onPress: () => {
+                        setPlayers(prevPlayers => prevPlayers.filter(p => p.id !== playerId));
+                        Alert.alert('Thông báo', 'Đã đuổi người chơi khỏi phòng');
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
+            {/* Header with back button */}
+            <View style={styles.headerWithBack}>
+                <TouchableOpacity 
+                    style={styles.backButton}
+                    onPress={handleLeaveRoom}
+                >
+                    <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
+                </TouchableOpacity>
                 <Text style={styles.title}>Phòng chờ</Text>
-                <View style={styles.codeContainer}>
-                    <Text style={styles.codeLabel}>Mã phòng:</Text>
-                    <Text style={styles.codeValue}>{gameCode}</Text>
-                    <TouchableOpacity style={styles.copyButton}>
-                        <Ionicons name="copy-outline" size={20} color={COLORS.BLUE} />
-                    </TouchableOpacity>
+                <View style={styles.placeholder} />
+            </View>
+            
+            {/* Quiz Info */}
+            {quiz && (
+                <View style={styles.quizInfoContainer}>
+                    <Text style={styles.quizTitle}>{quiz.title}</Text>
+                    <Text style={styles.quizAuthor}>Tác giả: {quiz.author}</Text>
                 </View>
+            )}
+            
+            {/* Room Code */}
+            <View style={styles.codeContainer}>
+                <Text style={styles.codeLabel}>Mã phòng:</Text>
+                <Text style={styles.codeValue}>{gameCode}</Text>
+                <TouchableOpacity 
+                    style={styles.copyButton}
+                    onPress={handleCopyCode}
+                >
+                    <Ionicons name="copy-outline" size={20} color={COLORS.BLUE} />
+                </TouchableOpacity>
             </View>
 
             {/* Player Count */}
@@ -92,7 +182,7 @@ const Lobby = ({ navigation, route }) => {
             </View>
 
             {/* Start Button (only for host) */}
-            {isHost && (
+            {isHost ? (
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity 
                         style={styles.startButton}
@@ -101,24 +191,28 @@ const Lobby = ({ navigation, route }) => {
                         <Text style={styles.startButtonText}>Bắt đầu</Text>
                     </TouchableOpacity>
                 </View>
+            ) : (
+                <View style={styles.waitingContainer}>
+                    <Text style={styles.waitingText}>Đang chờ chủ phòng bắt đầu...</Text>
+                </View>
             )}
 
-            {/* Full Players Modal */}
+            {/* Players Modal */}
             <Modal
                 animationType="slide"
                 transparent={true}
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={styles.modalContainer}>
+                <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Tất cả người chơi</Text>
+                            <Text style={styles.modalTitle}>Danh sách người chơi</Text>
                             <TouchableOpacity 
                                 style={styles.closeButton}
                                 onPress={() => setModalVisible(false)}
                             >
-                                <Ionicons name="close" size={24} color={COLORS.GRAY_DARK} />
+                                <Ionicons name="close" size={24} color={COLORS.BLACK} />
                             </TouchableOpacity>
                         </View>
                         
@@ -126,9 +220,11 @@ const Lobby = ({ navigation, route }) => {
                             {players.map(player => (
                                 <View key={player.id} style={styles.modalPlayerItem}>
                                     <Image source={{ uri: player.avatar }} style={styles.modalPlayerAvatar} />
-                                    <Text style={styles.modalPlayerName}>{player.name}</Text>
-                                    {isHost && (
-                                        <TouchableOpacity style={styles.kickButton}>
+                                    <Text style={styles.modalPlayerName}>
+                                        {player.isCurrentPlayer ? 'Bạn' : player.name}
+                                    </Text>
+                                    {isHost && !player.isCurrentPlayer && (
+                                        <TouchableOpacity style={styles.kickButton} onPress={() => handleKickPlayer(player.id)}>
                                             <MaterialIcons name="remove-circle-outline" size={24} color={COLORS.RED} />
                                         </TouchableOpacity>
                                     )}
@@ -147,21 +243,45 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.WHITE,
     },
-    header: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.GRAY_LIGHT,
+    headerWithBack: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+    },
+    backButton: {
+        padding: 8,
+    },
+    placeholder: {
+        width: 40,
     },
     title: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 12,
+    },
+    quizInfoContainer: {
+        padding: 16,
+        alignItems: 'center',
+    },
+    quizTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    quizAuthor: {
+        fontSize: 14,
+        color: COLORS.GRAY_DARK,
+        marginTop: 4,
     },
     codeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.GRAY_LIGHT,
-        padding: 12,
+        justifyContent: 'center',
+        padding: 16,
+        backgroundColor: COLORS.BLUE_LIGHT,
+        marginHorizontal: 16,
         borderRadius: 8,
     },
     codeLabel: {
@@ -171,23 +291,23 @@ const styles = StyleSheet.create({
     codeValue: {
         fontSize: 18,
         fontWeight: 'bold',
-        flex: 1,
+        letterSpacing: 1,
     },
     copyButton: {
-        padding: 4,
+        padding: 8,
+        marginLeft: 8,
     },
     playerCountContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.GRAY_LIGHT,
     },
     playerCount: {
         fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 8,
+        fontWeight: '500',
         flex: 1,
+        marginLeft: 8,
     },
     viewAllButton: {
         padding: 8,
@@ -208,6 +328,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
+    currentPlayerItem: {
+        // Highlight the current player
+        backgroundColor: COLORS.BLUE_LIGHT,
+        borderRadius: 8,
+        padding: 4,
+    },
     playerAvatar: {
         width: 50,
         height: 50,
@@ -222,7 +348,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: COLORS.GRAY_LIGHT,
+        backgroundColor: COLORS.BLUE_LIGHT,
         justifyContent: 'center',
         alignItems: 'center',
         alignSelf: 'center',
@@ -247,26 +373,35 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 18,
     },
-    modalContainer: {
+    waitingContainer: {
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.GRAY_LIGHT,
+        alignItems: 'center',
+    },
+    waitingText: {
+        fontSize: 16,
+        color: COLORS.GRAY_DARK,
+        fontStyle: 'italic',
+    },
+    modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        width: '90%',
-        maxHeight: '80%',
+        width: '80%',
+        maxHeight: '70%',
         backgroundColor: COLORS.WHITE,
         borderRadius: 12,
-        overflow: 'hidden',
+        padding: 16,
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.GRAY_LIGHT,
+        marginBottom: 16,
     },
     modalTitle: {
         fontSize: 18,
@@ -276,12 +411,12 @@ const styles = StyleSheet.create({
         padding: 4,
     },
     modalPlayersList: {
-        padding: 16,
+        maxHeight: '90%',
     },
     modalPlayerItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.GRAY_LIGHT,
     },
@@ -292,11 +427,11 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     modalPlayerName: {
-        fontSize: 16,
         flex: 1,
+        fontSize: 16,
     },
     kickButton: {
-        padding: 4,
+        padding: 8,
     },
 });
 

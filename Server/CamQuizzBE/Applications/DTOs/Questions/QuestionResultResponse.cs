@@ -11,4 +11,5 @@ public class QuestionResultResponse
     public required List<string> TrueAnswer { get; set; }  // List of correct option labels (e.g., ["A", "C"])
     public required List<PlayerScore> Ranking { get; set; }
     public GameQuestionResponse? NextQuestion { get; set; }
+    
 }

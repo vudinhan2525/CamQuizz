@@ -40,5 +40,7 @@ namespace CamQuizzBE.Applications.DTOs.Quizzes
         public required List<string> TrueAnswer { get; set; }
         public required List<PlayerScore> Ranking { get; set; }
         public GameQuestionDto NextQuestion { get; set; }
+
+        public int? TriggeredByUserId { get; set; }
     }
 }

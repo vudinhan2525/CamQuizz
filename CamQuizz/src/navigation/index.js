@@ -22,7 +22,7 @@ import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
 import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
 import SharedQuizz from '../screens/Users/Library/SharedQuizz';
 import { ReportDetail } from '../components/Report/ReportDetail';
-
+import FlashcardStudy from '../screens/Users/FlashCard/FlashCardStudy';
 import Lobby from '../screens/Users/QuizPlay/Lobby';
 import QuestionPlay from '../screens/Users/QuizPlay/QuestionPlay';
 import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
@@ -56,6 +56,11 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
                 component={FlashcardSetDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_STUDY}
+                component={FlashcardStudy}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

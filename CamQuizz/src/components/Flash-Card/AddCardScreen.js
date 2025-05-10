@@ -36,14 +36,6 @@ const AddCardScreen = ({ onClose, onSave }) => {
 
       {/* Content */}
       <ScrollView style={styles.content}>
-        {/* Card Type Selector */}
-        <View style={styles.optionContainer}>
-          <Text style={styles.optionLabel}>Kiểu:</Text>
-          <View style={styles.optionValue}>
-            <Text>Cơ bản</Text>
-            <ChevronDown size={20} />
-          </View>
-        </View>
 
         {/* Set Selector */}
         <View style={styles.optionContainer}>
@@ -89,14 +81,6 @@ const AddCardScreen = ({ onClose, onSave }) => {
           </View>
         </View>
 
-        {/* Tags */}
-        <View style={styles.cardContainer}>
-          <Text style={styles.cardLabel}>Nhãn:</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Thêm nhãn"
-          />
-        </View>
 
         {/* Card Counter */}
         <View style={styles.cardContainer}>

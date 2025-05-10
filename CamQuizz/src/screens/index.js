@@ -13,6 +13,7 @@ const SCREENS = {
     QUIZ_CREATION:"Tạo bài kiểm tra",
     QUESTION_SETTING:"Cài đặt câu hỏi",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
+    FLASHCARD_STUDY: "Học flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
     FlashCardPage: 'FlashCardPage',
     SharedQuizz: 'SharedQuizz',

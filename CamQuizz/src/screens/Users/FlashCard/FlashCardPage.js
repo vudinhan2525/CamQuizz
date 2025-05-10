@@ -66,7 +66,7 @@ const FlashCardPage = () => {
             <View style={styles.flashcardHeader}>
               <Text style={styles.flashcardTitle}>{set.title}</Text>
               <TouchableOpacity style={styles.studyButton} onPress={() => handleOpenSet(set.id)}>
-                <Text style={styles.studyButtonText}>Học</Text>
+                  <Text style={styles.studyButtonText}>Học</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.flashcardDetail}>Tổng cộng: {set.totalCards}/{set.totalCards}</Text>

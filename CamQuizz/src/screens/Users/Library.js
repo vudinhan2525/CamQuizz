@@ -30,14 +30,7 @@ export const Library = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Thư viện của tôi</Text>
-          <View style={styles.headerIcons}>
-            <View style={styles.searchContainer}>
-              <Search size={18} color="white" style={styles.searchIcon} />
-              <TextInput placeholder="Tìm kiếm"  style={styles.searchInput} placeholderTextColor="white" />
-            </View>
-            <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-              <MoreVertical size={20} color="white" />
-            </TouchableOpacity>
+          <View style={styles.headerIcons}>           
           </View>
         </View>
       </View>

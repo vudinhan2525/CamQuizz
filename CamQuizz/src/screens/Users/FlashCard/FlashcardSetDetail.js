@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { ArrowLeft, Plus, ChevronRight, Upload} from "lucide-react-native";
+import { ArrowLeft, Plus, ChevronRight } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AddCardScreen from "../../../components/Flash-Card/AddCardScreen";
 import COLORS from "../../../constant/colors";
+import SCREENS from "../..";
 
 export const FlashcardSetDetail = () => {
   const navigation = useNavigation();
@@ -12,6 +13,21 @@ export const FlashcardSetDetail = () => {
   const [activeTab, setActiveTab] = useState("today");
   const [showAddCard, setShowAddCard] = useState(false);
   const [flashcards, setFlashcards] = useState([]);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  useEffect(() => {
+    // Listen for when the screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Check if we have a reviewCompleted param from the study screen
+      if (route.params?.reviewCompleted) {
+        setReviewCount(prevCount => prevCount + 1);
+        // Clear the parameter to prevent multiple increments
+        navigation.setParams({ reviewCompleted: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, route]);
 
   const handleAddFlashcard = (frontText, backText) => {
     if (!frontText.trim() || !backText.trim()) {
@@ -22,6 +38,10 @@ export const FlashcardSetDetail = () => {
     setFlashcards([...flashcards, { front: frontText, back: backText }]);
     setShowAddCard(false);
   };
+
+  const handleStudyComplete = () => {
+  setReviewCount(prevCount => prevCount + 1);
+};
 
   return (
     <View style={styles.container}>
@@ -42,9 +62,9 @@ export const FlashcardSetDetail = () => {
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity onPress={() => setShowAddCard(true)}>
-              <View style={styles.plus}>
-              <Plus size={22} color={"white"} />   
-            </View>
+                <View style={styles.plus}>
+                  <Plus size={22} color={"white"} />   
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -60,7 +80,7 @@ export const FlashcardSetDetail = () => {
                 <Text style={styles.statLabel}>Mới</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statNumber}>0</Text>
+                <Text style={styles.statNumber}>{reviewCount}</Text>
                 <Text style={styles.statLabel}>Số lượt ôn</Text>
               </View>
               <View style={styles.statBox}>
@@ -76,6 +96,11 @@ export const FlashcardSetDetail = () => {
                 flashcards.length === 0 && styles.disabledButton,
               ]}
               disabled={flashcards.length === 0}
+              onPress={() => navigation.navigate(SCREENS.FLASHCARD_STUDY, { 
+                setId: id,
+                flashcards: flashcards,
+                onStudyComplete: handleStudyComplete  // Pass the callback function
+              })}
             >
               <Text style={styles.studyButtonText}>Học</Text>
             </TouchableOpacity>
@@ -113,10 +138,10 @@ export const FlashcardSetDetail = () => {
 
             <View style={styles.tabSpacer} />
 
-            <View style={styles.allButton}>
+            {/* <View style={styles.allButton}>
               <Text style={styles.allText}>Tất cả</Text>
               <ChevronRight size={18} />
-            </View>
+            </View> */}
           </View>
 
           {/* Content */}

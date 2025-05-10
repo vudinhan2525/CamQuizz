@@ -10,11 +10,22 @@ const SCREENS = {
     EXPLORE_TAB: "Tab khám phá",
     USER_TAB: "Tab người dùng",
     ADMIN_TAB: "Tab quản trị",
+    QUIZ_CREATION:"Tạo bài kiểm tra",
+    QUESTION_SETTING:"Cài đặt câu hỏi",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
     FlashCardPage: 'FlashCardPage',
     SharedQuizz: 'SharedQuizz',
     ReportDetail: 'Chi tiết báo cáo',
+    CREATE_STUDY_GROUP: "Tạo nhóm học tập",
+    STUDY_GROUP_DETAIL: "Chi tiết nhóm học tập",
+    RANKING: "Xếp hạng",
+    ENDQUIZ: "Kết thúc bài kiểm tra",
+    QUESTION_SETTING: "Cài đặt câu hỏi",
+    QUESTION_PLAY: "Trình phát câu hỏi",
+    QUIZ_DETAIL: "Chi tiết bài kiểm tra",
+    LOBBY: "Sảnh chờ",
+    QUIZ_REPORT: "Báo cáo bài kiểm tra",
   };
   
   export default SCREENS;

@@ -10,13 +10,17 @@ import { Library } from '../screens/Users/Library';
 import { Report } from '../screens/Users/Report';
 import { Explore } from '../screens/Users/Explore/Explore';
 import { Account } from '../screens/Account';
-import { StudyGroup } from '../screens/Users/StudyGroup';
+import { StudyGroup } from '../screens/Users/StudyGroup/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
+import QuizCreation from '../screens/Users/Quiz/QuizCreation';
+import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
 import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
 import SharedQuizz from '../screens/Users/Library/SharedQuizz';
 import { ReportDetail } from '../components/Report/ReportDetail';
 
+import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
+import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -28,9 +32,33 @@ function UsersStackNavigation() {
                 component={UserTabNavigator}
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name={SCREENS.QUIZ_CREATION}
+                component={QuizCreation}
+                options={{headerShown:false}}/>
+            <Stack.Screen 
+                name={SCREENS.QUESTION_SETTING} 
+                component={CreateQuestion}
+                options={{ headerShown: false }}
+            />
 
             
              
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_SET_DETAIL}
+                component={FlashcardSetDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.CREATE_STUDY_GROUP}
+                component={CreateStudyGroup}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.STUDY_GROUP_DETAIL}
+                component={GroupScreen}
+                options={{ headerShown: false }}
+            />
         </Stack.Navigator>
     );
 }
@@ -149,6 +177,7 @@ const UserTabNavigator = () => {
                     tabBarIcon: ({ color, size }) => (
                         <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
             <Tab.Screen

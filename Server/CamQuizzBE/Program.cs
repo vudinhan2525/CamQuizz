@@ -1,12 +1,44 @@
 using CamQuizzBE.Infras.Data;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Presentation.Middleware;
+using CamQuizzBE.Presentation.Hubs;
 using Microsoft.IdentityModel.Logging;
 using Serilog;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
-// // Log config
-builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+// Configure logging using Serilog
+builder.Host.UseSerilog((context, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .MinimumLevel.Debug()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+    )
+);
+
+// Add SignalR with handshake configuration
+builder.Services.AddSignalR(hubOptions =>
+{
+    hubOptions.EnableDetailedErrors = true;
+    hubOptions.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(15);
+})
+.AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(builder =>
+    {
+        builder.SetIsOriginAllowed(_ => true)
+               .AllowAnyMethod()
+               .AllowAnyHeader()
+               .AllowCredentials();
+    });
+});
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -14,16 +46,14 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
         options.JsonSerializerOptions.WriteIndented = true;
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
     });
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
 
 IdentityModelEventSource.ShowPII = true;
 builder.Services.AddSwaggerGen();
-builder.Logging.AddConsole(options =>
-{
-    options.LogToStandardErrorThreshold = LogLevel.Information;
-});
+// Remove duplicate logging configuration
 var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
@@ -34,8 +64,11 @@ logger.LogInformation("🚀 Application starting on {Addresses}", kestrelUrl);
 
 
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
-    .WithOrigins("http://localhost:3000"));
+// app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
+//     .WithOrigins("http://localhost:3000"));
+app.UseCors();
+app.UseRouting();
+
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -51,9 +84,16 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
     c.RoutePrefix = string.Empty;
 });
+// Add endpoints
+// Configure endpoints
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapHub<QuizHub>("/quizHub");
+    endpoints.MapHub<TmpHub>("/tmpHub");
+});
 
-// Map controller
-app.MapControllers();
+
 
 
 
@@ -67,7 +107,9 @@ try
     var scopedLogger = services.GetRequiredService<ILogger<Program>>();
 
     await context.Database.MigrateAsync();
+    await Seed.SeedGenres(context);  // Seed genres first
     await Seed.SeedUsers(context, userManager, roleManager);
+
 }
 catch (Exception ex)
 {

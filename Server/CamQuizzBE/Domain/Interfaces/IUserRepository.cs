@@ -11,5 +11,9 @@ public interface IUserRepository
     Task<IdentityResult> CreateUserAsync(RegisterDto registerDto);
     Task<AppUser?> GetUserByEmailAsync(string email);
     Task<AppUser?> GetUserByIdAsync(int id);
-    Task<PagedList<UserDto>> GetUsersAsync(UserParams userParams);
+    Task<PagedResult<UserDto>> GetUsersAsync(UserParams userParams, string? kw, int limit, int page, string? sort);
+
+    Task<IdentityResult> UpdateUserAsync(AppUser user);
+    Task<IdentityResult> DeleteUserAsync(AppUser user);
+
 }

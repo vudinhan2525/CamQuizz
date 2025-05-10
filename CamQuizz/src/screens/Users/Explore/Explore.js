@@ -206,7 +206,7 @@ export const Explore = () => {
         ]}>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
-              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} />
+              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} onPress={()=>{ navigation.navigate(SCREENS.QUIZ_CREATION)}} />
             </View>
             <Text style={styles.buttonText}>Tạo quiz</Text>
           </TouchableOpacity>

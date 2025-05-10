@@ -84,9 +84,9 @@ public class UserRepository(
         if (!string.IsNullOrEmpty(kw))
         {
             query = query.Where(u =>
-                u.FirstName.Contains(kw) ||
-                u.LastName.Contains(kw) ||
-                u.Email.Contains(kw));
+                u.FirstName!.Contains(kw) ||
+                u.LastName!.Contains(kw) ||
+                u.Email!.Contains(kw));
         }
 
         // Sorting (Handles sort parameter separately)

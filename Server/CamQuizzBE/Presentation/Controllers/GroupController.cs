@@ -24,7 +24,7 @@ public class GroupController : ControllerBase
             var groups = await _groupService.GetAllGroupsAsync();
             return Ok(groups);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return StatusCode(500, "An error occurred while retrieving groups");
         }

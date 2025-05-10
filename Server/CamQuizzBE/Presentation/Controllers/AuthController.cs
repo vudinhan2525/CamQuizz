@@ -16,7 +16,8 @@ class UserMap
 public class AuthController(
     ITokenService tokenService,
     UserManager<AppUser> userManager,
-    IMapper mapper
+    IMapper mapper,
+    IUserService userService 
 ) : BaseApiController
 {
     private Dictionary<string, UserMap> pincodeMap = [];
@@ -124,4 +125,45 @@ public class AuthController(
 
         return $"{hiddenEmailName}@{emailDomain}";
     }
+   [HttpPut("{id}")]
+   [Authorize]
+    public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
+    {
+        var result = await userService.UpdateUserAsync(id, updateUserDto);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+        return Ok("User updated successfully");
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var result = await userService.DeleteUserAsync(id);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+        return Ok("User deleted successfully");
+    }
+    [HttpGet("{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetUserById(int id)
+    {
+        var user = await userService.GetUserByIdAsync(id);
+        if (user == null) return NotFound("User not found");
+        
+        var userDto = mapper.Map<UserDto>(user);
+        return Ok(userDto);
+    }
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> GetAllUser(
+        [FromQuery] string? kw, 
+        [FromQuery] int limit = 10, 
+        [FromQuery] int page = 1, 
+        [FromQuery] string? sort = null)
+    {
+        var userParams = new UserParams(); 
+        var users = await userService.GetUsersAsync(userParams, kw, limit, page, sort);
+        return Ok(users);
+    }
+
+
 }

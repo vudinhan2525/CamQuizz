@@ -3,7 +3,8 @@ namespace CamQuizzBE.Applications.DTOs.Users;
 enum RegisterRole
 {
     Student,
-    Teacher
+    Teacher,
+    Admin
 }
 public class RegisterDto
 {

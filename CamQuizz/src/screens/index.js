@@ -14,6 +14,12 @@ const SCREENS = {
     QUESTION_SETTING:"Cài đặt câu hỏi",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
+    CREATE_STUDY_GROUP: "Tạo nhóm học tập",
+    STUDY_GROUP_DETAIL: "Chi tiết nhóm học tập",
+    RANKING: "Xếp hạng",
+    ENDQUIZ: "Kết thúc bài kiểm tra",
+    QUESTION_SETTING: "Cài đặt câu hỏi",
+    QUESTION_PLAY: "Trình phát câu hỏi",
   };
   
   export default SCREENS;

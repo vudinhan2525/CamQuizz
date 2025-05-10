@@ -14,6 +14,7 @@ const COLORS = {
     RAJAH: '#fbab60',
     Light_Cyan: '#e0ffff ',
     Fresh_Air: '#a6e7ff',
+    ORANGE: '#FF9F43',
   };
   
   export default COLORS;

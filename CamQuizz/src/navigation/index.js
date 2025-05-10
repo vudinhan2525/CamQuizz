@@ -10,13 +10,13 @@ import { Library } from '../screens/Users/Library';
 import { Report } from '../screens/Users/Report';
 import { Explore } from '../screens/Users/Explore/Explore';
 import { Account } from '../screens/Account';
-import { StudyGroup } from '../screens/Users/StudyGroup';
+import { StudyGroup } from '../screens/Users/StudyGroup/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
 import QuizCreation from '../screens/Users/Quiz/QuizCreation';
 import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
-
-
+import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
+import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -43,7 +43,16 @@ function UsersStackNavigation() {
                 component={FlashcardSetDetail}
                 options={{ headerShown: false }}
             />
-             
+            <Stack.Screen
+                name={SCREENS.CREATE_STUDY_GROUP}
+                component={CreateStudyGroup}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.STUDY_GROUP_DETAIL}
+                component={GroupScreen}
+                options={{ headerShown: false }}
+            />
         </Stack.Navigator>
     );
 }
@@ -119,6 +128,7 @@ const UserTabNavigator = () => {
                     tabBarIcon: ({ color, size }) => (
                         <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
             <Tab.Screen

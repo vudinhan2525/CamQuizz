@@ -17,6 +17,8 @@ import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
 import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
 import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
+import  GroupMembers from '../screens/Users/StudyGroup/GroupMembers';
+import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -53,6 +55,17 @@ function UsersStackNavigation() {
                 component={GroupScreen}
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name={SCREENS.GROUP_MEMBERS}
+                component={GroupMembers}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.GROUP_MESSAGE}
+                component={GroupMessage}
+                options={{ headerShown: false }}
+            />
+
         </Stack.Navigator>
     );
 }

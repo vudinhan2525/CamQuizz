@@ -20,6 +20,8 @@ const SCREENS = {
     ENDQUIZ: "Kết thúc bài kiểm tra",
     QUESTION_SETTING: "Cài đặt câu hỏi",
     QUESTION_PLAY: "Trình phát câu hỏi",
+    GROUP_MESSAGE:"Nhóm nhắn tin",
+    GROUP_MEMBERS:"Thành viên nhóm",
   };
   
   export default SCREENS;

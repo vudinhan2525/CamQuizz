@@ -14,6 +14,9 @@ const SCREENS = {
     QUESTION_SETTING:"Cài đặt câu hỏi",
     FLASHCARD_SET_DETAIL: "Chi tiết bộ flashcard",
     ADD_FLASHCARD: "Thêm FlashCard",
+    FlashCardPage: 'FlashCardPage',
+    SharedQuizz: 'SharedQuizz',
+    ReportDetail: 'Chi tiết báo cáo',
     CREATE_STUDY_GROUP: "Tạo nhóm học tập",
     STUDY_GROUP_DETAIL: "Chi tiết nhóm học tập",
     RANKING: "Xếp hạng",
@@ -22,6 +25,9 @@ const SCREENS = {
     QUESTION_PLAY: "Trình phát câu hỏi",
     GROUP_MESSAGE:"Nhóm nhắn tin",
     GROUP_MEMBERS:"Thành viên nhóm",
+    QUIZ_DETAIL: "Chi tiết bài kiểm tra",
+    LOBBY: "Sảnh chờ",
+    QUIZ_REPORT: "Báo cáo bài kiểm tra",
   };
   
   export default SCREENS;

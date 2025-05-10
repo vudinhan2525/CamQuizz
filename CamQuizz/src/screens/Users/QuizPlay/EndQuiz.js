@@ -19,7 +19,7 @@ const EndQuiz = ({ navigation, route }) => {
             </ScrollView>
             <TouchableOpacity 
                 style={styles.reportButton}
-                onPress={() => navigation.navigate('QuizReport')}
+                onPress={() => navigation.navigate(SCREENS.QUIZ_REPORT)}
             >
                 <Text style={styles.buttonText}>View Report</Text>
             </TouchableOpacity>

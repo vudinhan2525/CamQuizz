@@ -19,6 +19,11 @@ import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
 import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
 import  GroupMembers from '../screens/Users/StudyGroup/GroupMembers';
 import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
+import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
+import SharedQuizz from '../screens/Users/Library/SharedQuizz';
+import { ReportDetail } from '../components/Report/ReportDetail';
+
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -40,6 +45,8 @@ function UsersStackNavigation() {
                 options={{ headerShown: false }}
             />
 
+            
+             
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
                 component={FlashcardSetDetail}
@@ -87,6 +94,49 @@ function ExploreStack() {
     );
 }
 
+function LibraryStack() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.LIBRARY}>
+            <Stack.Screen
+                name={SCREENS.LIBRARY}
+                component={Library}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.FlashCardPage}
+                component={FlashCardPage}
+                options={{ title: 'Thẻ học bài' }}
+            />
+            <Stack.Screen   
+            name={SCREENS.SharedQuizz}
+            component={SharedQuizz}
+            options={{ title: 'Được chia sẻ' }}
+            />
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_SET_DETAIL}
+                component={FlashcardSetDetail}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
+
+function ReportStack() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.REPORT}>
+            <Stack.Screen
+                name={SCREENS.REPORT}
+                component={Report}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ReportDetail"
+                component={ReportDetail}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
 
 const UserTabNavigator = () => {
     const { colors } = useTheme();
@@ -114,7 +164,7 @@ const UserTabNavigator = () => {
             />
             <Tab.Screen
                 name={SCREENS.LIBRARY}
-                component={Library}
+                component={LibraryStack}
                 options={{
                    
                     tabBarIcon: ({ focused, color, size }) => (
@@ -125,7 +175,7 @@ const UserTabNavigator = () => {
             />
             <Tab.Screen
                 name={SCREENS.REPORT}
-                component={Report}
+                component={ReportStack}
                 options={{
                     title: 'Báo cáo',
                     tabBarIcon: ({ color, size }) => (

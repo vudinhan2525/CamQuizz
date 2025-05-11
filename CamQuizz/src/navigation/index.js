@@ -10,13 +10,27 @@ import { Library } from '../screens/Users/Library';
 import { Report } from '../screens/Users/Report';
 import { Explore } from '../screens/Users/Explore/Explore';
 import { Account } from '../screens/Account';
-import { StudyGroup } from '../screens/Users/StudyGroup';
+import { StudyGroup } from '../screens/Users/StudyGroup/StudyGroup';
 import { ExploreSearch } from '../screens/Users/Explore/ExploreSearch';
 import QuizCreation from '../screens/Users/Quiz/QuizCreation';
 import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
+import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
+import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
+import  GroupMembers from '../screens/Users/StudyGroup/GroupMembers';
+import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
+import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
+import SharedQuizz from '../screens/Users/Library/SharedQuizz';
+import { ReportDetail } from '../components/Report/ReportDetail';
+import FlashcardStudy from '../screens/Users/FlashCard/FlashCardStudy';
+import Lobby from '../screens/Users/QuizPlay/Lobby';
+import QuestionPlay from '../screens/Users/QuizPlay/QuestionPlay';
+import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
+import QuizReport from '../screens/Users/QuizPlay/QuizReport';
+import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
 
-
+import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
+import Ranking from '../screens/Users/QuizPlay/Ranking';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -38,12 +52,75 @@ function UsersStackNavigation() {
                 options={{ headerShown: false }}
             />
 
+            
+             
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
                 component={FlashcardSetDetail}
                 options={{ headerShown: false }}
             />
-             
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_STUDY}
+                component={FlashcardStudy}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.CREATE_STUDY_GROUP}
+                component={CreateStudyGroup}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.STUDY_GROUP_DETAIL}
+                component={GroupScreen}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.GROUP_MEMBERS}
+                component={GroupMembers}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.GROUP_MESSAGE}
+                component={GroupMessage}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUIZ_DETAIL}
+                component={QuizDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.LOBBY}
+                component={Lobby}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY}
+                component={QuestionPlay}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.ENDQUIZ}
+                component={EndQuiz}
+                options={{ headerShown: false }}
+            />
+
+            <Stack.Screen
+                name={SCREENS.QUIZ_REPORT}
+                component={QuizReport}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.RANKING}
+                component={Ranking}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY_SETTING}
+                component={QuestionPlaySetting}
+                options={{ headerShown: false }}
+            />
+
         </Stack.Navigator>
     );
 }
@@ -65,6 +142,49 @@ function ExploreStack() {
     );
 }
 
+function LibraryStack() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.LIBRARY}>
+            <Stack.Screen
+                name={SCREENS.LIBRARY}
+                component={Library}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.FlashCardPage}
+                component={FlashCardPage}
+                options={{ title: 'Thẻ học bài' }}
+            />
+            <Stack.Screen   
+            name={SCREENS.SharedQuizz}
+            component={SharedQuizz}
+            options={{ title: 'Được chia sẻ' }}
+            />
+            <Stack.Screen
+                name={SCREENS.FLASHCARD_SET_DETAIL}
+                component={FlashcardSetDetail}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
+
+function ReportStack() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.REPORT}>
+            <Stack.Screen
+                name={SCREENS.REPORT}
+                component={Report}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name="ReportDetail"
+                component={ReportDetail}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
 
 const UserTabNavigator = () => {
     const { colors } = useTheme();
@@ -92,7 +212,7 @@ const UserTabNavigator = () => {
             />
             <Tab.Screen
                 name={SCREENS.LIBRARY}
-                component={Library}
+                component={LibraryStack}
                 options={{
                    
                     tabBarIcon: ({ focused, color, size }) => (
@@ -103,7 +223,7 @@ const UserTabNavigator = () => {
             />
             <Tab.Screen
                 name={SCREENS.REPORT}
-                component={Report}
+                component={ReportStack}
                 options={{
                     title: 'Báo cáo',
                     tabBarIcon: ({ color, size }) => (
@@ -119,6 +239,7 @@ const UserTabNavigator = () => {
                     tabBarIcon: ({ color, size }) => (
                         <MaterialCommunityIcons name="account-group-outline" size={size} color={color} />
                     ),
+                    headerShown: false,
                 }}
             />
             <Tab.Screen

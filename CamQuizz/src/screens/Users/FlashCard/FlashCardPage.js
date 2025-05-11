@@ -2,16 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, StyleSheet, ScrollView } from 'react-native';
 import { Home, Search, Menu, Plus, Cloud, BarChart, Settings, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useToast } from '../../../hooks/use-toast';
+import Toast from 'react-native-toast-message';
 import PropTypes from 'prop-types';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
-import FlashcardEditor from '../../../components/Flash-Card/FlashcardEditor';
-import FlashcardView from '../../../components/Flash-Card/FlashcardView';
 
 const FlashCardPage = () => {
   const navigation = useNavigation();
-  const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newSetName, setNewSetName] = useState('');
   const [flashcardSets, setFlashcardSets] = useState([
@@ -25,7 +22,11 @@ const FlashCardPage = () => {
 
   const handleCreateSet = () => {
     if (!newSetName.trim()) {
-      toast({ title: 'Error', description: 'Set name cannot be empty', variant: 'destructive' });
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Set name cannot be empty'
+      });
       return;
     }
 
@@ -42,35 +43,20 @@ const FlashCardPage = () => {
     setNewSetName('');
     setIsCreateDialogOpen(false);
 
-    toast({ title: 'Success', description: `Flashcard set "${newSetName}" created successfully` });
+    Toast.show({
+      type: 'success',
+      text1: 'Success',
+      text2: `Flashcard set "${newSetName}" created successfully`
+    });
   };
 
   return (
     <View style={styles.container}>
-      {/* Today's stats */}
-      <View style={styles.statsContainer}>
-        <Text style={styles.statsTitle}>Today's List</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>New</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>0</Text>
-            <Text style={styles.statLabel}>Estimated(min)</Text>
-          </View>
-        </View>
-        <Text style={styles.statsFooter}>Studied 0 cards in 0 minutes today</Text>
-      </View>
 
       {/* Create Set Button */}
       <TouchableOpacity style={styles.createButton} onPress={() => setIsCreateDialogOpen(true)}>
         <Plus size={20} color="white" />
-        <Text style={styles.createButtonText}>Create Set</Text>
+        <Text style={styles.createButtonText}>Tạo bộ thẻ học bài</Text>
       </TouchableOpacity>
 
       {/* Flashcard Sets List */}
@@ -80,15 +66,15 @@ const FlashCardPage = () => {
             <View style={styles.flashcardHeader}>
               <Text style={styles.flashcardTitle}>{set.title}</Text>
               <TouchableOpacity style={styles.studyButton} onPress={() => handleOpenSet(set.id)}>
-                <Text style={styles.studyButtonText}>Study</Text>
+                  <Text style={styles.studyButtonText}>Học</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.flashcardDetail}>Total: {set.totalCards}/{set.totalCards}</Text>
+            <Text style={styles.flashcardDetail}>Tổng cộng: {set.totalCards}/{set.totalCards}</Text>
             <View style={styles.separator} />
             <View style={styles.flashcardStats}>
-              <Text>New: <Text style={styles.statBold}>{set.newCards}</Text></Text>
-              <Text>Learning: <Text style={styles.statBold}>{set.learningCards}</Text></Text>
-              <Text>Review: <Text style={styles.statBold}>{set.reviewCards}</Text></Text>
+              <Text>Mới: <Text style={styles.statBold}>{set.newCards}</Text></Text>
+              <Text>Đang học: <Text style={styles.statBold}>{set.learningCards}</Text></Text>
+              <Text>Ôn tập: <Text style={styles.statBold}>{set.reviewCards}</Text></Text>
             </View>
           </View>
         ))}
@@ -98,17 +84,17 @@ const FlashCardPage = () => {
       <Modal visible={isCreateDialogOpen} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Create set</Text>
+            <Text style={styles.modalTitle}>Tạo bộ</Text>
             <TextInput
               style={styles.modalInput}
               value={newSetName}
               onChangeText={setNewSetName}
-              placeholder="Set Flashcard"
+              placeholder="Bộ học bài"
               autoFocus
             />
             <View style={styles.modalActions}>
               <TouchableOpacity onPress={() => setIsCreateDialogOpen(false)}>
-                <Text style={styles.modalCancel}>CANCEL</Text>
+                <Text style={styles.modalCancel}>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={handleCreateSet}>
                 <Text style={styles.modalOk}>OK</Text>
@@ -139,7 +125,7 @@ export default FlashCardPage;
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#F3F4F6' 
+    backgroundColor: '#fff' 
   },
   header: { 
     flexDirection: 'row', 
@@ -148,7 +134,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', 
     padding: 16, 
     borderBottomWidth: 1, 
-    borderBottomColor: '#DDD' 
+    borderBottomColor: COLORS.BLUE
   },
   headerTitle: { 
     fontSize: 22, 
@@ -191,7 +177,7 @@ const styles = StyleSheet.create({
   createButton: { 
     flexDirection: 'row', 
     backgroundColor: COLORS.BLUE, 
-    padding: 10, borderRadius: 20, 
+    padding: 10, borderRadius: 8, 
     alignItems: 'center', 
     justifyContent: 'center', 
     margin: 16 
@@ -207,7 +193,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF', 
     padding: 16, 
     borderRadius: 8, 
-    marginBottom: 16 
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE 
   },
   flashcardHeader: { 
     flexDirection: 'row', 
@@ -249,7 +237,7 @@ const styles = StyleSheet.create({
   },
   modalInput: { 
     borderBottomWidth: 2, 
-    borderBottomColor: 'red', 
+    borderBottomColor: COLORS.BLUE, 
     padding: 8, 
     fontSize: 18, 
     marginBottom: 16 
@@ -263,6 +251,6 @@ const styles = StyleSheet.create({
     color: '#777' 
   },
   modalOk: { 
-    color: '#06B6D4' 
+    color: COLORS.BLUE,
   },
 });

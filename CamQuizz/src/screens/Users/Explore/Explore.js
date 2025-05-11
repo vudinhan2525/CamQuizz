@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Animated,
-  Platform, FlatList
+  Platform, FlatList, Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
@@ -11,6 +11,7 @@ import COLORS from '../../../constant/colors';
 import CategorySection from '../../../components/CategorySection';
 import QuizCard from '../../../components/QuizCard';
 import SCREENS from '../../index';
+import { mockPlayers, mockQuiz } from '../../../components/data/MockQuizPlayData';
 export const Explore = () => {
   const navigation = useNavigation();
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -41,6 +42,30 @@ export const Explore = () => {
     setSelectedCategory(category);
   };
 
+  // Thêm hàm xử lý tham gia trò chơi
+  const handleJoinGame = () => {
+    if (!joinCode.trim()) {
+      // Hiển thị thông báo nếu không nhập mã
+      Alert.alert('Thông báo', 'Vui lòng nhập mã tham gia');
+      return;
+    }
+    
+    const roomFound = true; 
+    
+    if (roomFound) {
+      // Điều hướng đến màn hình Lobby với vai trò người chơi (không phải host)
+      navigation.navigate(SCREENS.LOBBY, { 
+        quizId: mockQuiz.id, 
+        isHost: false,
+        roomCode: joinCode
+      });
+      
+      setJoinCode('');
+    } else {
+      Alert.alert('Thông báo', 'Không tìm thấy phòng với mã tham gia này');
+    }
+  };
+
 
   const content = () => (
     <>
@@ -53,7 +78,7 @@ export const Explore = () => {
           value={joinCode}
           onChangeText={setJoinCode}
         />
-        <TouchableOpacity style={styles.joinButton}>
+        <TouchableOpacity style={styles.joinButton} onPress={handleJoinGame}>
           <Text style={styles.joinButtonText}>Tham gia trò chơi</Text>
         </TouchableOpacity>
       </View>
@@ -100,7 +125,7 @@ export const Explore = () => {
           style={{ marginHorizontal: 10 }}
           data={quizzes}
           keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => <QuizCard quiz={item} />}
+          renderItem={({ item }) => <QuizCard quiz={item} onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quiz: item })} />}
           numColumns={2}
           contentContainerStyle={styles.gridContainer}
           ListFooterComponent={
@@ -390,7 +415,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   headerCollapsed: {
-    height: 80, // Giữ lại chỉ phần thanh search
+    height: 80, 
     justifyContent: 'center',
   },
 

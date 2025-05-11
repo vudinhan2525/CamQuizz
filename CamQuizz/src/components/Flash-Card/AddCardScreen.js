@@ -25,7 +25,7 @@ const AddCardScreen = ({ onClose, onSave }) => {
           <ArrowLeft size={24} color={"black"} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Add Card</Text>
+        <Text style={styles.headerTitle}>Thêm thẻ</Text>
 
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={handleSave}>
@@ -36,18 +36,10 @@ const AddCardScreen = ({ onClose, onSave }) => {
 
       {/* Content */}
       <ScrollView style={styles.content}>
-        {/* Card Type Selector */}
-        <View style={styles.optionContainer}>
-          <Text style={styles.optionLabel}>Type:</Text>
-          <View style={styles.optionValue}>
-            <Text>Basic Model</Text>
-            <ChevronDown size={20} />
-          </View>
-        </View>
 
         {/* Set Selector */}
         <View style={styles.optionContainer}>
-          <Text style={styles.optionLabel}>Set:</Text>
+          <Text style={styles.optionLabel}>Bộ thẻ:</Text>
           <View style={styles.optionValue}>
             <Text>{id}</Text>
             <ChevronDown size={20} />
@@ -56,74 +48,43 @@ const AddCardScreen = ({ onClose, onSave }) => {
 
         {/* Front Card */}
         <View style={styles.cardContainer}>
-          <Text style={styles.cardLabel}>Front</Text>
+          <Text style={styles.cardLabel}>Trước</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Enter front text"
+            placeholder="Điền nội dung mặt trước"
             value={frontText}
             onChangeText={setFrontText}
             multiline
           />
           <View style={styles.iconRow}>
             <TouchableOpacity>
-              <Headphones size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Mic size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
               <Image size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Camera size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Type size={24} color={COLORS.BLUE} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Back Card */}
         <View style={styles.cardContainer}>
-          <Text style={styles.cardLabel}>Back</Text>
+          <Text style={styles.cardLabel}>Sau</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Enter back text"
+            placeholder="Điền nội dung mặt sau"
             value={backText}
             onChangeText={setBackText}
             multiline
           />
           <View style={styles.iconRow}>
-            <TouchableOpacity>
-              <Headphones size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Mic size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
+          
             <TouchableOpacity>
               <Image size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Camera size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Type size={24} color={COLORS.BLUE} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Tags */}
-        <View style={styles.cardContainer}>
-          <Text style={styles.cardLabel}>Tags:</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Add tags"
-          />
-        </View>
 
         {/* Card Counter */}
         <View style={styles.cardContainer}>
-          <Text style={styles.cardLabel}>Cards: Card 1</Text>
+          <Text style={styles.cardLabel}>Thẻ: Thẻ 1</Text>
         </View>
       </ScrollView>
     </View>
@@ -144,7 +105,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: { 
     fontSize: 18, 
-    fontWeight: "bold" 
+    fontWeight: "bold",
+    color: COLORS.BLUE 
+
 },
   headerActions: { 
     flexDirection: "row", 
@@ -167,8 +130,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.BLUE,
   },
-  optionLabel: { fontSize: 16, fontWeight: "500" },
-  optionValue: { flexDirection: "row", alignItems: "center", gap: 8 },
+  optionLabel: { 
+    fontSize: 16, 
+    fontWeight: "500",
+    color: COLORS.BLUE, 
+  },
+  optionValue: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    gap: 8 
+  },
 
   cardContainer: {
     backgroundColor: "#FFF",
@@ -181,7 +152,9 @@ const styles = StyleSheet.create({
   cardLabel: { 
     fontSize: 16, 
     fontWeight: "500", 
-    marginBottom: 8 
+    marginBottom: 8,
+    color: COLORS.BLUE 
+
 },
   textInput: {
     borderWidth: 1,
@@ -190,12 +163,13 @@ const styles = StyleSheet.create({
     padding: 12,
     minHeight: 100,
     textAlignVertical: "top",
-    backgroundColor: "#F9FAFB",
+    backgroundColor: COLORS.Fresh_Air,
   },
   iconRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
     marginTop: 8,
+    marginRight: 20,
     gap: 12,
   },
 });

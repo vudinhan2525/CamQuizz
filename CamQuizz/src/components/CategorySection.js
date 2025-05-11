@@ -2,8 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import COLORS from '../constant/colors';
 import QuizCard from './QuizCard'; 
+import { useNavigation } from '@react-navigation/native';
+import SCREENS from '../screens';
 
 const CategorySection = ({ category, quizzes, onSeeMore }) => {
+  const navigation = useNavigation();
+  
   return (
     <View style={styles.categorySection}>
       <View style={styles.categoryHeader}>
@@ -16,7 +20,12 @@ const CategorySection = ({ category, quizzes, onSeeMore }) => {
         style={{ marginHorizontal: 20 }}
         data={quizzes.slice(0, 5)}
         keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => <QuizCard quiz={item} />}
+        renderItem={({ item }) => (
+          <QuizCard 
+            quiz={item} 
+            onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quiz: item })} 
+          />
+        )}
         horizontal
         showsHorizontalScrollIndicator={false}
       />

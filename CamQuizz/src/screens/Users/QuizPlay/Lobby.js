@@ -27,15 +27,21 @@ const Lobby = ({ navigation, route }) => {
 
     const handleStartGame = () => {
         // Navigate to the first question
-        navigation.navigate(SCREENS.QUESTION_PLAY, {
-            duration: 60,
-            isHost: true,
-            multipleCorrect: false,
-            question: 'What is the capital of France?',
-            answers: ['Paris', 'London', 'Berlin', 'Madrid'],
-            showRankingAfterEnd: true,
-            rankingDisplayTime: 10
-        });
+     navigation.navigate(SCREENS.QUESTION_PLAY, {
+        duration: 60,
+        isHost: true,
+        multipleCorrect: false,
+        question: 'What is the capital of France?',
+        questionImage: 'https://example.com/paris.jpg', // optional
+        answers: [
+            { text: 'Paris', image: 'https://example.com/paris.jpg' },
+            { text: 'London', image: 'https://example.com/london.jpg' },
+            { text: 'Berlin', image: null },
+            { text: 'Madrid', image: null }
+        ],
+        showRankingAfterEnd: true,         
+        rankingDisplayTime: 10  
+    });
     };
 
     const renderPlayerItem = ({ item }) => (

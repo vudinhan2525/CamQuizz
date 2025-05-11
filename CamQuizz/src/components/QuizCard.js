@@ -1,18 +1,26 @@
 import React from 'react';
 import { View, Text, StyleSheet,Dimensions, Image } from 'react-native';
 import COLORS from '../constant/colors';
+import { useNavigation } from '@react-navigation/native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
+import SCREENS from '../screens';
 const tmpUrl='https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
 const { width } = Dimensions.get('window'); 
+
 const QuizCard = ({ quiz, attemptText = "lượt thi" }) => {
+  const navigation = useNavigation();
+  const handlePress = () => {
+    navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: quiz.id });
+  };
   return (
-    <View style={styles.quizCard}>
+    <TouchableOpacity style={styles.quizCard}  onPress={() => handlePress()}>
       <Image source={{ uri: tmpUrl||quiz.image }} style={styles.quizImage} />
       <View style={styles.quizInfo}>
         <Text style={styles.quizTitle}>{quiz.title}</Text>
         <Text style={styles.quizQuestions}>{quiz.questions} câu hỏi</Text>
         <Text style={styles.quizAttempts}>{quiz.attempts} {attemptText}</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

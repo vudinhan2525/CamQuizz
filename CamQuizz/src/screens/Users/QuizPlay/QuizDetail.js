@@ -5,8 +5,19 @@ import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
 
 const QuizDetail = ({ navigation, route }) => {
-    const { quiz } = route.params;
-    
+    //const { quiz } = route.params;
+    const {quizId} = route.params;
+    const [quiz, setQuiz] = React.useState({
+        id: 'quiz001',
+        title: 'Kiến thức pháp luật cơ bản',
+        questions: 20,
+        duration: 30,
+        attempts: 500,
+        authorName: 'Nguyễn Văn A',
+        description: 'Quiz nhằm kiểm tra kiến thức pháp luật căn bản.',
+        image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
+        topics: ['Pháp luật']
+    });
     return (
         <View style={styles.container}>
             <ScrollView>

@@ -5,8 +5,19 @@ import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
 
 const QuizDetail = ({ navigation, route }) => {
-    const { quiz } = route.params;
-    
+    //const { quiz } = route.params;
+    const {quizId} = route.params;
+    const [quiz, setQuiz] = React.useState({
+        id: 'quiz001',
+        title: 'Kiến thức pháp luật cơ bản',
+        questions: 20,
+        duration: 30,
+        attempts: 500,
+        authorName: 'Nguyễn Văn A',
+        description: 'Quiz nhằm kiểm tra kiến thức pháp luật căn bản.',
+        image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
+        topic: 'Pháp luật'
+    });
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -62,11 +73,9 @@ const QuizDetail = ({ navigation, route }) => {
                     {/* Topics */}
                     <Text style={styles.sectionTitle}>Chủ đề</Text>
                     <View style={styles.topicsContainer}>
-                        {quiz.topics && quiz.topics.map((topic, index) => (
-                            <View key={index} style={styles.topicTag}>
-                                <Text style={styles.topicText}>{topic}</Text>
-                            </View>
-                        ))}
+                        <View style={styles.topicTag}>
+                            <Text style={styles.topicText}>{quiz.topic}</Text>
+                        </View>
                     </View>
                 </View>
             </ScrollView>
@@ -133,7 +142,7 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: COLORS.GRAY_LIGHT,
+        backgroundColor: COLORS.GRAY_BG,
         marginVertical: 16,
     },
     authorContainer: {
@@ -181,7 +190,7 @@ const styles = StyleSheet.create({
     buttonContainer: {
         padding: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderTopColor: COLORS.GRAY_BG,
     },
     playButton: {
         backgroundColor: COLORS.BLUE,

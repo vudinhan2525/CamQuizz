@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart } from 'react-native-chart-kit';
 import COLORS from '../../../constant/colors';
@@ -18,7 +18,7 @@ const chartConfig = {
 };
 
 const QuizReport = ({ navigation, route }) => {
-  const { quizId } = route.params;
+  const { roomId } = route.params;
   const [activeTab, setActiveTab] = useState('personal');
   
   // Mock data for personal results
@@ -27,7 +27,7 @@ const QuizReport = ({ navigation, route }) => {
     totalQuestions: 10,
     correctAnswers: 7.5,
     completedAt: new Date(),
-    timeSpent: '8:45',
+    time: '8:45',
     answers: [
       { questionId: 1, questionText: 'What is the capital of France?', isCorrect: true, userAnswer: 'Paris', correctAnswer: 'Paris' },
       { questionId: 2, questionText: 'Which planet is known as the Red Planet?', isCorrect: true, userAnswer: 'Mars', correctAnswer: 'Mars' },
@@ -44,20 +44,121 @@ const QuizReport = ({ navigation, route }) => {
   
   // Mock data for overall results
   const overallResults = {
-    totalAttempts: 45,
+    time: "8.45",
     uniqueParticipants: 32,
     averageScore: 68,
     questionPerformance: [
-      { id: 1, text: 'What is the capital of France?', correctPercentage: 92 },
-      { id: 2, text: 'Which planet is known as the Red Planet?', correctPercentage: 85 },
-      { id: 3, text: 'What is the largest ocean on Earth?', correctPercentage: 62 },
-      { id: 4, text: 'Who wrote "Romeo and Juliet"?', correctPercentage: 78 },
-      { id: 5, text: 'What is the chemical symbol for gold?', correctPercentage: 70 },
-      { id: 6, text: 'Which country is known as the Land of the Rising Sun?', correctPercentage: 88 },
-      { id: 7, text: 'What is the tallest mountain in the world?', correctPercentage: 95 },
-      { id: 8, text: 'Who painted the Mona Lisa?', correctPercentage: 45 },
-      { id: 9, text: 'What is the largest mammal on Earth?', correctPercentage: 82 },
-      { id: 10, text: 'Which element has the chemical symbol "O"?', correctPercentage: 58 },
+      { 
+        id: 1, 
+        text: 'What is the capital of France?',
+        image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg', // Optional question image
+        correctPercentage: 92,
+        options: [
+          { id: 1, text: 'Paris', isCorrect: true, percentage: 92, image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' },
+          { id: 2, text: 'London', isCorrect: false, percentage: 5, image: null },
+          { id: 3, text: 'Berlin', isCorrect: false, percentage: 2, image: null },
+          { id: 4, text: 'Rome', isCorrect: false, percentage: 1, image: null }
+        ]
+      },
+      { 
+        id: 2, 
+        text: 'Which planet is known as the Red Planet?', 
+        correctPercentage: 85,
+        options: [
+          { id: 1, text: 'Mars', isCorrect: true, percentage: 85 },
+          { id: 2, text: 'Venus', isCorrect: false, percentage: 10 },
+          { id: 3, text: 'Earth', isCorrect: false, percentage: 3 },
+          { id: 4, text: 'Jupiter', isCorrect: false, percentage: 2 }
+        ]
+      },
+      { 
+        id: 3, 
+        text: 'What is the largest ocean on Earth?', 
+        correctPercentage: 62,
+        options: [
+          { id: 1, text: 'Atlantic', isCorrect: false, percentage: 62 },
+          { id: 2, text: 'Pacific', isCorrect: true, percentage: 38 },
+          { id: 3, text: 'Indian', isCorrect: false, percentage: 0 },
+          { id: 4, text: 'Arctic', isCorrect: false, percentage: 0 }
+        ]
+      },
+      { 
+        id: 4, 
+        text: 'Who wrote "Romeo and Juliet"?', 
+        correctPercentage: 78,
+        options: [
+          { id: 1, text: 'William Shakespeare', isCorrect: true, percentage: 78 },
+          { id: 2, text: 'Shakespeare', isCorrect: false, percentage: 15 },
+          { id: 3, text: 'A. Shakespeare', isCorrect: false, percentage: 5 },
+          { id: 4, text: 'B. Shakespeare', isCorrect: false, percentage: 2 }
+        ]
+      },
+      { 
+        id: 5, 
+        text: 'What is the chemical symbol for gold?', 
+        correctPercentage: 70,
+        options: [
+          { id: 1, text: 'Au', isCorrect: true, percentage: 70 },
+          { id: 2, text: 'Ag', isCorrect: false, percentage: 15 },
+          { id: 3, text: 'Cu', isCorrect: false, percentage: 10 },
+          { id: 4, text: 'Fe', isCorrect: false, percentage: 5 }
+        ]
+      },
+      { 
+        id: 6, 
+        text: 'Which country is known as the Land of the Rising Sun?', 
+        correctPercentage: 88,
+        options: [
+          { id: 1, text: 'Japan', isCorrect: true, percentage: 88 },
+          { id: 2, text: 'China', isCorrect: false, percentage: 8 },
+          { id: 3, text: 'South Korea', isCorrect: false, percentage: 2 },
+          { id: 4, text: 'North Korea', isCorrect: false, percentage: 2 }
+        ]
+      },
+      { 
+        id: 7, 
+        text: 'What is the tallest mountain in the world?', 
+        correctPercentage: 95,
+        options: [
+          { id: 1, text: 'Mount Everest', isCorrect: true, percentage: 95 },
+          { id: 2, text: 'K2', isCorrect: false, percentage: 3 },
+          { id: 3, text: 'Kangchenjunga', isCorrect: false, percentage: 1 },
+          { id: 4, text: 'Lhotse', isCorrect: false, percentage: 1 }
+        ]
+      },
+      { 
+        id: 8, 
+        text: 'Who painted the Mona Lisa?', 
+        correctPercentage: 45,
+        options: [
+          { id: 1, text: 'Leonardo da Vinci', isCorrect: true, percentage: 45 },
+          { id: 2, text: 'Michelangelo', isCorrect: false, percentage: 40 },
+          { id: 3, text: 'Raphael', isCorrect: false, percentage: 10 },
+          { id: 4, text: 'Donatello', isCorrect: false, percentage: 5 }
+        ]
+      },
+      { 
+        id: 9, 
+        text: 'What is the largest mammal on Earth?', 
+        correctPercentage: 82,
+        options: [
+          { id: 1, text: 'Blue Whale', isCorrect: true, percentage: 82 },
+          { id: 2, text: 'Elephant', isCorrect: false, percentage: 15 },
+          { id: 3, text: 'Giraffe', isCorrect: false, percentage: 2 },
+          { id: 4, text: 'Hippopotamus', isCorrect: false, percentage: 1 }
+        ]
+      },
+      { 
+        id: 10, 
+        text: 'Which element has the chemical symbol "O"?', 
+        correctPercentage: 58,
+        options: [
+          { id: 1, text: 'Oxygen', isCorrect: true, percentage: 58 },
+          { id: 2, text: 'Osmium', isCorrect: false, percentage: 30 },
+          { id: 3, text: 'Ozone', isCorrect: false, percentage: 10 },
+          { id: 4, text: 'Oganesson', isCorrect: false, percentage: 2 }
+        ]
+      },
     ],
     scoreDistribution: [
       { range: '0-20%', count: 2 },
@@ -82,7 +183,7 @@ const QuizReport = ({ navigation, route }) => {
           Hoàn thành: {personalResult.completedAt.toLocaleDateString()}
         </Text>
         <Text style={styles.timeSpent}>
-          Thời gian làm bài: {personalResult.timeSpent}
+          Thời điểm làm bài: {personalResult.time}
         </Text>
       </View>
 
@@ -130,9 +231,9 @@ const QuizReport = ({ navigation, route }) => {
       {/* Statistics Cards */}
       <View style={styles.statisticsContainer}>
         <View style={styles.statCard}>
-          <Ionicons name="bar-chart-outline" size={20} color={COLORS.BLUE}/>
-          <Text style={styles.statText}>Số lượt làm bài</Text>
-          <Text style={styles.statValue}>{overallResults.totalAttempts}</Text>
+          <Ionicons name="alarm-outline" size={20} color={COLORS.BLUE}/>
+          <Text style={styles.statText}>Thời điểm làm bài</Text>
+          <Text style={styles.statValue}>{overallResults.time}</Text>
         </View>
 
         <View style={styles.statCard}>
@@ -172,17 +273,65 @@ const QuizReport = ({ navigation, route }) => {
           <View style={styles.questionHeader}>
             <Text style={styles.questionText}>{question.text}</Text>
           </View>
-          <View style={styles.performanceContainer}>
-            <Text style={styles.correctPercentage}>{question.correctPercentage}%</Text>
-            <View style={styles.progressBarContainer}>
-              <View 
-                style={[
-                  styles.progressBar, 
-                  { width: `${question.correctPercentage}%` }
-                ]} 
+          
+          {/* Question Image */}
+          {question.image && (
+            <View style={styles.questionImageContainer}>
+              <Image 
+                source={{ uri: question.image }} 
+                style={styles.questionImage}
+                resizeMode="cover"
               />
             </View>
-          </View>
+          )}
+          
+          {/* Display all answer options */}
+          {question.options && question.options.map(option => (
+            <View key={option.id} style={styles.optionContainer}>
+              <View style={styles.optionHeader}>
+                <Text style={[
+                  styles.optionText, 
+                  option.isCorrect && styles.correctOptionText
+                ]}>
+                  {option.text}
+                  {option.isCorrect && (
+                    <Ionicons name="checkmark-circle" size={16} color={COLORS.GREEN} style={{marginLeft: 8}} />
+                  )}
+                </Text>
+              </View>
+              
+              {/* Option Image */}
+              {option.image && (
+                <View style={styles.optionImageContainer}>
+                  <Image 
+                    source={{ uri: option.image }} 
+                    style={styles.optionImage}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
+              
+              <View style={styles.performanceContainer}>
+                <Text style={[
+                  styles.correctPercentage,
+                  option.isCorrect ? {color: COLORS.GREEN} : {color: COLORS.BLUE}
+                ]}>
+                  {option.percentage}%
+                </Text>
+                <View style={styles.progressBarContainer}>
+                  <View 
+                    style={[
+                      styles.progressBar, 
+                      { 
+                        width: `${option.percentage}%`,
+                        backgroundColor: option.isCorrect ? COLORS.GREEN : COLORS.BLUE 
+                      }
+                    ]} 
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
         </View>
       ))}
     </ScrollView>
@@ -248,7 +397,7 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: COLORS.WHITE,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.GRAY_LIGHT,
+    borderBottomColor: COLORS.GRAY_BG,
   },
   backButton: {
     marginRight: 16,
@@ -261,7 +410,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: COLORS.WHITE,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.GRAY_LIGHT,
+    borderBottomColor: COLORS.GRAY_BG,
   },
   tabButton: {
     flex: 1,
@@ -425,13 +574,51 @@ const styles = StyleSheet.create({
   progressBarContainer: {
     flex: 1,
     height: 12,
-    backgroundColor: COLORS.GRAY_LIGHT,
+    backgroundColor: COLORS.GRAY_BG,
     borderRadius: 6,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
     backgroundColor: COLORS.BLUE,
+  },
+  optionContainer: {
+    marginTop: 8,
+    marginLeft: 8,
+  },
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  correctOptionText: {
+    color: COLORS.GREEN,
+    fontWeight: '500',
+  },
+  questionImageContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  questionImage: {
+    width: '100%',
+    height: '100%',
+  },
+  optionImageContainer: {
+    width: '100%',
+    height: 100,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginVertical: 8,
+  },
+  optionImage: {
+    width: '100%',
+    height: '100%',
   },
 });
 

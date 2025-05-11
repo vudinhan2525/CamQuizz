@@ -29,7 +29,8 @@ import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
 import QuizReport from '../screens/Users/QuizPlay/QuizReport';
 import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
 
-
+import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
+import Ranking from '../screens/Users/QuizPlay/Ranking';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -83,8 +84,11 @@ function UsersStackNavigation() {
                 component={GroupMessage}
                 options={{ headerShown: false }}
             />
-
-            {/* Thêm các màn hình QuizPlay */}
+            <Stack.Screen
+                name={SCREENS.QUIZ_DETAIL}
+                component={QuizDetail}
+                options={{ headerShown: false }}
+            />
             <Stack.Screen
                 name={SCREENS.LOBBY}
                 component={Lobby}
@@ -100,14 +104,20 @@ function UsersStackNavigation() {
                 component={EndQuiz}
                 options={{ headerShown: false }}
             />
+
             <Stack.Screen
                 name={SCREENS.QUIZ_REPORT}
                 component={QuizReport}
                 options={{ headerShown: false }}
             />
             <Stack.Screen
-                name={SCREENS.QUIZ_DETAIL}
-                component={QuizDetail}
+                name={SCREENS.RANKING}
+                component={Ranking}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY_SETTING}
+                component={QuestionPlaySetting}
                 options={{ headerShown: false }}
             />
 

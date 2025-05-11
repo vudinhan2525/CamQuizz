@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
-import SCREEN from '../../../screens';
+import SCREENS from '../../../screens';
 import Ranking from './Ranking'; 
 // navigation.navigate(SCREEN.QUESTION_PLAY, {
 //     duration: 60,
 //     isHost: true,
 //     multipleCorrect: false,
 //     question: 'What is the capital of France?',
-//     answers: ['Paris', 'London', 'Berlin', 'Madrid'],
+//     questionImage: 'https://example.com/paris.jpg', // optional
+//     answers: [
+//         { text: 'Paris', image: 'https://example.com/paris.jpg' },
+//         { text: 'London', image: 'https://example.com/london.jpg' },
+//         { text: 'Berlin', image: null },
+//         { text: 'Madrid', image: null }
+//     ],
 //     showRankingAfterEnd: true,         
 //     rankingDisplayTime: 10  
 // });
+
 const QuestionPlay = ({ navigation, route }) => {
     const [timeLeft, setTimeLeft] = useState(route.params.duration);
     const [isPaused, setIsPaused] = useState(false);
@@ -25,7 +32,24 @@ const QuestionPlay = ({ navigation, route }) => {
         { id: 2, name: 'User 2', newScore: 90, oldScore: 95, isCorrect: false },
         // Add more mock data as needed
     ];
+    const handleEndQuestion = () => {
+        navigation.navigate(SCREENS.ENDQUIZ, {
+        quizId:"12345",
+        finalRanking: [
+            { id: 'u1', name: 'Nguyễn Văn A', score: 85 },
+            { id: 'u2', name: 'Trần Thị B', score: 75 },
+            { id: 'u3', name: 'Lê Văn C', score: 60 },
+            { id: 'u4', name: 'Phạm Thị D', score: 50 },
+            { id: 'u5', name: 'Nguyễn Văn E', score: 40 },
+        ]
+        });
 
+    }
+    const handleNextQuestion = () => {
+    }
+    const handleAnswerSelect = (index) => {
+
+    }
     useEffect(() => {
         let timer;
         if (!isPaused && timeLeft > 0) {
@@ -69,6 +93,38 @@ const QuestionPlay = ({ navigation, route }) => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const renderQuestion = () => (
+        <View style={styles.questionContainer}>
+            <Text style={styles.question}>{route.params.question}</Text>
+            {route.params.questionImage && (
+                <Image
+                    source={{ uri: route.params.questionImage }}
+                    style={styles.questionImage}
+                    resizeMode="contain"
+                />
+            )}
+        </View>
+    );
+
+    const renderAnswer = (answer, index) => (
+        <TouchableOpacity 
+            key={index}
+            style={styles.answerItem}
+            onPress={() => handleAnswerSelect(index)}
+        >
+            <View style={styles.answerContent}>
+                <Text style={styles.answerText}>{answer.text}</Text>
+                {answer.image && (
+                    <Image
+                        source={{ uri: answer.image }}
+                        style={styles.answerImage}
+                        resizeMode="cover"
+                    />
+                )}
+            </View>
+        </TouchableOpacity>
+    );
+
     return (
         <View style={styles.container}>
             {showRanking ? (
@@ -89,7 +145,7 @@ const QuestionPlay = ({ navigation, route }) => {
                         {isHost && (
                             <TouchableOpacity 
                                 style={styles.settingButton}
-                                onPress={() => navigation.navigate(SCREEN.QUESTION_SETTING )}
+                                onPress={() => navigation.navigate(SCREENS.QUESTION_PLAY_SETTING )}
                             >
                                 <Ionicons name="settings-outline" size={24} color={COLORS.WHITE} />
                             </TouchableOpacity>
@@ -97,20 +153,17 @@ const QuestionPlay = ({ navigation, route }) => {
                     </View>
 
                     {/* Content */}
-                    <View style={styles.content}>
-                        <Text style={styles.question}>{route.params.question}</Text>
+                    <ScrollView 
+                        style={styles.content}
+                        contentContainerStyle={styles.contentContainer}
+                    >
+                        {renderQuestion()}
                         <View style={styles.answersList}>
-                            {route.params.answers.map((answer, index) => (
-                                <TouchableOpacity 
-                                    key={index}
-                                    style={styles.answerItem}
-                                    onPress={() => handleAnswerSelect(index)}
-                                >
-                                    <Text style={styles.answerText}>{answer}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {route.params.answers.map((answer, index) => 
+                                renderAnswer(answer, index)
+                            )}
                         </View>
-                    </View>
+                    </ScrollView>
 
                     {/* Footer */}
                     {isHost && (
@@ -127,15 +180,15 @@ const QuestionPlay = ({ navigation, route }) => {
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={styles.footerButton}
-                                onPress={handleEndQuestion}
-                            >
-                                <Text style={styles.buttonText}>End</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                style={styles.footerButton}
                                 onPress={handleNextQuestion}
                             >
                                 <Text style={styles.buttonText}>Next</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={styles.footerButton}
+                                onPress={handleEndQuestion}
+                            >
+                                <Text style={styles.buttonText}>End</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -175,30 +228,52 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
+    },
+    contentContainer: {
         padding: 16,
+    },
+    questionContainer: {
+        marginBottom: 20,
     },
     question: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: 10,
+    },
+    questionImage: {
+        width: '100%',
+        height: 200,
+        borderRadius: 8,
+        marginTop: 10,
     },
     answersList: {
         gap: 10,
     },
     answerItem: {
-        padding: 16,
-        backgroundColor: COLORS.GRAY_LIGHT,
+        backgroundColor: COLORS.WHITE,
         borderRadius: 8,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: COLORS.BLUE,
+    },
+    answerContent: {
+        padding: 16,
     },
     answerText: {
         fontSize: 16,
+        marginBottom: answer => answer.image ? 10 : 0,
+    },
+    answerImage: {
+        width: '100%',
+        height: 120,
+        borderRadius: 4,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
         padding: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderTopColor: COLORS.GRAY_BG,
     },
     footerButton: {
         backgroundColor: COLORS.BLUE,

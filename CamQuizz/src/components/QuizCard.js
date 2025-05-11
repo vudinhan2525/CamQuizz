@@ -1,11 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet,Dimensions, Image, TouchableOpacity } from 'react-native';
 import COLORS from '../constant/colors';
+import { useNavigation } from '@react-navigation/native';
+
+import SCREENS from '../screens';
 const tmpUrl='https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
 const { width } = Dimensions.get('window'); 
-const QuizCard = ({ quiz, attemptText = "lượt thi", onPress }) => {
+
+const QuizCard = ({ quiz, attemptText = "lượt thi" }) => {
+  const navigation = useNavigation();
+  const handlePress = () => {
+    navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: quiz.id });
+  };
   return (
-    <TouchableOpacity style={styles.quizCard} onPress={onPress}>
+    <TouchableOpacity style={styles.quizCard}  onPress={() => handlePress()}>
       <Image source={{ uri: tmpUrl||quiz.image }} style={styles.quizImage} />
       <View style={styles.quizInfo}>
         <Text style={styles.quizTitle}>{quiz.title}</Text>

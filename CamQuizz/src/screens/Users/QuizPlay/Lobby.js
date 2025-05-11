@@ -40,18 +40,22 @@ const Lobby = ({ navigation, route }) => {
     }, [isHost, roomCode]);
 
     const handleStartGame = () => {
-        if (players.length < 2) {
-            Alert.alert('Thông báo', 'Cần ít nhất 2 người chơi để bắt đầu trò chơi');
-            return;
-        }
-        
-        // Điều hướng đến màn hình câu hỏi đầu tiên
-        navigation.navigate(SCREENS.QUESTION_PLAY, {
-            quizId,
-            isHost,
-            currentQuestionIndex: 0,
-            players
-        });
+        // Navigate to the first question
+     navigation.navigate(SCREENS.QUESTION_PLAY, {
+        duration: 60,
+        isHost: true,
+        multipleCorrect: false,
+        question: 'What is the capital of France?',
+        questionImage: 'https://example.com/paris.jpg', // optional
+        answers: [
+            { text: 'Paris', image: 'https://example.com/paris.jpg' },
+            { text: 'London', image: 'https://example.com/london.jpg' },
+            { text: 'Berlin', image: null },
+            { text: 'Madrid', image: null }
+        ],
+        showRankingAfterEnd: true,         
+        rankingDisplayTime: 10  
+    });
     };
     
     const handleLeaveRoom = () => {
@@ -66,7 +70,22 @@ const Lobby = ({ navigation, route }) => {
                 },
                 {
                     text: 'Rời phòng',
-                    onPress: () => navigation.goBack()
+                    onPress: () => {
+                        navigation.reset({
+                            index: 0,
+                            routes: [
+                                {
+                                    name: SCREENS.USER_TAB,
+                                    state: {
+                                        index: 0,
+                                        routes: [
+                                            { name: SCREENS.EXPLORE_TAB }
+                                        ]
+                                    }
+                                }
+                            ],
+                        });
+                        Alert.alert('Thông báo', 'Bạn đã rời khỏi phòng chơi');}
                 }
             ]
         );
@@ -113,12 +132,7 @@ const Lobby = ({ navigation, route }) => {
         <View style={styles.container}>
             {/* Header with back button */}
             <View style={styles.headerWithBack}>
-                <TouchableOpacity 
-                    style={styles.backButton}
-                    onPress={handleLeaveRoom}
-                >
-                    <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
-                </TouchableOpacity>
+                
                 <Text style={styles.title}>Phòng chờ</Text>
                 <View style={styles.placeholder} />
             </View>
@@ -191,7 +205,7 @@ const Lobby = ({ navigation, route }) => {
                         style={styles.exitButton}
                         onPress={handleLeaveRoom}
                     >
-                        <Text style={styles.exitButtonText}>Thoát</Text>
+                        <Text style={styles.exitButtonText} >Thoát</Text>
                     </TouchableOpacity>
                 </View>
             )}

@@ -21,13 +21,13 @@ const SCREENS = {
     STUDY_GROUP_DETAIL: "Chi tiết nhóm học tập",
     RANKING: "Xếp hạng",
     ENDQUIZ: "Kết thúc bài kiểm tra",
-    QUESTION_SETTING: "Cài đặt câu hỏi",
     QUESTION_PLAY: "Trình phát câu hỏi",
     GROUP_MESSAGE:"Nhóm nhắn tin",
     GROUP_MEMBERS:"Thành viên nhóm",
     QUIZ_DETAIL: "Chi tiết bài kiểm tra",
     LOBBY: "Sảnh chờ",
     QUIZ_REPORT: "Báo cáo bài kiểm tra",
+    QUESTION_PLAY_SETTING: "Cài đặt trình phát câu hỏi (Chủ trì)",
   };
   
   export default SCREENS;

@@ -22,8 +22,13 @@ import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
 import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
 import SharedQuizz from '../screens/Users/Library/SharedQuizz';
 import { ReportDetail } from '../components/Report/ReportDetail';
-
-
+import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
+import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
+import Lobby from '../screens/Users/QuizPlay/Lobby';
+import QuestionPlay from '../screens/Users/QuizPlay/QuestionPlay';
+import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
+import QuizReport from '../screens/Users/QuizPlay/QuizReport';
+import Ranking from '../screens/Users/QuizPlay/Ranking';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -72,6 +77,43 @@ function UsersStackNavigation() {
                 component={GroupMessage}
                 options={{ headerShown: false }}
             />
+            <Stack.Screen
+                name={SCREENS.QUIZ_DETAIL}
+                component={QuizDetail}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.LOBBY}
+                component={Lobby}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY}
+                component={QuestionPlay}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.ENDQUIZ}
+                component={EndQuiz}
+                options={{ headerShown: false }}
+            />
+
+            <Stack.Screen
+                name={SCREENS.QUIZ_REPORT}
+                component={QuizReport}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.RANKING}
+                component={Ranking}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUESTION_PLAY_SETTING}
+                component={QuestionPlaySetting}
+                options={{ headerShown: false }}
+            />
+
 
         </Stack.Navigator>
     );

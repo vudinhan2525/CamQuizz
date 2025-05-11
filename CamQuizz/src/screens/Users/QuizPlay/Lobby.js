@@ -21,13 +21,10 @@ const Lobby = ({ navigation, route }) => {
             setGameCode(roomCode || '');
         }
         
-        // Giả lập người chơi tham gia phòng
         setPlayers(mockPlayers);
         
-        // Giả lập lấy thông tin quiz
         setQuiz(mockQuiz);
         
-        // Giả lập người chơi tham gia sau một khoảng thời gian
         if (!isHost) {
             // Thêm người chơi hiện tại vào danh sách
             const currentPlayer = {
@@ -76,8 +73,6 @@ const Lobby = ({ navigation, route }) => {
     };
 
     const handleCopyCode = () => {
-        // Trong môi trường thực tế, bạn sẽ sử dụng Clipboard API
-        // Clipboard.setString(gameCode);
         Alert.alert('Thông báo', 'Đã sao chép mã phòng: ' + gameCode);
     };
 
@@ -94,26 +89,25 @@ const Lobby = ({ navigation, route }) => {
         </View>
     );
 
-    const handleKickPlayer = (playerId) => {
-        // Xử lý khi host đuổi người chơi
-        Alert.alert(
-            'Xác nhận',
-            'Bạn có chắc muốn đuổi người chơi này?',
-            [
-                {
-                    text: 'Hủy',
-                    style: 'cancel'
-                },
-                {
-                    text: 'Đuổi',
-                    onPress: () => {
-                        setPlayers(prevPlayers => prevPlayers.filter(p => p.id !== playerId));
-                        Alert.alert('Thông báo', 'Đã đuổi người chơi khỏi phòng');
-                    }
-                }
-            ]
-        );
-    };
+    // const handleKickPlayer = (playerId) => {
+    //     Alert.alert(
+    //         'Xác nhận',
+    //         'Bạn có chắc muốn đuổi người chơi này?',
+    //         [
+    //             {
+    //                 text: 'Hủy',
+    //                 style: 'cancel'
+    //             },
+    //             {
+    //                 text: 'Đuổi',
+    //                 onPress: () => {
+    //                     setPlayers(prevPlayers => prevPlayers.filter(p => p.id !== playerId));
+    //                     Alert.alert('Thông báo', 'Đã đuổi người chơi khỏi phòng');
+    //                 }
+    //             }
+    //         ]
+    //     );
+    // };
 
     return (
         <View style={styles.container}>
@@ -153,37 +147,34 @@ const Lobby = ({ navigation, route }) => {
             <View style={styles.playerCountContainer}>
                 <Ionicons name="people" size={24} color={COLORS.BLUE} />
                 <Text style={styles.playerCount}>{players.length} người chơi</Text>
-                <TouchableOpacity 
+                {/* <TouchableOpacity 
                     style={styles.viewAllButton}
                     onPress={() => setModalVisible(true)}
                 >
                     <Text style={styles.viewAllText}>Xem tất cả</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
             {/* Players Grid */}
             <View style={styles.playersContainer}>
                 <FlatList
-                    data={players.slice(0, 8)}
+                    data={players}
                     renderItem={renderPlayerItem}
                     keyExtractor={item => item.id.toString()}
                     numColumns={4}
                     contentContainerStyle={styles.playersList}
                 />
-                
-                {players.length > 8 && (
-                    <TouchableOpacity 
-                        style={styles.morePlayersButton}
-                        onPress={() => setModalVisible(true)}
-                    >
-                        <Text style={styles.morePlayersText}>+{players.length - 8}</Text>
-                    </TouchableOpacity>
-                )}
             </View>
 
             {/* Start Button (only for host) */}
             {isHost ? (
                 <View style={styles.buttonContainer}>
+                    <TouchableOpacity 
+                        style={styles.cancelButton}
+                        onPress={handleLeaveRoom}
+                    >
+                        <Text style={styles.cancelButtonText}>Hủy</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity 
                         style={styles.startButton}
                         onPress={handleStartGame}
@@ -192,13 +183,21 @@ const Lobby = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
             ) : (
-                <View style={styles.waitingContainer}>
-                    <Text style={styles.waitingText}>Đang chờ chủ phòng bắt đầu...</Text>
+                <View style={styles.playerButtonContainer}>
+                    <View style={styles.waitingContainer}>
+                        <Text style={styles.waitingText}>Đang chờ chủ phòng bắt đầu...</Text>
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.exitButton}
+                        onPress={handleLeaveRoom}
+                    >
+                        <Text style={styles.exitButtonText}>Thoát</Text>
+                    </TouchableOpacity>
                 </View>
             )}
 
             {/* Players Modal */}
-            <Modal
+            {/* <Modal
                 animationType="slide"
                 transparent={true}
                 visible={modalVisible}
@@ -233,7 +232,7 @@ const Lobby = ({ navigation, route }) => {
                         </ScrollView>
                     </View>
                 </View>
-            </Modal>
+            </Modal> */}
         </View>
     );
 };
@@ -361,23 +360,59 @@ const styles = StyleSheet.create({
         padding: 16,
         borderTopWidth: 1,
         borderTopColor: COLORS.GRAY_LIGHT,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    playerButtonContainer: {
+        padding: 16,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.GRAY_LIGHT,
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     startButton: {
         backgroundColor: COLORS.BLUE,
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
+        flex: 2,
+        marginLeft: 10,
     },
     startButtonText: {
         color: COLORS.WHITE,
         fontWeight: 'bold',
         fontSize: 18,
     },
-    waitingContainer: {
+    cancelButton: {
+        backgroundColor: COLORS.RED,
         padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderRadius: 8,
         alignItems: 'center',
+        flex: 1,
+    },
+    cancelButtonText: {
+        color: COLORS.WHITE,
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    exitButton: {
+        backgroundColor: COLORS.RED,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        width: '50%',
+        marginTop: 16,
+    },
+    exitButtonText: {
+        color: COLORS.WHITE,
+        fontWeight: 'bold',
+        fontSize: 18,
+    },
+    waitingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
     },
     waitingText: {
         fontSize: 16,

@@ -84,7 +84,6 @@ export const Report = ({ navigation }) => {
     }
   };
 
-  // Quyết định có hiển thị badges hay không
   const shouldShowBadges = activeView === 'author' || activeView === 'organization';
 
   const options = [
@@ -151,7 +150,7 @@ export const Report = ({ navigation }) => {
           </Modal>
         </View>
 
-        <View style={styles.searchSection}>
+        {/* <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
             <TestFilter
               tests={allTests}
@@ -168,7 +167,7 @@ export const Report = ({ navigation }) => {
               <Text style={styles.refreshText}>Làm mới</Text>
             </TouchableOpacity>
           )}
-        </View>
+        </View> */}
 
         <View style={styles.testListContainer}>
           {filteredTests.length > 0 ? (

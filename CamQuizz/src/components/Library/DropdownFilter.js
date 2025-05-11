@@ -3,17 +3,26 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { ChevronDown } from "lucide-react-native";
 import COLORS from '../../constant/colors';
 
-const DropdownFilter = ({ label, count }) => {
+const DropdownFilter = ({ label, count, options = [], onSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
+  
+  const handleOptionSelect = (value, label) => {
+    if (onSelect) {
+      onSelect(value, label);
+    }
+    setIsOpen(false);
+  };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.button} onPress={() => setIsOpen(!isOpen)}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.rightContainer}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count}</Text>
-          </View>
+          {count !== undefined && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{count}</Text>
+            </View>
+          )}
           <View style={{transform: [{ rotate: isOpen ? "180deg" : "0deg" }] }}>
             <ChevronDown size={16} color="black" />
           </View>
@@ -22,12 +31,26 @@ const DropdownFilter = ({ label, count }) => {
 
       {isOpen && (
         <View style={styles.dropdown}>
-          <TouchableOpacity style={styles.option} onPress={() => console.log("Selected Option 1")} onPressIn={() => setIsOpen(false)}>
-            <Text>Published</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.option} onPress={() => console.log("Selected Option 2")} onPressIn={() => setIsOpen(false)}>
-            <Text>Draft</Text>
-          </TouchableOpacity>
+          {options && options.length > 0 ? (
+            options.map((option, index) => (
+              <TouchableOpacity 
+                key={index}
+                style={styles.option} 
+                onPress={() => handleOptionSelect(option.value, option.label)}
+              >
+                <Text>{option.label}</Text>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <>
+              <TouchableOpacity style={styles.option} onPress={() => handleOptionSelect("public", "Công khai")}>
+                <Text>Công khai</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.option} onPress={() => handleOptionSelect("private", "Riêng tư")}>
+                <Text>Riêng tư</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       )}
     </View>

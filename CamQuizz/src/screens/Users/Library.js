@@ -7,7 +7,7 @@ import SharedQuizz from "../Users/Library/SharedQuizz";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
 import { useNavigation } from '@react-navigation/native';
-import SCREENS from '../../navigation/index';
+import SCREENS from '../../screens';
 
 export const Library = () => {
   const [activeTab, setActiveTab] = useState("myLibrary");

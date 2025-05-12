@@ -29,7 +29,16 @@ const SCREENS = {
     LOBBY: "Sảnh chờ",
     QUIZ_REPORT: "Báo cáo bài kiểm tra",
     QUESTION_PLAY_SETTING: "Cài đặt trình phát câu hỏi (Chủ trì)",
-  };
+    ADMIN_QUIZZES: "Quản lý quizz",
+    ADMIN_PACKAGES: "Quản lý gói / doanh thu",
+    ADMIN_USERS: "Quản lý người dùng",
+    ADMIN_ACCOUNT: "Tài khoản admin",
+    LOGIN: 'Login',
+    SIGNUP: 'Signup',
+    AUTH_STACK: 'AuthStack',
+    USER_STACK: 'UserStack',
+    ADMIN_STACK: 'AdminStack',
+};
   
   export default SCREENS;
   

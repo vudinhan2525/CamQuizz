@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Entypo from 'react-native-vector-icons/Entypo';
+import COLORS from '../constant/colors';
 import { useIsKeyboardVisible } from '../hooks/useIsKeyboardVisible';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import SCREENS from '../screens';
@@ -31,8 +32,33 @@ import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
 
 import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
+
+import { QuizzManagement } from '../screens/Admin/QuizzManagement';
+import { PackageManagement } from '../screens/Admin/PackageManagement';
+import { UserManagement } from '../screens/Admin/UserManagement';
+import { AdminAccount } from '../screens/Admin/AdminAccount';
+
+import { Login } from '../screens/Auth/Login';
+import { Signup } from '../screens/Auth/Signup';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+
+// Auth Stack
+function AuthStackNavigator() {
+  return (
+    <Stack.Navigator
+      initialRouteName={SCREENS.LOGIN}
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name={SCREENS.LOGIN} component={Login} />
+      <Stack.Screen name={SCREENS.SIGNUP} component={Signup} />
+    </Stack.Navigator>
+  );
+}
+
 
 function UsersStackNavigation() {
     return (
@@ -256,4 +282,87 @@ const UserTabNavigator = () => {
     );
 };
 
-export default UsersStackNavigation;
+function AdminTabNavigator() {
+    const { colors } = useTheme();
+    const isKeyboardVisible = useIsKeyboardVisible();
+    return (
+        <Tab.Navigator
+            initialRouteName={SCREENS.ADMIN_QUIZZES}
+            screenOptions={{
+                tabBarActiveTintColor: colors.BLUE,
+                tabBarInactiveTintColor: colors.BLACK,
+                tabBarStyle: {
+                    display: isKeyboardVisible ? 'none' : 'flex',
+                },
+                headerStyle: {
+                    backgroundColor: COLORS.BLUE,
+                },
+                headerTintColor: COLORS.WHITE,
+                headerTitleStyle: {
+                    fontWeight: 'bold',
+                },
+                headerShown: true, 
+            }}
+        >
+            <Tab.Screen
+                name={SCREENS.ADMIN_QUIZZES}
+                component={QuizzManagement}
+                options={{
+                    title: 'Quản lý quizz',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons name={focused ? 'list' : 'list-outline'} size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tab.Screen
+                name={SCREENS.ADMIN_PACKAGES}
+                component={PackageManagement}
+                options={{
+                    title: 'Quản lý gói',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons name={focused ? 'cash' : 'cash-outline'} size={size} color={color} />
+                    ),
+                    // headerShown đã được đặt thành true trong screenOptions
+                }}
+            />
+            <Tab.Screen
+                name={SCREENS.ADMIN_USERS}
+                component={UserManagement}
+                options={{
+                    title: 'Quản lý người dùng',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
+                    ),
+                    // headerShown đã được đặt thành true trong screenOptions
+                }}
+            />
+            <Tab.Screen
+                name={SCREENS.ADMIN_ACCOUNT}
+                component={AdminAccount}
+                options={{
+                    title: 'Tài khoản',
+                    tabBarIcon: ({ focused, color, size }) => (
+                        <Ionicons name={focused ? 'settings' : 'settings-outline'} size={size} color={color} />
+                    ),
+                    // headerShown đã được đặt thành true trong screenOptions
+                }}
+            />
+        </Tab.Navigator>
+    );
+}
+
+
+function AdminStackNavigation() {
+    return (
+        <Stack.Navigator initialRouteName={SCREENS.ADMIN_TAB}>
+            <Stack.Screen
+                name={SCREENS.ADMIN_TAB}
+                component={AdminTabNavigator}
+                options={{ headerShown: false }}
+            />
+        </Stack.Navigator>
+    );
+}
+
+
+export { AuthStackNavigator, UsersStackNavigation, AdminStackNavigation };

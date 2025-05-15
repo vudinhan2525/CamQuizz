@@ -31,13 +31,6 @@ public class MemberController : ControllerBase
         return Ok(members);
     }
 
-    [HttpGet("approved/{groupId}")]
-    public async Task<IActionResult> GetApprovedMembers(int groupId)
-    {
-        var members = await _memberService.GetApprovedMembersAsync(groupId);
-        return Ok(members);
-    }
-
     [HttpPost("join/{groupId}")]
     public async Task<IActionResult> RequestToJoinGroup(int groupId, [FromQuery] int userId)
     {

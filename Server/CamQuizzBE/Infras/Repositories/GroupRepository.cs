@@ -209,6 +209,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
     public async Task<GroupDto?> GetGroupByIdAsync(int id)
     {
         var group = await _context.Groups
+            .Include(g => g.Owner)
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
             .Where(g => g.Id == id)

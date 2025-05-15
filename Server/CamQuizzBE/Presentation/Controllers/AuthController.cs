@@ -3,6 +3,7 @@ using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Applications.Helpers;
 using CamQuizzBE.Domain.Interfaces;
 using System.Text.RegularExpressions;
+using System.Security.Claims;
 
 namespace CamQuizzBE.Presentation.Controllers;
 
@@ -138,6 +139,14 @@ public class AuthController(
     [Authorize]
     public async Task<IActionResult> DeleteUser(int id)
     {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        // Check if user is trying to delete their own account or is admin
+        if (currentUserId != id && !User.IsInRole("Admin"))
+        {
+            return Unauthorized("You can only delete your own account");
+        }
+
         var result = await userService.DeleteUserAsync(id);
         if (!result.Succeeded) return BadRequest(result.Errors);
         return Ok("User deleted successfully");
@@ -153,7 +162,7 @@ public class AuthController(
         return Ok(userDto);
     }
     [HttpGet]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllUser(
         [FromQuery] string? kw, 
         [FromQuery] int limit = 10, 
@@ -165,5 +174,23 @@ public class AuthController(
         return Ok(users);
     }
 
+    [HttpGet("email/{email}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<UserDto>> GetUserByEmail(string email)
+    {
+        var user = await userService.GetUserByEmailAsync(email);
+        if (user == null) return NotFound("User not found");
+        return Ok(user);
+    }
+
+    [HttpPut("{id}/ban")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> BanUser(int id, BanUserDto banUserDto)
+    {
+        var result = await userService.BanUserAsync(id, banUserDto.IsBanned);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        return Ok($"User has been {(banUserDto.IsBanned ? "banned" : "unbanned")} successfully");
+    }
 
 }

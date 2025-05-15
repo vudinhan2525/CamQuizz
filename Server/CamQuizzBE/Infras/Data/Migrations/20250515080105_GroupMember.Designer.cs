@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250515080105_GroupMember")]
+    partial class GroupMember
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,7 +59,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("QuestionId");
 
-                    b.ToTable("answers", (string)null);
+                    b.ToTable("answers");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.AppRole", b =>
@@ -226,7 +229,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("chat_messages", (string)null);
+                    b.ToTable("chat_messages");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.FlashCard", b =>
@@ -260,7 +263,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("StudySetId");
 
-                    b.ToTable("flashcards", (string)null);
+                    b.ToTable("flashcards");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Genres", b =>
@@ -287,7 +290,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("genres", (string)null);
+                    b.ToTable("genres");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Group", b =>
@@ -329,7 +332,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("groups", (string)null);
+                    b.ToTable("groups");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.GroupQuiz", b =>
@@ -358,7 +361,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("SharedById");
 
-                    b.ToTable("group_quizzes", (string)null);
+                    b.ToTable("group_quizzes");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.GroupShared", b =>
@@ -381,7 +384,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("OwnerId");
 
-                    b.ToTable("group_shared", (string)null);
+                    b.ToTable("group_shared");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Member", b =>
@@ -408,7 +411,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("members", (string)null);
+                    b.ToTable("members");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Questions", b =>
@@ -458,7 +461,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("QuizId");
 
-                    b.ToTable("questions", (string)null);
+                    b.ToTable("questions");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Quizzes", b =>
@@ -519,7 +522,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("quizzes", (string)null);
+                    b.ToTable("quizzes");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.StudySet", b =>
@@ -557,7 +560,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("studysets", (string)null);
+                    b.ToTable("studysets");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>
@@ -580,7 +583,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("user_shared", (string)null);
+                    b.ToTable("user_shared");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>

@@ -19,12 +19,14 @@ public class Group
 
     [Column("owner_id")]
     public int OwnerId { get; set; }
-    [Column("created_at")]
     [ForeignKey("OwnerId")]
     public AppUser Owner { get; set; } = null!;
     [Column("status")]
     public GroupStatus Status { get; set; } = GroupStatus.Active;
+    [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Member> Members { get; set; } = new List<Member>();
 

@@ -40,6 +40,8 @@ import { AdminAccount } from '../screens/Admin/AdminAccount';
 
 import { Login } from '../screens/Auth/Login';
 import { Signup } from '../screens/Auth/Signup';
+import SelectQuizForFlashcard from '../screens/Users/FlashCard/SelectQuizForFlashcard';
+import SelectQuestionsForFlashcard from '../screens/Users/FlashCard/SelectQuestionsForFlashcard';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -77,9 +79,14 @@ function UsersStackNavigation() {
                 component={CreateQuestion}
                 options={{ headerShown: false }}
             />
-
-            
-             
+            <Stack.Screen
+                name={SCREENS.SELECT_QUIZ_FOR_FLASHCARD}
+                component={SelectQuizForFlashcard}
+            />
+            <Stack.Screen
+                name={SCREENS.SELECT_QUESTIONS_FOR_FLASHCARD}
+                component={SelectQuestionsForFlashcard}
+            />
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
                 component={FlashcardSetDetail}

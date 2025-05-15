@@ -38,6 +38,8 @@ const SCREENS = {
     AUTH_STACK: 'AuthStack',
     USER_STACK: 'UserStack',
     ADMIN_STACK: 'AdminStack',
+    SELECT_QUIZ_FOR_FLASHCARD: 'SelectQuizForFlashcard',
+    SELECT_QUESTIONS_FOR_FLASHCARD: 'SelectQuestionsForFlashcard',
 };
   
   export default SCREENS;

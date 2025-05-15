@@ -30,6 +30,7 @@ public class MemberRepository : IMemberRepository
     public async Task<Member?> GetByIdAsync(int groupId, int userId)
     {
         return await _context.Members
+            .Include(m => m.User)
             .FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
     }
 

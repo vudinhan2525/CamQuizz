@@ -8,16 +8,19 @@ using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Applications.DTOs.Groups;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 public class MemberService : IMemberService
 {
     private readonly IMemberRepository _memberRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly IUserRepository _userRepository;
 
-    public MemberService(IMemberRepository memberRepository, IGroupRepository groupRepository)
+    public MemberService(IMemberRepository memberRepository, IGroupRepository groupRepository, IUserRepository userRepository)
     {
         _memberRepository = memberRepository ?? throw new ArgumentNullException(nameof(memberRepository));
         _groupRepository = groupRepository ?? throw new ArgumentNullException(nameof(groupRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     private async Task ValidateGroupAndStatus(int groupId)
@@ -42,27 +45,63 @@ public class MemberService : IMemberService
     public async Task<IEnumerable<MemberDto>> GetMembersByGroupIdAsync(int groupId)
     {
         await ValidateGroupAndStatus(groupId);
-        var members = await _memberRepository.GetMembersByGroupIdAsync(groupId);
+
+        // Get all members
+        var members = (await _memberRepository.GetMembersByGroupIdAsync(groupId)).ToList();
+        
+        // Get group details
+        var group = await _groupRepository.GetGroupByIdAsync(groupId);
+        if (group == null)
+            throw new KeyNotFoundException("Group not found");
+
+        // Add owner as approved member if not already in the list
+        if (!members.Any(m => m.UserId == group.OwnerId))
+        {
+            var owner = await _userRepository.GetUserByIdAsync(group.OwnerId);
+            if (owner != null)
+            {
+                members.Add(new Member
+                {
+                    GroupId = groupId,
+                    UserId = group.OwnerId,
+                    Status = MemberStatus.Approved,
+                    JoinedAt = group.CreatedAt,
+                    User = owner
+                });
+            }
+        }
+
+        // Convert to DTOs and order by status (Owner and Approved first, then Pending)
+        return members
+            .OrderBy(m => m.UserId != group.OwnerId) // Owner first
+            .ThenBy(m => m.Status != MemberStatus.Approved) // Then approved members
+            .ThenBy(m => m.JoinedAt) // Then by join date
+            .Select(m => new MemberDto
+            {
+                GroupId = m.GroupId,
+                UserId = m.UserId,
+                Email = m.User?.Email ?? string.Empty,
+                FirstName = m.User?.FirstName ?? string.Empty,
+                LastName = m.User?.LastName ?? string.Empty,
+                JoinedAt = m.JoinedAt,
+                Status = m.Status
+            });
+    }
+
+    public async Task<IEnumerable<MemberDto>> GetPendingMembersAsync(int groupId)
+    {
+        await ValidateGroupAndStatus(groupId);
+        var members = await _memberRepository.GetPendingMembersAsync(groupId);
         return members.Select(m => new MemberDto
         {
-    
             GroupId = m.GroupId,
             UserId = m.UserId,
-            JoinedAt = m.JoinedAt, // Assuming Member has this property
+            Email = m.User?.Email ?? string.Empty,
+            FirstName = m.User?.FirstName ?? string.Empty,
+            LastName = m.User?.LastName ?? string.Empty,
+            JoinedAt = m.JoinedAt,
             Status = m.Status
         });
-    }
-
-    public async Task<IEnumerable<Member>> GetPendingMembersAsync(int groupId)
-    {
-        await ValidateGroupAndStatus(groupId);
-        return await _memberRepository.GetPendingMembersAsync(groupId);
-    }
-
-    public async Task<IEnumerable<Member>> GetApprovedMembersAsync(int groupId)
-    {
-        await ValidateGroupAndStatus(groupId);
-        return await _memberRepository.GetApprovedMembersAsync(groupId);
     }
 
     // Member requests to join a group

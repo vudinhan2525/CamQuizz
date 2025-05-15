@@ -47,6 +47,81 @@ public class GroupController : ControllerBase
         return Ok(group);
     }
 
+    [HttpPost("{groupId}/invite")]
+    [Authorize]
+    public async Task<IActionResult> InviteMemberByEmail(int groupId, [FromBody] InviteMemberDto inviteDto)
+    {
+        var inviterId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        // Check if user has permission to invite (is member)
+        if (!await _groupService.IsMember(groupId, inviterId))
+        {
+            return Unauthorized("You must be a member to invite others");
+        }
+
+        var member = await _groupService.InviteMemberByEmailAsync(groupId, inviterId, inviteDto.Email);
+        return Ok($"Invitation sent to {inviteDto.Email}");
+    }
+
+    [HttpPost("{groupId}/quizzes")]
+    [Authorize]
+    public async Task<IActionResult> ShareQuizWithGroup(int groupId, [FromBody] ShareQuizDto shareDto)
+    {
+        var sharerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        // Check if user is a member
+        if (!await _groupService.IsMember(groupId, sharerId))
+        {
+            return Unauthorized("You must be a member to share quizzes");
+        }
+
+        var sharedQuiz = await _groupService.ShareQuizWithGroupAsync(groupId, sharerId, shareDto.QuizId);
+        return Ok("Quiz shared successfully");
+    }
+
+    [HttpGet("{groupId}/quizzes")]
+    [Authorize]
+    public async Task<IActionResult> GetSharedQuizzes(int groupId)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        if (!await _groupService.IsMember(groupId, userId))
+        {
+            return Unauthorized("You must be a member to view shared quizzes");
+        }
+        var quizzes = await _groupService.GetSharedQuizzesAsync(groupId);
+        return Ok(quizzes);
+    }
+
+    [HttpDelete("{groupId}/quizzes/{quizId}")]
+    [Authorize]
+    public async Task<IActionResult> RemoveSharedQuiz(int groupId, int quizId)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        if (!await _groupService.IsOwner(groupId, userId))
+        {
+            return Unauthorized("Only group owner can remove shared quizzes");
+        }
+
+        await _groupService.RemoveSharedQuizAsync(groupId, quizId);
+        return Ok("Quiz removed from group");
+    }
+
+    [HttpGet("{groupId}/chat")]
+    [Authorize]
+    public async Task<IActionResult> GetChatHistory(int groupId, [FromQuery] int limit = 50)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        if (!await _groupService.IsMember(groupId, userId))
+        {
+            return Unauthorized("You must be a member to view chat history");
+        }
+
+        var messages = await _groupService.GetGroupChatHistoryAsync(groupId, limit);
+        return Ok(messages);
+    }
+
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDto groupDto)

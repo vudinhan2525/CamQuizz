@@ -23,6 +23,9 @@ IdentityDbContext<
     public DbSet<Member> Members { get; set; }
     public DbSet<StudySet> StudySets { get; set; }
     public DbSet<FlashCard> FlashCards { get; set; }
+    public DbSet<GroupQuiz> GroupQuizzes { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<GroupShared> GroupShared { get; set; }
 
     override protected void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,5 +175,42 @@ IdentityDbContext<
             .WithMany()
             .HasForeignKey(gs => gs.GroupId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Chat Message relationships
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(m => m.Group)
+            .WithMany()
+            .HasForeignKey(m => m.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ChatMessage>()
+            .HasOne(m => m.User)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // GroupQuiz relationships
+        modelBuilder.Entity<GroupQuiz>()
+            .HasKey(gq => new { gq.GroupId, gq.QuizId });
+
+        modelBuilder.Entity<GroupQuiz>()
+            .HasOne(gq => gq.Group)
+            .WithMany()
+            .HasForeignKey(gq => gq.GroupId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GroupQuiz>()
+            .HasOne(gq => gq.Quiz)
+            .WithMany()
+            .HasForeignKey(gq => gq.QuizId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<GroupQuiz>()
+            .HasOne(gq => gq.SharedBy)
+            .WithMany()
+            .HasForeignKey(gq => gq.SharedById)
+            .OnDelete(DeleteBehavior.NoAction);
     }
 }
+    
+

@@ -1,4 +1,4 @@
-namespace CamQuizzBE.Domain.Interfaces;
+namespace CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Enums;
 

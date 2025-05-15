@@ -2,6 +2,7 @@ namespace CamQuizzBE.Applications.Services;
 
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Applications.DTOs.Groups;

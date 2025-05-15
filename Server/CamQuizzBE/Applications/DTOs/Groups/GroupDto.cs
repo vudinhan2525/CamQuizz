@@ -8,8 +8,12 @@ public class GroupDto
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int OwnerId { get; set; }
-    public List<int> MemberIds { get; set; } = new();
+    public string OwnerName { get; set; } = string.Empty;
+    public List<MemberDto> Members { get; set; } = new();
+    public List<SharedQuizDto> SharedQuizzes { get; set; } = new();
     public GroupStatus Status { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public int TotalMembers => Members.Count;
+    public int TotalSharedQuizzes => SharedQuizzes.Count;
 }

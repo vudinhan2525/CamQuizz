@@ -2,6 +2,7 @@ namespace CamQuizzBE.Infras.Repositories;
 
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;

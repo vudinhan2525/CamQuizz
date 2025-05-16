@@ -30,11 +30,17 @@ const App = () => {
   const checkLoginStatus = async () => {
     try {
       const userData = await checkAuthStatus();
-      
+
       if (userData && userData.token) {
         console.log('User is logged in:', userData.roles);
         setUserToken(userData.token);
-        setUserRole(userData.roles && userData.roles.includes('Admin') ? 'Admin' : 'User');
+
+        // Kiểm tra roles một cách an toàn
+        const roles = userData.roles || [];
+        const isAdmin = Array.isArray(roles) && roles.includes('Admin');
+
+        setUserRole(isAdmin ? 'Admin' : 'User');
+        console.log('User role set to:', isAdmin ? 'Admin' : 'User');
       } else {
         console.log('No user logged in');
         setUserToken(null);
@@ -95,7 +101,7 @@ const App = () => {
     <NavigationContainer theme={MyTheme}>
       <SafeAreaView style={styles.container}>
         <StatusBar style="auto" />
-        <Stack.Navigator 
+        <Stack.Navigator
           initialRouteName="Root"
           screenOptions={{ headerShown: false }}
         >

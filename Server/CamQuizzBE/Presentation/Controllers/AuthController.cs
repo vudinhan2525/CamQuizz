@@ -164,6 +164,4 @@ public class AuthController(
         var users = await userService.GetUsersAsync(userParams, kw, limit, page, sort);
         return Ok(users);
     }
-
-
 }

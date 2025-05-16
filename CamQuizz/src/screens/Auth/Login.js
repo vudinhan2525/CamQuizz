@@ -20,23 +20,21 @@ export const Login = () => {
 
     setLoading(true);
     try {
+      // Gọi API đăng nhập
       const userData = await login(email, password);
-      
+
       // Kiểm tra vai trò để điều hướng
-      const userRoles = userData.roles || [];
-      if (userRoles.includes('Admin')) {
-        // Thay vì reset trực tiếp đến AdminStack, reset đến root navigator
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Root' }], // Điều hướng đến Root navigator
-        });
-      } else {
-        // Thay vì reset trực tiếp đến UserStack, reset đến root navigator
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Root' }], // Điều hướng đến Root navigator
-        });
-      }
+      console.log('Login successful, user data:', userData);
+
+      // Xử lý roles một cách an toàn
+      const roles = userData.roles || [];
+      console.log('User roles:', roles);
+
+      // Điều hướng đến màn hình chính dựa trên vai trò
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Root' }], // Điều hướng đến Root navigator
+      });
     } catch (error) {
       console.error('Login error:', error);
       Alert.alert(

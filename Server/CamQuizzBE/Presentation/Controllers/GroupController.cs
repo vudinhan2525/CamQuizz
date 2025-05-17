@@ -1,10 +1,12 @@
 namespace CamQuizzBE.Presentation.Controllers;
+
 using CamQuizzBE.Applications.DTOs.Groups;
-using CamQuizzBE.Domain.Entities; 
+using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Applications.Services;
 using CamQuizzBE.Presentation.Exceptions;
 using Microsoft.AspNetCore.Mvc;
+using CamQuizzBE.Presentation.Utils;
 
 [Route("api/v1/groups")]
 [ApiController]
@@ -22,7 +24,9 @@ public class GroupController : ControllerBase
         try
         {
             var groups = await _groupService.GetAllGroupsAsync();
-            return Ok(groups);
+            var response = new ApiResponse<IEnumerable<GroupDto>>(groups);
+
+            return Ok(response);
         }
         catch (Exception)
         {
@@ -31,11 +35,12 @@ public class GroupController : ControllerBase
     }
 
     [HttpGet("my-groups/{userId}")]
-    [Authorize]  
-     public async Task<IActionResult> GetMyGroups(int userId)
+    [Authorize]
+    public async Task<IActionResult> GetMyGroups(int userId)
     {
         var groups = await _groupService.GetMyGroupsAsync(userId);
-        return Ok(groups);
+        var response = new ApiResponse<IEnumerable<GroupDto>>(groups);
+        return Ok(response);
     }
 
     [HttpGet("{id}")]
@@ -44,7 +49,8 @@ public class GroupController : ControllerBase
         var group = await _groupService.GetGroupByIdAsync(id);
         if (group == null)
             return NotFound();
-        return Ok(group);
+        var response = new ApiResponse<GroupDto>(group);
+        return Ok(response);
     }
 
     [HttpPost("{groupId}/invite")]
@@ -52,7 +58,7 @@ public class GroupController : ControllerBase
     public async Task<IActionResult> InviteMemberByEmail(int groupId, [FromBody] InviteMemberDto inviteDto)
     {
         var inviterId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         // Check if user has permission to invite (is member)
         if (!await _groupService.IsMember(groupId, inviterId))
         {
@@ -60,7 +66,10 @@ public class GroupController : ControllerBase
         }
 
         var member = await _groupService.InviteMemberByEmailAsync(groupId, inviterId, inviteDto.Email);
-        return Ok($"Invitation sent to {inviteDto.Email}");
+
+        var response = new ApiResponse<string>($"Invitation sent to {inviteDto.Email}");
+
+        return Ok(response);
     }
 
     [HttpPost("{groupId}/quizzes")]
@@ -68,7 +77,7 @@ public class GroupController : ControllerBase
     public async Task<IActionResult> ShareQuizWithGroup(int groupId, [FromBody] ShareQuizDto shareDto)
     {
         var sharerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         // Check if user is a member
         if (!await _groupService.IsMember(groupId, sharerId))
         {
@@ -76,7 +85,9 @@ public class GroupController : ControllerBase
         }
 
         var sharedQuiz = await _groupService.ShareQuizWithGroupAsync(groupId, sharerId, shareDto.QuizId);
-        return Ok("Quiz shared successfully");
+        var response = new ApiResponse<GroupQuiz>(sharedQuiz);
+
+        return Ok(response);
     }
 
     [HttpGet("{groupId}/quizzes")]
@@ -89,7 +100,9 @@ public class GroupController : ControllerBase
             return Unauthorized("You must be a member to view shared quizzes");
         }
         var quizzes = await _groupService.GetSharedQuizzesAsync(groupId);
-        return Ok(quizzes);
+        var response = new ApiResponse<IEnumerable<GroupQuiz>>(quizzes);
+
+        return Ok(response);
     }
 
     [HttpDelete("{groupId}/quizzes/{quizId}")]
@@ -97,14 +110,15 @@ public class GroupController : ControllerBase
     public async Task<IActionResult> RemoveSharedQuiz(int groupId, int quizId)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         if (!await _groupService.IsOwner(groupId, userId))
         {
             return Unauthorized("Only group owner can remove shared quizzes");
         }
 
         await _groupService.RemoveSharedQuizAsync(groupId, quizId);
-        return Ok("Quiz removed from group");
+
+        return Ok(new ApiResponse<string>("Quiz removed from group"));
     }
 
     [HttpGet("{groupId}/chat")]
@@ -112,14 +126,16 @@ public class GroupController : ControllerBase
     public async Task<IActionResult> GetChatHistory(int groupId, [FromQuery] int limit = 50)
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         if (!await _groupService.IsMember(groupId, userId))
         {
             return Unauthorized("You must be a member to view chat history");
         }
 
         var messages = await _groupService.GetGroupChatHistoryAsync(groupId, limit);
-        return Ok(messages);
+        var response = new ApiResponse<IEnumerable<ChatMessage>>(messages);
+
+        return Ok(response);
     }
 
     [HttpPost]
@@ -131,6 +147,8 @@ public class GroupController : ControllerBase
             return BadRequest("Invalid group data.");
         }
         var createdGroup = await _groupService.CreateGroupAsync(groupDto);
+        var response = new ApiResponse<GroupDto>(createdGroup);
+
         return CreatedAtAction(nameof(GetGroupById), new { id = createdGroup.Id }, createdGroup);
     }
     [HttpDelete("{id}")]
@@ -140,7 +158,7 @@ public class GroupController : ControllerBase
         try
         {
             await _groupService.DeleteGroupAsync(id);
-            return NoContent();
+            return Ok(new ApiResponse<string>("Delete group success"));
         }
         catch (ValidatorException ex)
         {
@@ -154,7 +172,7 @@ public class GroupController : ControllerBase
         try
         {
             await _groupService.UpdateGroupStatusAsync(groupId, newStatus);
-            return Ok();
+            return Ok(new ApiResponse<string>("Update group status success"));
         }
         catch (KeyNotFoundException ex)
         {
@@ -169,7 +187,9 @@ public class GroupController : ControllerBase
         try
         {
             var updatedGroup = await _groupService.UpdateGroupAsync(id, updateGroupDto);
-            return Ok(updatedGroup);
+            var response = new ApiResponse<GroupDto>(updatedGroup);
+
+            return Ok(response);
         }
         catch (ValidatorException ex)
         {
@@ -185,6 +205,8 @@ public class GroupController : ControllerBase
     public async Task<IActionResult> GetPendingMembers(int groupId)
     {
         var pendingMembers = await _groupService.GetPendingMembersAsync(groupId);
-        return Ok(pendingMembers);
+        var response = new ApiResponse<IEnumerable<MemberDto>>(pendingMembers);
+
+        return Ok(response);
     }
 }

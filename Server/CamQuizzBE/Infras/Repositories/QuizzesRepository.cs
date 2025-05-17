@@ -1,12 +1,17 @@
 using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Domain.Enums;
+using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Infras.Data;
 namespace CamQuizzBE.Infras.Repositories;
 
-public class QuizzesRepository(DataContext context) : IQuizzesRepository
+public class QuizzesRepository(DataContext context, ILogger<QuizzesRepository> logger, IQuestionRepository questionRepo, IAnswerRepository answerRepo) : IQuizzesRepository
 {
     private readonly DataContext _context = context;
+    private readonly IQuestionRepository _questionRepo = questionRepo;
+    private readonly IAnswerRepository _answerRepo = answerRepo;
+    private readonly ILogger<QuizzesRepository> _logger = logger;
 
     public async Task<PagedResult<Quizzes>> GetAllAsync(string? kw, int limit, int page, string? sort, int? genreId)
     {
@@ -58,10 +63,59 @@ public class QuizzesRepository(DataContext context) : IQuizzesRepository
             .FirstOrDefaultAsync(q => q.Id == id);
     }
 
-    public async Task AddAsync(Quizzes quiz)
+    public async Task<Quizzes?> AddAsync(CreateQuizBody body)
     {
+        if (body.GenreId is null || body.GenreId <= 0)
+        {
+            throw new ArgumentException("GenreId must be greater than 0.", nameof(body.GenreId));
+        }
+        var quiz = new Quizzes
+        {
+            UserId = body.UserId,
+            Name = body.Name,
+            Image = body.Image,
+            GenreId = (int)body.GenreId,
+            Status = body.Status ?? QuizStatus.Public,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
         await _context.Quizzes.AddAsync(quiz);
         await _context.SaveChangesAsync();
+        int totalDuration = 0;
+
+        foreach (var questionBody in body.Questions)
+        {
+            var question = new Questions
+            {
+                QuizId = quiz.Id,
+                Name = questionBody.Name,
+                Description = questionBody.Description,
+                Duration = questionBody.Duration,
+                Score = questionBody.Score
+            };
+
+            await _questionRepo.AddAsync(question);
+            totalDuration += question.Duration;
+
+            foreach (var answerBody in questionBody.Answers)
+            {
+                var answer = new Answers
+                {
+                    QuestionId = question.Id,
+                    Answer = answerBody.Answer,
+                    IsCorrect = answerBody.IsCorrect
+                };
+
+                await _answerRepo.AddAsync(answer);
+            }
+        }
+        quiz.Duration = totalDuration;
+        quiz.NumberOfQuestions = body.Questions.Count;
+        quiz.UpdatedAt = DateTime.UtcNow;
+
+        _context.Quizzes.Update(quiz);
+        await _context.SaveChangesAsync();
+        return await this.GetByIdAsync(quiz.Id);
     }
 
     public async Task DeleteAsync(int id)

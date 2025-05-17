@@ -12,10 +12,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-public class GroupRepository(DataContext context) : IGroupRepository
+public class GroupRepository(DataContext context, ILogger<GroupRepository> logger) : IGroupRepository
 {
     private readonly DataContext _context = context;
-
+    private readonly ILogger<GroupRepository> _logger = logger;
     public async Task<IEnumerable<GroupDto>> GetAllGroupsAsync()
     {
         return await _context.Groups
@@ -148,6 +148,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
     {
         if (page <= 0 || pageSize <= 0)
             throw new ValidatorException("Invalid pagination parameters");
+        _logger.LogInformation("here1");
 
         var query = _context.Groups
             .Where(g => g.OwnerId == userId || g.Members.Any(m => m.UserId == userId))
@@ -158,7 +159,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
         {
             query = query.Where(g => g.Name.Contains(search) || g.Description.Contains(search));
         }
-
+        _logger.LogInformation("here2");
         // Apply sorting
         if (!string.IsNullOrWhiteSpace(sort))
         {
@@ -175,6 +176,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
         {
             query = query.OrderBy(g => g.Id);
         }
+        _logger.LogInformation("here3");
 
         // Apply pagination
         query = query.Skip((page - 1) * pageSize).Take(pageSize);
@@ -184,6 +186,7 @@ public class GroupRepository(DataContext context) : IGroupRepository
                 .ThenInclude(m => m.User)
             .AsNoTracking()
             .ToListAsync();
+        _logger.LogInformation("here4");
 
         return groups.Select(g => new GroupDto
         {

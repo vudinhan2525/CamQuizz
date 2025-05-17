@@ -1,4 +1,8 @@
 
+using System.Text.Json.Serialization;
+using CamQuizzBE.Domain.Enums;
+using CamQuizzBE.Domain.Interfaces;
+
 namespace CamQuizzBE.Applications.DTOs.Quizzes;
 
 public class CreateQuizDto
@@ -15,5 +19,13 @@ public class CreateQuizDto
 
     [Required(ErrorMessage = "UserId is required.")]
     public int? UserId { get; set; }
+
+    public QuizStatus Status { get; set; } = QuizStatus.Public;
+    public List<string> UserShareIds = new List<string>();
+    public List<string> GroupShareIds = new List<string>();
+
+    [JsonPropertyName("questions")]
+    public List<CreateQuestionBody> Questions { get; set; } = new List<CreateQuestionBody>();
+
 }
 

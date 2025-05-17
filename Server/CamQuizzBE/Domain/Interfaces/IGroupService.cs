@@ -24,7 +24,7 @@ public interface IGroupService
     Task<Member> JoinGroupAsync(int groupId, int userId);
     Task LeaveGroupAsync(int groupId, int userId);
     Task UpdateMemberStatusAsync(int groupId, int userId, UpdateMemberStatusDto updateMemberStatusDto); // Update this
-    
+
     Task<Member> InviteMemberByEmailAsync(int groupId, int inviterId, string email);
 
     Task<GroupQuiz> ShareQuizWithGroupAsync(int groupId, int sharerId, int quizId);

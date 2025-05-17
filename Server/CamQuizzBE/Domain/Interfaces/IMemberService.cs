@@ -9,8 +9,7 @@ using System.Threading.Tasks;
 public interface IMemberService
 {
     Task<IEnumerable<MemberDto>> GetMembersByGroupIdAsync(int groupId);
-    Task<IEnumerable<Member>> GetPendingMembersAsync(int groupId);
-    Task<IEnumerable<Member>> GetApprovedMembersAsync(int groupId);
+    Task<IEnumerable<MemberDto>> GetPendingMembersAsync(int groupId);
     Task<bool> IsUserMemberAsync(int groupId, int userId);
     Task RequestToJoinGroupAsync(int groupId, int userId);
     Task UpdateMemberStatusAsync(int groupId, int userId, int ownerId, MemberStatus newStatus);

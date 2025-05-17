@@ -23,6 +23,12 @@ public class UserService(
         return user == null ? null : mapper.Map<UserDto>(user);
     }
 
+    public async Task<UserDto?> GetUserByEmailAsync(string email)
+    {
+        var user = await userRepository.GetUserByEmailAsync(email);
+        return user == null ? null : mapper.Map<UserDto>(user);
+    }
+
     public async Task<PagedResult<UserDto>> GetUsersAsync(UserParams userParams, string? kw, int limit, int page, string? sort)
     {
         var usersPagedList = await userRepository.GetUsersAsync(userParams, kw, limit, page, sort);
@@ -34,9 +40,6 @@ public class UserService(
             usersPagedList.Limit
         );
     }
-
-
-
 
     public async Task<IdentityResult> UpdateUserAsync(int id, UpdateUserDto updateUserDto)
     {
@@ -55,5 +58,16 @@ public class UserService(
         if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
 
         return await userRepository.DeleteUserAsync(user);
+    }
+
+    public async Task<IdentityResult> BanUserAsync(int id, bool isBanned)
+    {
+        var user = await userRepository.GetUserByIdAsync(id);
+        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+
+        user.IsBanned = isBanned;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        return await userRepository.UpdateUserAsync(user);
     }
 }

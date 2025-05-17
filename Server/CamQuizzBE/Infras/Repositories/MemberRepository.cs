@@ -2,6 +2,7 @@ namespace CamQuizzBE.Infras.Repositories;
 
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,7 @@ public class MemberRepository : IMemberRepository
     public async Task<Member?> GetByIdAsync(int groupId, int userId)
     {
         return await _context.Members
+            .Include(m => m.User)
             .FirstOrDefaultAsync(m => m.GroupId == groupId && m.UserId == userId);
     }
 

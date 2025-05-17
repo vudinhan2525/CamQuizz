@@ -12,9 +12,24 @@ using System.Threading;
 namespace CamQuizzBE.Presentation.Hubs;
 
 public record RejoinGameRequest(int UserId);
-public record NextQuestionRequest(string RoomId, int UserId);
-public record PauseTimerRequest(string RoomId, int UserId);
-public record ResumeTimerRequest(string RoomId, int UserId);
+
+public class NextQuestionRequest
+{
+    public string RoomId { get; set; } = string.Empty;
+    public int UserId { get; set; }
+}
+
+public class PauseTimerRequest
+{
+    public string RoomId { get; set; } = string.Empty;
+    public int UserId { get; set; }
+}
+
+public class ResumeTimerRequest
+{
+    public string RoomId { get; set; } = string.Empty;
+    public int UserId { get; set; }
+}
 
 public class GameState
 {
@@ -22,7 +37,7 @@ public class GameState
     public int CurrentQuestionIndex { get; set; } = -1;
     public Dictionary<int, List<string>> PlayerAnswers { get; set; } = new();
     public Dictionary<int, int> PlayerScores { get; set; } = new();
-    public Timer? QuestionTimer { get; set; }
+    public CancellationTokenSource? TimerCancellation { get; set; }
     public DateTime? QuestionStartTime { get; set; }
     public double OriginalDuration { get; set; }
     public double TimeRemaining { get; set; }
@@ -60,7 +75,8 @@ public class QuizHub : Hub
     {
         if (_games.TryGetValue(roomId, out var gameState))
         {
-            gameState.QuestionTimer?.Dispose();
+            gameState.TimerCancellation?.Cancel();
+            gameState.TimerCancellation?.Dispose();
             _games.Remove(roomId);
             _logger.LogInformation("Cleaned up game state for room {RoomId}", roomId);
         }
@@ -324,17 +340,26 @@ public class QuizHub : Hub
             _games[request.RoomId] = gameState;
 
             var duration = quiz.Duration > 0 ? quiz.Duration : 30;
-            gameState.QuestionTimer = new Timer(async (state) => await OnQuestionTimeUp(state),
-                request.RoomId,
-                TimeSpan.FromSeconds(duration),
-                Timeout.InfiniteTimeSpan);
-
-            await Clients.Group(request.RoomId).SendAsync("gameStarted", new { room.RoomId, firstQuestion });
+            gameState.TimerCancellation = new CancellationTokenSource();
+            
+            using var scope = _serviceProvider.CreateScope();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+            
+            _ = StartQuestionTimer(request.RoomId, duration, gameState);
+            await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarted", new { room.RoomId, firstQuestion });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error starting game in room {RoomId}", request.RoomId);
-            await Clients.Group(request.RoomId).SendAsync("error", new { Message = "Error starting game", Error = ex.Message });
+            using var scope = _serviceProvider.CreateScope();
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+            await hubContext.Clients.Group(request.RoomId).SendAsync("error", new { Message = "Error starting game", Error = ex.Message });
+            
+            // Clean up any created game state
+            if (_games.ContainsKey(request.RoomId))
+            {
+                _games.Remove(request.RoomId);
+            }
             throw;
         }
     }
@@ -369,7 +394,8 @@ public class QuizHub : Hub
                 _logger.LogInformation("All players answered or disconnected in room {RoomId}, processing question end", request.RoomId);
                 using var scope = _serviceProvider.CreateScope();
                 var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
-                await ProcessQuestionEnd(request.RoomId, quizService, triggeredByUserId: request.UserId);
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+                await ProcessQuestionEnd(request.RoomId, hubContext, quizService, triggeredByUserId: request.UserId);
             }
         }
         catch (Exception ex)
@@ -399,7 +425,8 @@ public class QuizHub : Hub
 
             using var scope = _serviceProvider.CreateScope();
             var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
-            await ProcessQuestionEnd(request.RoomId, quizService, triggeredByUserId: request.UserId);
+            var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+            await ProcessQuestionEnd(request.RoomId, hubContext, quizService, triggeredByUserId: request.UserId);
         }
         catch (Exception ex)
         {
@@ -433,7 +460,7 @@ public class QuizHub : Hub
                 return;
             }
 
-            if (gameState.QuestionStartTime == null || gameState.QuestionTimer == null)
+            if (gameState.QuestionStartTime == null || gameState.TimerCancellation == null)
             {
                 throw new Exception("No active question timer found");
             }
@@ -442,8 +469,9 @@ public class QuizHub : Hub
             gameState.TimeRemaining = Math.Max(0, gameState.OriginalDuration - elapsed);
             gameState.IsPaused = true;
 
-            gameState.QuestionTimer?.Dispose();
-            gameState.QuestionTimer = null;
+            gameState.TimerCancellation?.Cancel();
+            gameState.TimerCancellation?.Dispose();
+            gameState.TimerCancellation = null;
 
             _logger.LogInformation("Timer paused for room {RoomId}, timeRemaining: {TimeRemaining}s", request.RoomId, gameState.TimeRemaining);
 
@@ -488,10 +516,9 @@ public class QuizHub : Hub
             gameState.QuestionStartTime = DateTime.Now;
             gameState.IsPaused = false;
 
-            gameState.QuestionTimer = new Timer(async (state) => await OnQuestionTimeUp(state),
-                request.RoomId,
-                TimeSpan.FromSeconds(gameState.TimeRemaining),
-                Timeout.InfiniteTimeSpan);
+            gameState.TimerCancellation = new CancellationTokenSource();
+            
+            _ = StartQuestionTimer(request.RoomId, gameState.TimeRemaining, gameState);
 
             _logger.LogInformation("Timer resumed for room {RoomId}, timeRemaining: {TimeRemaining}s", request.RoomId, gameState.TimeRemaining);
 
@@ -509,24 +536,33 @@ public class QuizHub : Hub
         }
     }
 
-    private async Task OnQuestionTimeUp(object stateInfo)
+    private async Task StartQuestionTimer(string roomId, double duration, GameState gameState)
     {
-        var roomId = (string)stateInfo;
+        using var scope = _serviceProvider.CreateScope();
+        var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
+        var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+        
         try
         {
-            _logger.LogInformation("Timer expired for room {RoomId}", roomId);
-            using var scope = _serviceProvider.CreateScope();
-            var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
-            await ProcessQuestionEnd(roomId, quizService, isTimeUp: true);
+            await Task.Delay(TimeSpan.FromSeconds(duration), gameState.TimerCancellation.Token);
+            
+            if (!gameState.IsPaused && _games.ContainsKey(roomId))
+            {
+                _logger.LogInformation("Timer expired for room {RoomId}", roomId);
+                await ProcessQuestionEnd(roomId, hubContext, quizService, isTimeUp: true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Timer was cancelled, do nothing
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing timer callback for room {RoomId}", roomId);
-            await Clients.Group(roomId).SendAsync("error", new { Message = "Error processing question timeout", Error = ex.Message });
+            _logger.LogError(ex, "Timer error for room {RoomId}", roomId);
         }
     }
 
-    private async Task ProcessQuestionEnd(string roomId, IQuizzesService quizService, bool isTimeUp = false, int? triggeredByUserId = null)
+    private async Task ProcessQuestionEnd(string roomId, IHubContext<QuizHub> hubContext, IQuizzesService quizService, bool isTimeUp = false, int? triggeredByUserId = null)
     {
         try
         {
@@ -539,9 +575,9 @@ public class QuizHub : Hub
                 return;
             }
 
-            var oldTimer = gameState.QuestionTimer;
-            gameState.QuestionTimer = null;
-            oldTimer?.Dispose();
+            gameState.TimerCancellation?.Cancel();
+            gameState.TimerCancellation?.Dispose();
+            gameState.TimerCancellation = null;
 
             var quiz = await quizService.GetQuizByIdAsync(room.QuizId);
             if (quiz?.Questions == null || !quiz.Questions.Any())
@@ -609,10 +645,9 @@ public class QuizHub : Hub
                 gameState.TimeRemaining = gameState.OriginalDuration;
                 gameState.IsPaused = false;
 
-                gameState.QuestionTimer = new Timer(async (state) => await OnQuestionTimeUp(state),
-                    roomId,
-                    TimeSpan.FromSeconds(gameState.TimeRemaining),
-                    Timeout.InfiniteTimeSpan);
+                gameState.TimerCancellation = new CancellationTokenSource();
+                
+                _ = StartQuestionTimer(roomId, gameState.TimeRemaining, gameState);
             }
 
             var result = new QuestionResultResponse
@@ -627,11 +662,12 @@ public class QuizHub : Hub
 
             _logger.LogInformation("Sending doneQuestion event for room {RoomId}, question {QuestionId}, nextQuestionId: {NextQuestionId}",
                 roomId, currentQuestion.Id, nextQuestion?.Id);
-            await Clients.Group(roomId).SendAsync("doneQuestion", result);
+            await hubContext.Clients.Group(roomId).SendAsync("doneQuestion", result);
 
             if (nextQuestion == null)
             {
-                gameState.QuestionTimer?.Dispose();
+                gameState.TimerCancellation?.Cancel();
+                gameState.TimerCancellation?.Dispose();
                 _games.Remove(roomId);
                 _logger.LogInformation("Game ended for room {RoomId}, all questions completed", roomId);
 
@@ -643,13 +679,13 @@ public class QuizHub : Hub
                 };
 
                 _logger.LogInformation("Sending doneQuiz event for room {RoomId}", roomId);
-                await Clients.Group(roomId).SendAsync("doneQuiz", quizResult);
+                await hubContext.Clients.Group(roomId).SendAsync("doneQuiz", quizResult);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing question end for room {RoomId}", roomId);
-            await Clients.Group(roomId).SendAsync("error", new { Message = "Error processing question end", Error = ex.Message });
+            await hubContext.Clients.Group(roomId).SendAsync("error", new { Message = "Error processing question end", Error = ex.Message });
             throw;
         }
     }

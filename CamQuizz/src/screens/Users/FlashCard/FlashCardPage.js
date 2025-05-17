@@ -257,7 +257,8 @@ const styles = StyleSheet.create({
   createButton: { 
     flexDirection: 'row', 
     backgroundColor: COLORS.BLUE, 
-    padding: 10, borderRadius: 8, 
+    padding: 10, 
+    borderRadius: 8, 
     alignItems: 'center', 
     justifyContent: 'center', 
     margin: 16 

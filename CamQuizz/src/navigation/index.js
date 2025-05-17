@@ -33,13 +33,13 @@ import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
 import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
 
-import { QuizzManagement } from '../screens/Admin/QuizzManagement';
-import { PackageManagement } from '../screens/Admin/PackageManagement';
-import { UserManagement } from '../screens/Admin/UserManagement';
-import { AdminAccount } from '../screens/Admin/AdminAccount';
+import { Quizz } from '../screens/Admin/Quizz';
+import { Package } from '../screens/Admin/Package';
+import { User } from '../screens/Admin/User';
+import { Account as AdminAccount } from '../screens/Admin/Account';
 
 import { Login } from '../screens/Auth/Login';
-import { Signup } from '../screens/Auth/Signup';
+import { Signup } from '../screens/Auth/Signup_new';
 import SelectQuizForFlashcard from '../screens/Users/FlashCard/SelectQuizForFlashcard';
 import SelectQuestionsForFlashcard from '../screens/Users/FlashCard/SelectQuestionsForFlashcard';
 const Stack = createStackNavigator();
@@ -74,8 +74,8 @@ function UsersStackNavigation() {
                 name={SCREENS.QUIZ_CREATION}
                 component={QuizCreation}
                 options={{headerShown:false}}/>
-            <Stack.Screen 
-                name={SCREENS.QUESTION_SETTING} 
+            <Stack.Screen
+                name={SCREENS.QUESTION_SETTING}
                 component={CreateQuestion}
                 options={{ headerShown: false }}
             />
@@ -188,7 +188,7 @@ function LibraryStack() {
                 component={FlashCardPage}
                 options={{ title: 'Thẻ học bài' }}
             />
-            <Stack.Screen   
+            <Stack.Screen
             name={SCREENS.SharedQuizz}
             component={SharedQuizz}
             options={{ title: 'Được chia sẻ' }}
@@ -247,7 +247,7 @@ const UserTabNavigator = () => {
                 name={SCREENS.LIBRARY}
                 component={LibraryStack}
                 options={{
-                   
+
                     tabBarIcon: ({ focused, color, size }) => (
                         <Ionicons name={focused ? 'library' : 'library-outline'} size={size} color={color} />
                     ),
@@ -308,12 +308,12 @@ function AdminTabNavigator() {
                 headerTitleStyle: {
                     fontWeight: 'bold',
                 },
-                headerShown: true, 
+                headerShown: true,
             }}
         >
             <Tab.Screen
                 name={SCREENS.ADMIN_QUIZZES}
-                component={QuizzManagement}
+                component={Quizz}
                 options={{
                     title: 'Quản lý quizz',
                     tabBarIcon: ({ focused, color, size }) => (
@@ -323,7 +323,7 @@ function AdminTabNavigator() {
             />
             <Tab.Screen
                 name={SCREENS.ADMIN_PACKAGES}
-                component={PackageManagement}
+                component={Package}
                 options={{
                     title: 'Quản lý gói',
                     tabBarIcon: ({ focused, color, size }) => (
@@ -334,7 +334,7 @@ function AdminTabNavigator() {
             />
             <Tab.Screen
                 name={SCREENS.ADMIN_USERS}
-                component={UserManagement}
+                component={User}
                 options={{
                     title: 'Quản lý người dùng',
                     tabBarIcon: ({ focused, color, size }) => (

@@ -53,13 +53,19 @@ export const Signup = () => {
       }
 
       // Bước 2: Gọi API đăng ký
-      await signup(userData);
+      try {
+        const result = await signup(userData);
+        console.log('Signup result:', result);
 
-      Alert.alert(
-        'Đăng ký thành công',
-        'Vui lòng đăng nhập để tiếp tục',
-        [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
-      );
+        Alert.alert(
+          'Đăng ký thành công',
+          'Vui lòng đăng nhập để tiếp tục',
+          [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
+        );
+      } catch (signupError) {
+        console.error('Signup API error:', signupError);
+        throw signupError; 
+      }
     } catch (error) {
       console.error('Signup error:', error);
       Alert.alert(

@@ -27,9 +27,9 @@ public class QuizzesService : IQuizzesService
         return await _quizzesRepo.GetByIdAsync(id);
     }
 
-    public async Task CreateQuizAsync(Quizzes quiz)
+    public async Task<Quizzes?> CreateQuizAsync(CreateQuizBody body)
     {
-        await _quizzesRepo.AddAsync(quiz);
+        return await _quizzesRepo.AddAsync(body);
     }
 
     public async Task DeleteQuizAsync(int id)

@@ -13,9 +13,11 @@ using CamQuizzBE.Presentation.Utils;
 public class GroupController : ControllerBase
 {
     private readonly IGroupService _groupService;
-    public GroupController(IGroupService groupService)
+    private readonly ILogger<GroupController> _logger;
+    public GroupController(IGroupService groupService, ILogger<GroupController> logger)
     {
         _groupService = groupService;
+        _logger = logger;
     }
     [HttpGet]
     [Authorize]

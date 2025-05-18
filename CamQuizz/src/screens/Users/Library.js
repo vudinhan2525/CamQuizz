@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
@@ -6,13 +6,29 @@ import FlashCardPage from "../Users/FlashCard/FlashCardPage";
 import SharedQuizz from "../Users/Library/SharedQuizz";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import SCREENS from '../../screens/index';
 
+// Add this function to handle navigation from external components
+export const navigateToFlashcardTab = (navigation, params = {}) => {
+  navigation.navigate(SCREENS.Library, { 
+    activeTab: "flashcard",
+    ...params
+  });
+};
+
 export const Library = () => {
-  const [activeTab, setActiveTab] = useState("myLibrary");
+  const route = useRoute();
+  const [activeTab, setActiveTab] = useState(route.params?.activeTab || "myLibrary");
   const [visibility, setVisibility] = useState("public"); // "public" or "private"
   const navigation = useNavigation();
+
+  // Update useEffect to handle tab changes from navigation params
+  useEffect(() => {
+    if (route.params?.activeTab) {
+      setActiveTab(route.params.activeTab);
+    }
+  }, [route.params]);
 
   // Hàm xử lý khi tab được chọn
   const handleTabPress = (tabName) => {

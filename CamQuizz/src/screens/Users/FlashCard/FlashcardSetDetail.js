@@ -9,11 +9,19 @@ import SCREENS from "../..";
 export const FlashcardSetDetail = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { id } = route.params || {};
+  const { id, flashcardSet } = route.params || {};
   const [activeTab, setActiveTab] = useState("today");
   const [showAddCard, setShowAddCard] = useState(false);
-  const [flashcards, setFlashcards] = useState([]);
+  const [flashcards, setFlashcards] = useState(flashcardSet?.cards || []);
   const [reviewCount, setReviewCount] = useState(0);
+  const [setTitle, setSetTitle] = useState(flashcardSet?.title || id);
+
+  useEffect(() => {
+    // Cập nhật flashcards khi flashcardSet thay đổi
+    if (flashcardSet?.cards) {
+      setFlashcards(flashcardSet.cards);
+    }
+  }, [flashcardSet]);
 
   useEffect(() => {
     // Listen for when the screen comes into focus
@@ -58,7 +66,7 @@ export const FlashcardSetDetail = () => {
               <TouchableOpacity onPress={() => navigation.goBack()}>
                 <ArrowLeft size={24} color={"black"} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>{id}</Text>
+              <Text style={styles.headerTitle}>{setTitle}</Text>
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity onPress={() => setShowAddCard(true)}>

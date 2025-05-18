@@ -3,38 +3,125 @@ import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar 
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
-
+import * as signalR from '@microsoft/signalr';
+import { API_URL } from '@env';
+import QuizzService from '../../../services/QuizzService';
+import GenreService from '../../../services/GenreService';
 const QuizDetail = ({ navigation, route }) => {
     //const { quiz } = route.params;
-    const {quizId} = route.params;
-    const [quiz, setQuiz] = React.useState({
-        id: 'quiz001',
-        title: 'Kiến thức pháp luật cơ bản',
-        questions: 20,
-        duration: 30,
-        attempts: 500,
-        authorName: 'Nguyễn Văn A',
-        description: 'Quiz nhằm kiểm tra kiến thức pháp luật căn bản.',
-        image: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
-        topic: 'Pháp luật'
-    });
+    const { quizId } = route.params;
+    const [quiz, setQuiz] = React.useState({});
+    const [connectionId, setConnectionId] = React.useState(null);
+    const [hubConnection, setHubConnection] = React.useState(null);
+    React.useEffect(() => {
+        const fetchQuiz = async () => {
+            try {
+                const quizData = await QuizzService.getQuizzById(quizId);
+                const quiz = {
+                    id: quizData.id,
+                    title: quizData.name,
+                    questions: quizData.number_of_questions,
+                    duration: quizData.duration,
+                    attempts: quizData.number_of_attended,
+                    // authorName: quizData.authorName,
+                    description: quizData.description,
+                    image: quizData.image,
+                    topic: quizData.genre_id,
+                }
+                const genre = await GenreService.getGenreById(quizData.genre_id);
+                quiz.topic = genre.name;
+                setQuiz(quiz);
+            } catch (error) {
+                console.error('Error fetching quiz data:', error);
+            }
+        };
+        fetchQuiz();
+    }, [quizId]);
+
+    const connectToHub = async (connectionId) => {
+        try {
+            console.log("Connecting to SignalR hub with connection ID:", connectionId);
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl(`${API_URL}/quizHub?id=${connectionId}`, {
+                    skipNegotiation: true,
+                    transport: signalR.HttpTransportType.WebSockets
+                })
+                .configureLogging(signalR.LogLevel.Information)
+                .withAutomaticReconnect()
+                .build();
+
+
+
+            await connection.start();
+            console.log("Connected to SignalR hub");
+            setHubConnection(connection);
+
+            return connection;
+        } catch (error) {
+            console.error("Error connecting to SignalR hub:", error);
+            throw error;
+        }
+    };
+
+    const handleBegin = async () => {
+        try {
+            console.log(API_URL)
+            const response = await fetch(`${API_URL}/tmpHub/negotiate`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+            });
+            const data = await response.json();
+            const connectionId = data.connectionId;
+            setConnectionId(connectionId);
+            console.log('Connection data:', data);
+
+            if (response.ok) {
+                // Connect to SignalR hub
+                await connectToHub(connectionId);
+
+                // Navigate to lobby with the connection data
+                // navigation.navigate(SCREENS.LOBBY, {
+                //     quizId: quiz.id,
+                //     connectionData: data,
+                //     hubConnection: hubConnection
+                // });
+            } else {
+                console.error('Failed to negotiate connection:', data);
+            }
+        } catch (error) {
+            console.error('Error negotiating connection:', error);
+        }
+    };
+
+    const formatTime = (duration) => {
+        if (!duration && duration !== 0) return '0:00';
+        const minutes = Math.floor(duration / 60);
+        const seconds = duration % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
+
+
+
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Quiz Image with Back Button */}
                 <View style={styles.imageContainer}>
-                    <Image 
-                        source={{ uri: quiz.Image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }} 
-                        style={styles.quizImage} 
+                    <Image
+                        source={{ uri: quiz.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }}
+                        style={styles.quizImage}
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.backButton}
                         onPress={() => navigation.goBack()}
                     >
                         <Ionicons name="arrow-back" size={24} color={COLORS.WHITE} />
                     </TouchableOpacity>
                 </View>
-                
+
                 {/* Quiz Info */}
                 <View style={styles.infoContainer}>
                     <Text style={styles.title}>{quiz.title}</Text>
@@ -45,31 +132,29 @@ const QuizDetail = ({ navigation, route }) => {
                         </View>
                         <View style={styles.statItem}>
                             <Ionicons name="time-outline" size={20} color={COLORS.BLUE} />
-                            <Text style={styles.statText}>{quiz.duration} phút</Text>
+                            <Text style={styles.statText}>{formatTime(quiz.duration)} phút</Text>
                         </View>
                         <View style={styles.statItem}>
                             <Ionicons name="people-outline" size={20} color={COLORS.BLUE} />
                             <Text style={styles.statText}>{quiz.attempts} lượt thi</Text>
                         </View>
                     </View>
-                    
+
                     <View style={styles.divider} />
-                    
+
                     {/* Author Info */}
                     <View style={styles.authorContainer}>
-                        <Image 
-                            source={{ uri: quiz.authorAvatar || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }} 
-                            style={styles.authorAvatar} 
+                        <Image
+                            source={{ uri: quiz.authorAvatar || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }}
+                            style={styles.authorAvatar}
                         />
                         <Text style={styles.authorName}>Tạo bởi: {quiz.authorName}</Text>
                     </View>
-                    
+
                     <View style={styles.divider} />
-                    
-                    {/* Description */}
-                    <Text style={styles.sectionTitle}>Mô tả</Text>
-                    <Text style={styles.description}>{quiz.description}</Text>
-                    
+
+
+
                     {/* Topics */}
                     <Text style={styles.sectionTitle}>Chủ đề</Text>
                     <View style={styles.topicsContainer}>
@@ -79,12 +164,14 @@ const QuizDetail = ({ navigation, route }) => {
                     </View>
                 </View>
             </ScrollView>
-            
+
             {/* Play Button */}
             <View style={styles.buttonContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.playButton}
-                    onPress={() => navigation.navigate(SCREENS.LOBBY, { quizId: quiz.id })}
+                    onPress={() => {
+                        handleBegin()
+                    }}
                 >
                     <Ionicons name="play" size={24} color={COLORS.WHITE} />
                     <Text style={styles.playButtonText}>Bắt đầu</Text>

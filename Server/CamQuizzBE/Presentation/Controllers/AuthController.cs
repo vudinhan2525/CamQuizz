@@ -4,6 +4,10 @@ using CamQuizzBE.Applications.Helpers;
 using CamQuizzBE.Domain.Interfaces;
 using System.Text.RegularExpressions;
 using System.Security.Claims;
+// using System.IdentityModel.Tokens.Jwt;
+// using Microsoft.AspNetCore.Authentication;
+// using Microsoft.AspNetCore.Authentication.Cookies;
+// using Microsoft.AspNetCore.Authentication.Google;
 
 namespace CamQuizzBE.Presentation.Controllers;
 
@@ -169,10 +173,106 @@ public class AuthController(
         [FromQuery] int page = 1, 
         [FromQuery] string? sort = null)
     {
-        var userParams = new UserParams(); 
+        var userParams = new UserParams();
         var users = await userService.GetUsersAsync(userParams, kw, limit, page, sort);
         return Ok(users);
     }
+
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto changePasswordDto)
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var result = await userService.ChangePasswordAsync(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
+        
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        return Ok("Password changed successfully");
+    }
+
+    // [HttpGet("external-login/google")]
+    // public IActionResult GoogleLogin()
+    // {
+    //     var properties = new AuthenticationProperties
+    //     {
+    //         RedirectUri = Url.Action(nameof(ExternalLoginCallback), "Auth", null, Request.Scheme)
+    //     };
+
+    //     return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    // }
+
+    // [HttpGet("external-login/callback")]
+    // public async Task<IActionResult> ExternalLoginCallback()
+    // {
+    // try
+    // {
+    //     var info = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    //     if (info?.Principal == null)
+    //         return BadRequest("External authentication failed");
+
+    //     var userInfo = new GoogleUserInfo
+    //     {
+    //         Email = info.Principal.FindFirstValue(ClaimTypes.Email) ?? "",
+    //         GivenName = info.Principal.FindFirstValue(ClaimTypes.GivenName) ?? "",
+    //         FamilyName = info.Principal.FindFirstValue(ClaimTypes.Surname) ?? "",
+    //         Sub = info.Principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? ""
+    //     };
+
+    //     // Validate required fields
+    //     if (string.IsNullOrEmpty(userInfo.Email) ||
+    //         string.IsNullOrEmpty(userInfo.Sub) ||
+    //         string.IsNullOrEmpty(userInfo.GivenName) ||
+    //         string.IsNullOrEmpty(userInfo.FamilyName))
+    //     {
+    //         return BadRequest("Required user information not provided by Google");
+    //     }
+
+    //     var user = await userManager.FindByEmailAsync(userInfo.Email);
+        
+    //     if (user == null)
+    //     {
+    //         user = new AppUser
+    //         {
+    //             UserName = userInfo.Email,
+    //             Email = userInfo.Email,
+    //             FirstName = userInfo.GivenName,
+    //             LastName = userInfo.FamilyName,
+    //             Gender = "Other",  // Default value as required by your model
+    //             CreatedAt = DateTime.UtcNow,
+    //             UpdatedAt = DateTime.UtcNow
+    //         };
+
+    //         var createResult = await userManager.CreateAsync(user);
+    //         if (!createResult.Succeeded)
+    //             return BadRequest(createResult.Errors);
+
+    //         await userManager.AddToRoleAsync(user, "Student");  // Default role
+    //     }
+
+    //     // Add Google login info if not already present
+    //     var existingLogins = await userManager.GetLoginsAsync(user);
+    //     if (!existingLogins.Any(l => l.LoginProvider == "Google" && l.ProviderKey == userInfo.Sub))
+    //     {
+    //         var addLoginResult = await userManager.AddLoginAsync(user,
+    //             new UserLoginInfo("Google", userInfo.Sub, "Google"));
+            
+    //         if (!addLoginResult.Succeeded)
+    //             return BadRequest("Failed to link Google account");
+    //     }
+
+    //     // Return user with token as per your existing pattern
+    //     var userDto = mapper.Map<UserDto>(user);
+    //     userDto.Token = await tokenService.CreateTokenAsync(user);
+        
+    //     return Ok(userDto);
+    // }
+    // catch (Exception ex)
+    // {
+    //     Console.WriteLine($"Google authentication error: {ex.Message}");
+    //     return BadRequest("An error occurred during Google authentication");
+    // }
+    // }
 
     [HttpGet("email/{email}")]
     [Authorize(Roles = "Admin")]
@@ -194,3 +294,4 @@ public class AuthController(
     }
 
 }
+

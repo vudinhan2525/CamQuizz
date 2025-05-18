@@ -2,78 +2,91 @@ import React from 'react';
 import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import COLORS from '../../../constant/colors';
 import Entypo from 'react-native-vector-icons/Entypo';
-export const SearchResult = ({ searchQuery, filters }) => {
-  const quizzes = [
-    {
-      id: '1',
-      title: 'Quiz 1',
-      category: 'Category 1',
-      plays: 100,
-      questions: 10,
-      image: 'https://via.placeholder.com/100',
-    },
-    {
-      id: '2',
-      title: 'Quiz 2',
-      category: 'Category 2',
-      plays: 200,
-      questions: 20,
-      image: 'https://via.placeholder.com/100',
-    },
-    {
-      id: '3',
-      title: 'Quiz 3',
-      category: 'Category 3',
-      plays: 300,
-      questions: 30,
-      image: 'https://via.placeholder.com/100',
-    },
-    {
-      id: '4',
-      title: 'Quiz 4',
-      category: 'Category 4',
-      plays: 300,
-      questions: 30,
-      image: 'https://via.placeholder.com/100',
-    },
-    {
-      id: '5',
-      title: 'Quiz 5',
-      category: 'Category 5',
-      plays: 300,
-      questions: 30,
-      image: 'https://via.placeholder.com/100',
-    },
-    {
-      id: '6',
-      title: 'Quiz 6',
-      category: 'Category 6',
-      plays: 300,
-      questions: 30,
-      image: 'https://via.placeholder.com/100',
-    },
-  ];
+import QuizzService from '../../../services/QuizzService';
 
+export const SearchResult = ({ searchQuery, filters , categories}) => {
+  const [quizzes, setQuizzes] = React.useState([]);
+  const [pagination, setPagination] = React.useState({
+    page: 1,
+    limit: 5,
+  });
+  const [isAll, setIsAll] = React.useState(false);
+  React.useEffect(() => {
+    return () => {
+      resetState();
+    };
+  },[]);
+  const resetState = () => {
+    setQuizzes([]);
+    setPagination({
+      page: 1,
+      limit: 5,
+    });
+    setIsAll(false);
+  };
+  React.useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
+        console.log('categoryId', categoryId);
+        const { data, paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, 1, pagination.limit, filters.newestSort, filters.popularSort);
+        if (data) {
+          setQuizzes(data);
+          setPagination({
+            page: 1,
+            limit: 5,
+          });
+        }
+        else
+          setQuizzes([]);
+        setIsAll(paginationn.total_pages === 1);
+
+      } catch (error) {
+        console.error('Error fetching quizzes:', error);
+      }
+    };
+    fetchQuizzes();
+  }, [searchQuery, filters]);
+  const handleSeeMore = async () => {
+    try {
+      const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
+      const { data, paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, pagination.page + 1, pagination.limit, filters.newestSort, filters.popularSort);
+      if (data) {
+        setIsAll(paginationn.total_pages === pagination.page + 1);
+        setQuizzes((prev) => [...prev, ...data]);
+        setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
+      }
+
+
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+    }
+
+  };
+  const getCategoryName = (id) => {
+    const category = categories.find((item) => item.value === id);
+    return category ? category.label : 'Unknown';
+  };
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Image source={{ uri: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'||item.image }} style={styles.image} />
+      <Image source={{ uri: item.image|| 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'  }} style={styles.image} />
       <View style={styles.infoContainer}>
-        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.title}>{item.name}</Text>
         <View style={styles.row}>
-          <Text style={styles.questions}>{item.questions} câu hỏi</Text>
-          <Entypo name="dot-single"  size={20} color={COLORS.GRAY} />
-          <Text style={styles.plays}>{item.plays} lượt làm bài</Text>
+          <Text style={styles.questions}>{item.number_of_questions} câu hỏi</Text>
+          <Entypo name="dot-single" size={20} color={COLORS.GRAY} />
+          <Text style={styles.plays}>{item.number_of_attended} lượt làm bài</Text>
         </View>
         <View style={styles.categoryContainer}>
-          <Text style={styles.category}>{item.category}</Text>
+          <Text style={styles.category}>{getCategoryName(item.genre_id)}</Text>
         </View>
       </View>
     </View>
   );
 
   const renderFooter = () => (
-    <View style={styles.footerContainer}>
-      <TouchableOpacity style={styles.footerButton} onPress={() => console.log('See More pressed')}>
+    !isAll && quizzes.length!=0 && <View style={styles.footerContainer}>
+      <TouchableOpacity style={styles.footerButton} onPress={() => handleSeeMore()}>
         <Text style={styles.footerButtonText}>See More</Text>
       </TouchableOpacity>
     </View>
@@ -118,7 +131,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color:COLORS.BLUE
+    color: COLORS.BLUE
   },
   row: {
     flexDirection: 'row',
@@ -152,13 +165,13 @@ const styles = StyleSheet.create({
   footerButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: COLORS.BLUE,
+    backgroundColor: COLORS.WHITE,
     borderRadius: 5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   footerButtonText: {
-    color: '#fff',
+    color: COLORS.BLUE,
     fontSize: 16,
   },
 });

@@ -14,11 +14,11 @@ const QuizCard = ({ quiz, attemptText = "lượt thi" }) => {
   };
   return (
     <TouchableOpacity style={styles.quizCard}  onPress={() => handlePress()}>
-      <Image source={{ uri: tmpUrl||quiz.image }} style={styles.quizImage} />
+      <Image source={{ uri: quiz.image ||tmpUrl }} style={styles.quizImage} />
       <View style={styles.quizInfo}>
-        <Text style={styles.quizTitle}>{quiz.title}</Text>
-        <Text style={styles.quizQuestions}>{quiz.questions} câu hỏi</Text>
-        <Text style={styles.quizAttempts}>{quiz.attempts} {attemptText}</Text>
+        <Text style={styles.quizTitle}>{quiz.name}</Text>
+        <Text style={styles.quizQuestions}>{quiz.number_of_questions} câu hỏi</Text>
+        <Text style={styles.quizAttempts}>{quiz.number_of_attended} {attemptText}</Text>
       </View>
     </TouchableOpacity>
   );

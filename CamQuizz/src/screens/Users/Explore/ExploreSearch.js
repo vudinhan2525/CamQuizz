@@ -9,35 +9,77 @@ import { SearchView } from './SearchView';
 import Octicons from 'react-native-vector-icons/Octicons';
 import BottomSheet from '../../../components/BottomSheet';
 import { Dropdown } from 'react-native-element-dropdown';
-
+import GenreService from '../../../services/GenreService';
+import QuizzService from '../../../services/QuizzService';
 export const ExploreSearch = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { categoryId } = route.params;
   const [searchQuery, setSearchQuery] = useState('');
   const [showResult, setShowResult] = useState(false);
+  const [categories, setCategories] = useState([
+    { label: 'Category 1', value: '1' },
+    { label: 'Category 2', value: '2' },
+    { label: 'Category 3', value: '3' },
+  ]);
+  const bottomSheetRef = useRef();
   const [filterObj, setFilterObj] = useState({
-    categoryId:  "Tất cả",
-    numberQuestion:'0, 10', //range
-    popularSort: true,
-    newestSort: true,
+    categoryId: 0,
+    popularSort: 'anttend_num',
+    newestSort: 'created_at',
   });
-  const [numberQuestionIndex, setNumberQuestionIndex] = useState();
-  useEffect(()=>{
-    if (categoryId) {
+  const [originalFilterObj, setOriginalFilterObj] = useState({
+    categoryId: 0,
+    popularSort: 'anttend_num',
+    newestSort: 'created_at',
+  });
+
+  useEffect(() => {
+    if (categoryId !== null) {
       setFilterObj(prev => ({
-          ...prev,
-          categoryId: categoryId
+        ...prev,
+        categoryId: categoryId
+      }));
+      setOriginalFilterObj(prev => ({
+        ...prev,
+        categoryId: categoryId
       }));
       setShowResult(true);
-  }
+    }
 
-  },[categoryId])
-  const bottomSheetRef = useRef();
-
+  }, [categoryId])
+  React.useEffect(() => {
+    const fetchCategories = async () => {
+      const genres = await GenreService.getAllGenres();
+      console.log('Fetching categories');
+      genres.data = genres.data.map((item) => ({
+        label: item.name,
+        value: item.id,
+      }));
+      setCategories([{ value: 0, label: 'All' }, ...genres.data]);
+    };
+    fetchCategories();
+    return () => {
+      resetState();
+    };
+  }, []);
   const handleSearchSubmit = () => {
     console.log('searchQuery', searchQuery);
     setShowResult(true);
+  };
+  const resetState = () => {
+    setSearchQuery('');
+    setShowResult(false);
+    setFilterObj({
+      categoryId: 0,
+      popularSort: 'anttend_num',
+      newestSort: 'created_at',
+    });
+    setOriginalFilterObj({
+      categoryId: 0,
+      popularSort: 'anttend_num',
+      newestSort: 'created_at',
+    });
   };
 
   const clearSearchQuery = () => {
@@ -51,42 +93,30 @@ export const ExploreSearch = () => {
   };
 
   const resetFilters = () => {
-    setFilterObj({
-      categoryId: 'Tất cả',
-      numberQuestion: [0, 10],
-      popularSort: true,
-      newestSort: true,
+    setOriginalFilterObj({
+      categoryId: 0,
+      popularSort: 'anttend_num',
+      newestSort: 'created_at',
     });
   };
 
   const applyFilters = () => {
     bottomSheetRef.current.close();
-    // Apply filters logic here
+    setOriginalFilterObj(filterObj);
   };
 
-  const categories = [
-    { label: 'Category 1', value: '1' },
-    { label: 'Category 2', value: '2' },
-    { label: 'Category 3', value: '3' },
-  ];
-  const numberQuestionMap = {
-    '0-10': [0, 10],
-    '10-20': [10, 20],
-    '20-30': [20, 30]
-  }
-  const numberQuestions = [
-    { label: '0-10', value: '0-10' },
-    { label: '10-20', value: '10-20' },
-    { label: '20-30', value: '20-30' },
-  ];
+
+
+
+
 
   const timeSortOptions = [
-    { label: 'Mới nhất', value: true },
-    { label: 'Cũ nhất', value: false },
+    { label: 'Mới nhất', value: 'created_at' },
+    { label: 'Cũ nhất', value: '-created_at' },
   ];
   const popularSortOptions = [
-    { label: 'Phổ biến', value: true },
-    { label: 'Ít phổ biến', value: false },
+    { label: 'Phổ biến', value: 'anttend_num' },
+    { label: 'Ít phổ biến', value: '-anttend_num' },
   ]
 
 
@@ -127,78 +157,70 @@ export const ExploreSearch = () => {
       </View>
       <View style={styles.content}>
         {showResult ? (
-          <SearchResult searchQuery={searchQuery} filters={filterObj} />
+          <SearchResult searchQuery={searchQuery} filters={originalFilterObj} categories={categories} />
         ) : (
           <SearchView onSearchPress={handleSearchPress} />
         )}
       </View>
-      <Text>{categoryId}</Text>
 
-      <BottomSheet ref={bottomSheetRef} title="Bộ lọc" height={350}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.label}>Danh mục</Text>
-          <Dropdown
-            style={styles.dropdown}
-            data={categories}
-            labelField="label"
-            valueField="value"
-            value={filterObj.categoryId}
-            onChange={(item) => {
-              setFilterObj({ ...filterObj, categoryId: item.value });
-            }}
-          />
-        </View>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.label}>Số lượng câu hỏi</Text>
-          <Dropdown
-            style={styles.dropdown}
-            data={numberQuestions}
-            labelField="label"
-            valueField="value"
-            placeholder="0-10"
-            value={numberQuestionIndex}
-            onChange={(item) => {
-              setNumberQuestionIndex(item.value);
-              setFilterObj({ ...filterObj, numberQuestion: numberQuestionMap[item.value] });
-            }}
-          />
-        </View>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.label}>Độ phổ biến</Text>
-          <Dropdown
-            style={styles.dropdown}
-            data={popularSortOptions}
-            labelField="label"
-            valueField="value"
-            value={filterObj.popularSort}
-            onChange={(item) => {
-              setFilterObj({ ...filterObj, popularSort: item.value });
-            }}
-          />
-        </View>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.label}>Thời gian</Text>
-          <Dropdown
-            style={styles.dropdown}
-            data={timeSortOptions}
-            labelField="label"
-            valueField="value"
-            value={filterObj.newestSort}
-            onChange={(item) => {
-              setFilterObj({ ...filterObj, newestSort: item.value });
-            }}
-          />
-        </View>
+      <BottomSheet ref={bottomSheetRef} title="Bộ lọc">
+        <View style={{ flex: 1, justifyContent: 'space-between' }}>
+          <View>
+            <View style={styles.dropdownContainer}>
+              <Text style={styles.label}>Danh mục</Text>
+              <Dropdown
+                style={styles.dropdown}
+                data={categories}
+                labelField="label"
+                valueField="value"
+                value={filterObj.categoryId}
+                onChange={(item) => {
+                  setFilterObj({ ...filterObj, categoryId: item.value });
+                }}
+              />
+            </View>
 
-        <View style={styles.modalButtons}>
-          <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetFilters}>
-            <Text style={[styles.buttonText, styles.resetButtonText]}>Đặt lại bộ lọc</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.applyButton]} onPress={applyFilters}>
-            <Text style={[styles.buttonText, styles.applyButtonText]}>Áp dụng bộ lọc</Text>
-          </TouchableOpacity>
+            <View style={styles.dropdownContainer}>
+              <Text style={styles.label}>Độ phổ biến</Text>
+              <Dropdown
+                style={styles.dropdown}
+                data={popularSortOptions}
+                labelField="label"
+                valueField="value"
+                value={filterObj.popularSort}
+                onChange={(item) => {
+                  setFilterObj({ ...filterObj, popularSort: item.value });
+                }}
+              />
+            </View>
+
+            <View style={styles.dropdownContainer}>
+              <Text style={styles.label}>Thời gian</Text>
+              <Dropdown
+                style={styles.dropdown}
+                data={timeSortOptions}
+                labelField="label"
+                valueField="value"
+                value={filterObj.newestSort}
+                onChange={(item) => {
+                  setFilterObj({ ...filterObj, newestSort: item.value });
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Buttons at bottom */}
+          <View style={styles.modalButtons}>
+            <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={resetFilters}>
+              <Text style={[styles.buttonText, styles.resetButtonText]}>Đặt lại bộ lọc</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.applyButton]} onPress={applyFilters}>
+              <Text style={[styles.buttonText, styles.applyButtonText]}>Áp dụng bộ lọc</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </BottomSheet>
+
     </View>
   );
 };

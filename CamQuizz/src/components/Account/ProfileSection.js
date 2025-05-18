@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
+import { useNavigation } from '@react-navigation/native';
 import EditableField from './EditableField';
 import ProfileAvatar from './ProfileAvatar';
 import EditableSection from './EditableSection';
 import { Switch } from 'react-native';
+import { logout } from '../../services/AuthService';
 
 const ProfileSection = () => {
+  const navigation = useNavigation();
   const [profile, setProfile] = useState({
     name: 'Nguyen Van A',
     description: 'Other',
@@ -21,6 +24,36 @@ const ProfileSection = () => {
       text1: `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`
     });
   };
+
+  const handleLogout = () => {
+  Alert.alert(
+    'Đăng xuất',
+    'Bạn có chắc chắn muốn đăng xuất?',
+    [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        onPress: async () => {
+          try {
+            await logout();
+            
+            // Thêm log để kiểm tra
+            console.log('Navigating to Root after logout');
+            
+            // Đảm bảo reset toàn bộ stack điều hướng
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Root' }],
+            });
+          } catch (error) {
+            console.error('Error logging out:', error);
+            Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
+          }
+        },
+      },
+    ]
+  );
+};
 
   return (
     <ScrollView style={styles.container}>
@@ -111,7 +144,7 @@ const ProfileSection = () => {
       </Pressable>
 
       {/* Logout Button */}
-      <Pressable style={styles.logoutButton}>
+      <Pressable style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Đăng xuất</Text>
       </Pressable>
 

@@ -1,8 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_URL}  from '@env';
 
 // API base URL - using ngrok for remote access
-const API_BASE_URL = 'https://2414-14-169-54-186.ngrok-free.app/api/v1';
+const API_BASE_URL = 'https://797a-14-169-15-220.ngrok-free.app/api/v1';
+// const API_BASE_URL = `${API_URL}/api/v1`;
 
 // Create axios instance with default config
 const apiClient = axios.create({

@@ -4,14 +4,52 @@ import COLORS from '../constant/colors';
 import QuizCard from './QuizCard'; 
 import { useNavigation } from '@react-navigation/native';
 import SCREENS from '../screens';
-
-const CategorySection = ({ category, quizzes, onSeeMore }) => {
+import QuizzService from '../services/QuizzService';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+const CategorySection = ({ category, onSeeMore }) => {
   const navigation = useNavigation();
-  
+  const [quizzes,setQuizzes] = React.useState([]);
+  React.useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        const {data, paginationn} = await QuizzService.getAllQuizz(null, category.id, 1, 5);
+        setQuizzes(data);
+      } catch (error) {
+        console.error('Error fetching quizzes:', error);
+      }
+    };
+    fetchQuizzes();
+  }, [category.id]);
+useFocusEffect(
+  React.useCallback(() => {
+    let isActive = true;
+
+    async function fetchData() {
+      try {
+        const { data, paginationn } = await QuizzService.getAllQuizz(null, category.id, 1, 5);
+        if (isActive) {
+          setQuizzes(data);
+        }
+      } catch (error) {
+        console.error('Error fetching quizzes:', error);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [category.id])
+);
+
+
+
   return (
     <View style={styles.categorySection}>
       <View style={styles.categoryHeader}>
-        <Text style={styles.categoryTitle}>{category}</Text>
+        <Text style={styles.categoryTitle}>{category.name}</Text>
         <TouchableOpacity onPress={onSeeMore}>
           <Text style={styles.seeMoreButton}>Xem thêm</Text>
         </TouchableOpacity>

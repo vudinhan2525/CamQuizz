@@ -11,35 +11,81 @@ import COLORS from '../../../constant/colors';
 import CategorySection from '../../../components/CategorySection';
 import QuizCard from '../../../components/QuizCard';
 import SCREENS from '../../index';
+import GenreService from '../../../services/GenreService';
+import QuizzService from '../../../services/QuizzService';
 import { mockPlayers, mockQuiz } from '../../../components/data/MockQuizPlayData';
-export const Explore = () => {
-  const navigation = useNavigation();
+export const Explore = ({navigation}) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [userName, setUserName] = useState('Nguyen Duy An');
   const [avatar, setAvatar] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [categories, setCategories] = useState(['All', 'Category 1', 'Category 2', 'Category 3', 'Category 4', 'Category 5']);
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [quizzes, setQuizzes] = useState([
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 1', questions: 10, attempts: 100 },
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 2', questions: 15, attempts: 150 },
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 3', questions: 20, attempts: 200 },
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 4', questions: 25, attempts: 250 },
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 5', questions: 30, attempts: 300 },
-    { image: 'https://via.placeholder.com/100', title: 'Quiz 6', questions: 35, attempts: 350 },
-  ]);
-  const handleSeeMore = (categoryId,navigate) => {
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState({ id: 0, name: 'All' });
+  const [quizzes, setQuizzes] = useState([]);
+  const [isAll, setIsAll] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 5,
+  });
+  React.useEffect(() => {
+    const fetchCategories = async () => {
+      const genres = await GenreService.getAllGenres();
+      console.log('Fetching categories');
+      setCategories([{ id: 0, name: 'All' }, ...genres.data]);
+    };
+    fetchCategories();
+
+  }, []);
+
+
+  React.useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        console.log('Fetching quizzes for category:', selectedCategory.id);
+        const {data, paginationn} = await QuizzService.getAllQuizz(null, selectedCategory.id, 1, pagination.limit);
+
+        if (data) {
+          setQuizzes(data);
+          setPagination({
+            page: 1,
+            limit: 5,
+          });
+          setIsAll(paginationn.total_pages === 1);
+        }
+      } catch (error) {
+        console.error('Error fetching quizzes:', error);
+      }
+    };
+    if (selectedCategory.id !== 0)
+      fetchQuizzes();
+  }, [selectedCategory]);
+
+
+  const handleSeeMore = async (category, navigate) => {
     // Xử lý sự kiện khi nhấn nút "Xem thêm"
-    if(navigate){
-      return () => {
-        navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId });
-      };
+    if (navigate) {
+      navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId: category.id });
+      return;
+    }
+    try {
+      const {data, paginationn} = await QuizzService.getAllQuizz(null, category.id, pagination.page + 1, pagination.limit);
+      if (data) {
+        setIsAll(paginationn.total_pages === pagination.page+1);
+        setQuizzes((prev) => [...prev, ...data]);
+        setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
+      }
+
+
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
     }
 
   };
   const handleCategoryPress = (category) => {
     setSelectedCategory(category);
+    setPagination({ page: 1, limit: 5 });
+    setIsAll(false);
   };
 
   // Thêm hàm xử lý tham gia trò chơi
@@ -49,17 +95,17 @@ export const Explore = () => {
       Alert.alert('Thông báo', 'Vui lòng nhập mã tham gia');
       return;
     }
-    
-    const roomFound = true; 
-    
+
+    const roomFound = true;
+
     if (roomFound) {
       // Điều hướng đến màn hình Lobby với vai trò người chơi (không phải host)
-      navigation.navigate(SCREENS.LOBBY, { 
-        quizId: mockQuiz.id, 
+      navigation.navigate(SCREENS.LOBBY, {
+        quizId: mockQuiz.id,
         isHost: false,
         roomCode: joinCode
       });
-      
+
       setJoinCode('');
     } else {
       Alert.alert('Thông báo', 'Không tìm thấy phòng với mã tham gia này');
@@ -88,35 +134,37 @@ export const Explore = () => {
         nestedScrollEnabled={true}
         style={{ marginHorizontal: 10 }}
         data={categories}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={[
               styles.categoryCard,
-              selectedCategory === item && styles.selectedCategoryCard
+              selectedCategory.id === item.id && styles.selectedCategoryCard
             ]}
             onPress={() => handleCategoryPress(item)}
           >
             <Text
               style={[
                 styles.categoryText,
-                selectedCategory === item && styles.selectedCategoryText
+                selectedCategory.id === item.id && styles.selectedCategoryText
               ]}
             >
-              {item}
+              {item.name}
             </Text>
           </TouchableOpacity>
         )}
         horizontal
         showsHorizontalScrollIndicator={false}
       />
-      {selectedCategory === 'All' ? (
+      {selectedCategory.name === 'All' ? (
         categories.slice(1).map((category, index) => (
           <CategorySection
-            key={index}
+            key={category.id}
             category={category}
-            quizzes={quizzes}
-            onSeeMore={handleSeeMore(category,true)}
+            onSeeMore={() => {
+              handleSeeMore(category, true)
+            }
+            }
           />
         ))
       ) : (
@@ -129,8 +177,10 @@ export const Explore = () => {
           numColumns={2}
           contentContainerStyle={styles.gridContainer}
           ListFooterComponent={
-            selectedCategory !== 'All' && (
-              <TouchableOpacity style={styles.seeMoreButton} onPress={handleSeeMore(selectedCategory,false)}>
+            selectedCategory.name !== 'All' && !isAll && quizzes.length!=0&& (
+              <TouchableOpacity style={styles.seeMoreButton} 
+                onPress={()=>{
+                  handleSeeMore(selectedCategory, false)}}>
                 <Text style={styles.seeMoreButtonText}>Xem thêm</Text>
               </TouchableOpacity>
             )
@@ -189,7 +239,7 @@ export const Explore = () => {
             </TouchableOpacity>
           </View>
         </Animated.View>
-       
+
         <Animated.View style={[styles.searchContainer,
         {
           position: 'absolute',
@@ -200,9 +250,9 @@ export const Explore = () => {
         ]}
         >
           <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => {navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId: null })}}
-          style={styles.searchInputContainer}>
+            activeOpacity={1}
+            onPress={() => { navigation.navigate(SCREENS.EXPLORE_SEARCH, { categoryId: null }) }}
+            style={styles.searchInputContainer}>
             <EvilIcons name="search" size={24} color={COLORS.GRAY_LIGHT} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -231,7 +281,7 @@ export const Explore = () => {
         ]}>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
-              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} onPress={()=>{ navigation.navigate(SCREENS.QUIZ_CREATION)}} />
+              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} onPress={() => { navigation.navigate(SCREENS.QUIZ_CREATION) }} />
             </View>
             <Text style={styles.buttonText}>Tạo quiz</Text>
           </TouchableOpacity>
@@ -415,7 +465,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   headerCollapsed: {
-    height: 80, 
+    height: 80,
     justifyContent: 'center',
   },
 

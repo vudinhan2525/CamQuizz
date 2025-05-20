@@ -4,7 +4,7 @@ using CamQuizzBE.Infras.Data;
 
 namespace CamQuizzBE.Infras.Repositories;
 
-public class QuestionsRepository(DataContext context,ILogger<QuestionsRepository> logger) : IQuestionRepository
+public class QuestionsRepository(DataContext context, ILogger<QuestionsRepository> logger) : IQuestionRepository
 {
     private readonly DataContext _context = context;
     private readonly ILogger<QuestionsRepository> _logger = logger;
@@ -12,7 +12,7 @@ public class QuestionsRepository(DataContext context,ILogger<QuestionsRepository
     public async Task<PagedResult<Questions>> GetAllAsync(string? kw, int limit, int page, string? sort, int? quizId)
     {
         var query = _context.Questions
-        .Include(q => q.Answers) 
+        .Include(q => q.Answers)
         .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(kw))
@@ -55,6 +55,7 @@ public class QuestionsRepository(DataContext context,ILogger<QuestionsRepository
 
     public async Task<Questions> AddAsync(Questions question)
     {
+        _logger.LogInformation(">>>>comehere");
         await _context.Questions.AddAsync(question);
         await _context.SaveChangesAsync();
 

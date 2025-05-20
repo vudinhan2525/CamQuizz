@@ -1,21 +1,35 @@
-namespace CamQuizzBE.Domain.Interfaces;
-
-using CamQuizzBE.Domain.Entities;
-using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Applications.DTOs.Groups;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using CamQuizzBE.Applications.Helpers;
+using CamQuizzBE.Domain.Entities;
+
+namespace CamQuizzBE.Domain.Interfaces;
 
 public interface IGroupService
 {
     Task<IEnumerable<GroupDto>> GetAllGroupsAsync();
+    Task<IEnumerable<GroupDto>> GetGroupsAsync(string? search, int page, int pageSize, string? sort); // Add this
     Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId);
+    Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, string? search, int page, int pageSize, string? sort); // Add this
     Task<GroupDto?> GetGroupByIdAsync(int id);
     Task<GroupDto> CreateGroupAsync(CreateGroupDto groupDto);
     Task DeleteGroupAsync(int id);
     Task<GroupDto> UpdateGroupAsync(int id, UpdateGroupDto updateGroupDto);
-    Task UpdateGroupStatusAsync(int groupId, UpdateGroupStatusDto newStatus);
+    Task UpdateGroupStatusAsync(int groupId, UpdateGroupStatusDto updateGroupStatusDto);
+
+    Task<Member?> GetMemberAsync(int groupId, int userId);
+    Task<IEnumerable<MemberDto>> GetMembersAsync(int groupId);
     Task<IEnumerable<MemberDto>> GetPendingMembersAsync(int groupId);
-    Task UpdateMemberStatusAsync(int groupId, int userId, MemberStatus newStatus);
-    Task AddMemberAsync(int groupId, int userId);
+    Task<bool> IsMember(int groupId, int userId);
+    Task<bool> IsOwner(int groupId, int userId);
+    Task<Member> JoinGroupAsync(int groupId, int userId);
+    Task LeaveGroupAsync(int groupId, int userId);
+    Task UpdateMemberStatusAsync(int groupId, int userId, UpdateMemberStatusDto updateMemberStatusDto); // Update this
+
+    Task<Member> InviteMemberByEmailAsync(int groupId, int inviterId, string email);
+
+    Task<GroupQuiz> ShareQuizWithGroupAsync(int groupId, int sharerId, int quizId);
+    Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(int groupId);
+    Task RemoveSharedQuizAsync(int groupId, int quizId);
+    Task<ChatMessage> SaveChatMessage(ChatMessage message);
+    Task<IEnumerable<ChatMessage>> GetGroupChatHistoryAsync(int groupId, int limit = 50);
 }

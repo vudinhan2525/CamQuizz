@@ -114,6 +114,11 @@ public class UserRepository(
 
     public async Task<IdentityResult> UpdateUserAsync(AppUser user)
     {
+        // First save changes to context
+        context.Users.Update(user);
+        await context.SaveChangesAsync();
+        
+        // Then update in UserManager
         return await userManager.UpdateAsync(user);
     }
 

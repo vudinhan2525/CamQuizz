@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,10 @@ import BottomSheet from '../../../components/BottomSheet';
 import QuestionSlider from '../../../components/QuestionSlider'
 import OptionalAccessModal from '../../../components/OptionalAccessModal';
 import SCREENS from '../../index'
+import ImageService from '../../../services/ImageService';
+import QuizzService from '../../../services/QuizzService';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import GenreService from '../../../services/GenreService';
 const QuizCreation = () => {
     const navigation = useNavigation();
     const [imageUri, setImageUri] = useState(null);
@@ -24,22 +28,18 @@ const QuizCreation = () => {
     const [tmpQuizInfo, setTmpQuizInfo] = useState({
         categoryId: "Khác",
         name: "Bài kiểm tra ZZZ",
-        access: 'Công khai',
+        access: 'Public',
         amount: 0,
         selectedGroups: [],
         invitedEmails: []
     });
     const [showGroupModal, setShowGroupModal] = useState(false);
     const [selectedGroups, setSelectedGroups] = useState([]);
-    const categories = [
-        { label: 'Category 1', value: '1' },
-        { label: 'Category 2', value: '2' },
-        { label: 'Category 3', value: '3' },
-    ];
+    const [categories, setCategories] = useState([]);
     const accesses = [
-        { label: 'Công khai', value: 'Công khai' },
-        { label: 'Riêng tư', value: 'Riêng tư' },
-        { label: 'Tùy chọn', value: 'Tùy chọn' },
+        { label: 'Công khai', value: 'Public' },
+        { label: 'Riêng tư', value: 'Private' },
+        { label: 'Tùy chọn', value: 'Option' },
     ];
     const mockGroups = [
         { id: '1', name: 'Nhóm Toán học' },
@@ -51,11 +51,95 @@ const QuizCreation = () => {
     ];
     const [questions, setQuestions] = useState([]);
     const questionsRef = useRef(questions);
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await GenreService.getAllGenres();
+                const categories = response.data.map(item => ({
+                    label: item.name,
+                    value: item.id.toString(),
+                }));
+                setCategories(categories);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     useEffect(() => {
         questionsRef.current = questions;
     }, [questions]);
+    const getCategoryName = (id) => {
+        const category = categories.find((item) => item.value === id);
+        return category ? category.label : 'Unknown';
+    };
+    const createQuizDTO = async () => {
+        try {
+            let quizImageUrl = "";
+            if (imageUri?.uri) {
+                const quizImageResult = await handleUploadImage(imageUri.uri);
+                quizImageUrl = quizImageResult.secure_url;
+            }
+            const userId = await AsyncStorageService.getUserId();
+            const formattedQuestions = await Promise.all(questions.map(async question => {
+                // Upload question image if exists
+                let questionImageUrl = "";
+                if (question.questionImage) {
+                    const questionImageResult = await handleUploadImage(question.questionImage);
+                    questionImageUrl = questionImageResult.secure_url;
+                }
 
+                // Upload answer images and format answers
+                const formattedAnswers = await Promise.all(question.options.map(async answer => {
+                    let answerImageUrl = null;
+                    if (answer.image) {
+                        const answerImageResult = await handleUploadImage(answer.image);
+                        answerImageUrl = answerImageResult.secure_url;
+                    }
+                    const formattedAnswer = {
+                        answer: answer.text,
+                        is_correct: answer.isCorrect,
+                        image: answerImageUrl||""
+                    };
+
+                    console.log('Formatted Answer:', formattedAnswer); 
+
+                    return formattedAnswer;
+                }));
+
+                return {
+                    name: question.question,
+                    description: question.explanation || '',
+                    duration: question.duration || 60,
+                    score: question.points || 10,
+                    image: questionImageUrl,
+                    answers: formattedAnswers
+                };
+            }));
+
+            const userShareIds = quizInfo.access === 'Tùy chọn' ?
+                quizInfo.invitedEmails.map(email => email) : [];
+
+            const groupShareIds = quizInfo.access === 'Tùy chọn' ?
+                quizInfo.selectedGroups.map(groupId => groupId) : [];
+
+            return {
+                name: quizInfo.name,
+                image: quizImageUrl||"",
+                genre_id: parseInt(quizInfo.categoryId),
+                user_id: userId,
+                status: quizInfo.access === 'Công khai' ? 'Public' :
+                    quizInfo.access === 'Riêng tư' ? 'Private' : 'Option',
+                userShareIds,
+                groupShareIds,
+                questions: formattedQuestions
+            };
+        } catch (error) {
+            console.error('Error creating quiz DTO:', error);
+            throw error;
+        }
+    };
     const handleImagePicker = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -64,7 +148,7 @@ const QuizCreation = () => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             quality: 1,
         });
@@ -77,7 +161,21 @@ const QuizCreation = () => {
         selectedGroups: tmpQuizInfo.selectedGroups,
         invitedEmails: tmpQuizInfo.invitedEmails
     });
-    
+    const handleUploadImage = async (uri) => {
+        try {
+            const fileName = uri.split('/').pop() || 'image.jpg';
+            const imageParam = {
+                uri: uri,
+                type: 'image/jpeg',
+                name: fileName
+            };
+            const uploadResult = await ImageService.uploadImage(imageParam);
+            return uploadResult;
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            throw error;
+        }
+    };
     const handleDeleteImage = () => {
         setImageUri(null);
     };
@@ -92,14 +190,27 @@ const QuizCreation = () => {
     const saveQuizInfo = () => {
         setQuizInfo({
             ...tmpQuizInfo,
-            selectedGroups: tmpQuizInfo.access === 'Tùy chọn' ? selectedGroups : [],
-            invitedEmails: tmpQuizInfo.access === 'Tùy chọn' ? tmpQuizInfo.invitedEmails : []
+            selectedGroups: tmpQuizInfo.access === 'Option' ? selectedGroups : [],
+            invitedEmails: tmpQuizInfo.access === 'Option' ? tmpQuizInfo.invitedEmails : [],
+            access: getAccessLabel(tmpQuizInfo.access)
         });
         bottomSheetRef.current.close();
     }
+    const getAccessLabel = (access) => {
+        switch (access) {
+            case 'Public':
+                return 'Công khai';
+            case 'Private':
+                return 'Riêng tư';
+            case 'Option':
+                return 'Tùy chọn';
+            default:
+                return 'Công khai';
+        }
+    };
     const handleAccessChange = (item) => {
         setTmpQuizInfo({ ...tmpQuizInfo, access: item.value });
-        if (item.value === 'Tùy chọn') {
+        if (item.value === 'Option') {
             setShowGroupModal(true);
         }
     };
@@ -116,19 +227,37 @@ const QuizCreation = () => {
         setQuizInfo(prev => ({
             ...prev,
             selectedGroups: groups,
-            invitedEmails: emails
+            invitedEmails: emails,
+            access: getAccessLabel(tmpQuizInfo.access)
         }));
     };
 
-    
+
 
     const handleAddQuestion = (newQuestion) => {
-        setQuestions(prev => [...prev, newQuestion]);
+        setQuestions(prev => [...prev, {
+            ...newQuestion,
+            questionImage: newQuestion.questionImage,
+            answers: newQuestion.options.map(answer => ({
+                ...answer,
+                image: answer.image
+            }))
+        }]);
+        console.log('newQuestion:', newQuestion);
     };
 
     const handleUpdateQuestion = (updatedQuestion) => {
-        setQuestions(prev => 
-            prev.map(q => q.id === updatedQuestion.id ? updatedQuestion : q)
+        setQuestions(prev =>
+            prev.map(q => q.id === updatedQuestion.id ?
+                {
+                    ...updatedQuestion,
+                    questionImage: updatedQuestion.questionImage,
+                    answers: updatedQuestion.options.map(answer => ({
+                        ...answer,
+                        image: answer.image
+                    }))
+                } : q
+            )
         );
     };
 
@@ -151,16 +280,31 @@ const QuizCreation = () => {
         if (!questions || questions.length === 0) {
             return false;
         }
+
         return true;
     };
 
-    const handleSaveQuiz = () => {
+    const handleSaveQuiz = async () => {
         if (!isQuizValid()) {
             alert('Vui lòng thêm ít nhất 1 câu hỏi');
             return;
         }
-        
-        saveQuizInfo();
+
+        try {
+            const quizDTO = await createQuizDTO();
+            console.log('📦 Full Quiz DTO:', JSON.stringify(quizDTO, null, 2));
+
+            const data = await QuizzService.createQuizz(quizDTO);
+
+            if (data) {
+                console.log('✅ Quiz created successfully:', data);
+                alert('Tạo bài kiểm tra thành công!');
+                navigation.goBack();
+            } 
+        } catch (error) {
+            console.error('Error saving quiz:', error);
+            alert('Không thể tạo bài kiểm tra. Vui lòng thử lại!');
+        }
     };
 
     return (
@@ -170,7 +314,7 @@ const QuizCreation = () => {
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Tạo bài kiểm tra</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[
                         !isQuizValid() && styles.saveButtonDisabled
                     ]}
@@ -209,10 +353,10 @@ const QuizCreation = () => {
                     <View style={styles.quizInfoCard}>
                         <View style={styles.quizInfo}>
                             <Text style={styles.quizInfoText}>Tên bài kiểm tra: <Text style={{ color: COLORS.BLACK }}>{quizInfo.name}</Text></Text>
-                            <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{quizInfo.categoryId}</Text></Text>
+                            <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{getCategoryName(quizInfo.categoryId)}</Text></Text>
                             <Text style={styles.quizInfoText}>Quyền truy cập: <Text style={{ color: COLORS.BLACK }}>{quizInfo.access}</Text></Text>
                             <View style={styles.accessDetailsContainer}>
-                                {quizInfo.access === 'Tùy chọn' && <Text style={styles.quizInfoText}>Tùy chọn truy cập:</Text>}
+                                {quizInfo.access === 'Option' && <Text style={styles.quizInfoText}>Tùy chọn truy cập:</Text>}
                                 <View style={styles.flowContainer}>
                                     {quizInfo.selectedGroups.map(groupId => {
                                         const group = mockGroups.find(g => g.id === groupId);
@@ -238,8 +382,8 @@ const QuizCreation = () => {
                         </TouchableOpacity>
                     </View>
                     <View style={styles.questionSliderContainer}>
-                        <QuestionSlider 
-                            questions={questions} 
+                        <QuestionSlider
+                            questions={questions}
                             setQuestions={setQuestions}
                             handleEditQuestion={handleEditQuestion}
                         />
@@ -247,12 +391,12 @@ const QuizCreation = () => {
                 </View>
             </ScrollView>
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.footerButton} onPress={() => { }}>
+                <TouchableOpacity style={styles.footerButton} onPress={() => { handleUploadImage() }}>
                     <Ionicons name="cloud-upload-outline" color={COLORS.WHITE} size={24} />
-                    <Text style={[styles.buttonText, styles.footerButtonText]}> Đăng sheet câu hỏi</Text>
+                    <Text style={[styles.buttonText, styles.footerButtonText]}> Upload image</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                    style={styles.footerButton} 
+                <TouchableOpacity
+                    style={styles.footerButton}
                     onPress={handleCreateQuestion}
                 >
                     <Ionicons name="create-outline" color={COLORS.WHITE} size={24} />
@@ -299,63 +443,63 @@ const QuizCreation = () => {
                 </View>
                 <View style={styles.accessContainer}>
 
-                {tmpQuizInfo.access === 'Tùy chọn' && (
-                    <View style={styles.selectedItemsContainer}>
-                        <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
-                            <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
-                            <TouchableOpacity 
-                                style={styles.editButton}
-                                onPress={() => setShowGroupModal(true)}
+                    {tmpQuizInfo.access === 'Option' && (
+                        <View style={styles.selectedItemsContainer}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
+                                <TouchableOpacity
+                                    style={styles.editButton}
+                                    onPress={() => setShowGroupModal(true)}
                                 >
-                                <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
-                            </TouchableOpacity>
-                        </View>
+                                    <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+                                </TouchableOpacity>
+                            </View>
 
-                        {tmpQuizInfo.selectedGroups.length > 0 && (
-                            <View style={styles.selectedGroupsContainer}>
-                                <Text style={styles.smallLabel}>Nhóm được chọn:</Text>
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.groupsScrollView}
+                            {tmpQuizInfo.selectedGroups.length > 0 && (
+                                <View style={styles.selectedGroupsContainer}>
+                                    <Text style={styles.smallLabel}>Nhóm được chọn:</Text>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.groupsScrollView}
                                     >
-                                    {tmpQuizInfo.selectedGroups.map(groupId => {
-                                        const group = mockGroups.find(g => g.id === groupId);
-                                        return (
-                                            <View key={groupId} style={styles.groupTag}>
-                                                <Text style={styles.groupTagText}>{group?.name}</Text>
+                                        {tmpQuizInfo.selectedGroups.map(groupId => {
+                                            const group = mockGroups.find(g => g.id === groupId);
+                                            return (
+                                                <View key={groupId} style={styles.groupTag}>
+                                                    <Text style={styles.groupTagText}>{group?.name}</Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </ScrollView>
+                                </View>
+                            )}
+
+                            {tmpQuizInfo.invitedEmails?.length > 0 && (
+                                <View style={styles.selectedGroupsContainer}>
+                                    <Text style={styles.smallLabel}>Email được mời:</Text>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.groupsScrollView}
+                                    >
+                                        {tmpQuizInfo.invitedEmails.map((email, index) => (
+                                            <View key={index} style={styles.groupTag}>
+                                                <Text style={styles.groupTagText}>{email}</Text>
                                             </View>
-                                        );
-                                    })}
-                                </ScrollView>
-                            </View>
-                        )}
-
-                        {tmpQuizInfo.invitedEmails?.length > 0 && (
-                            <View style={styles.selectedGroupsContainer}>
-                                <Text style={styles.smallLabel}>Email được mời:</Text>
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.groupsScrollView}
-                                    >
-                                    {tmpQuizInfo.invitedEmails.map((email, index) => (
-                                        <View key={index} style={styles.groupTag}>
-                                            <Text style={styles.groupTagText}>{email}</Text>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
-                    </View>
-                )}
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )}
+                        </View>
+                    )}
                 </View>
 
                 <View style={styles.modalButtons}>
-                    <TouchableOpacity 
-                    disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Tùy chọn' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
-                    style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Tùy chọn' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
-                    onPress={() => saveQuizInfo()} >
+                    <TouchableOpacity
+                        disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Option' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
+                        style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Option' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
+                        onPress={() => saveQuizInfo()} >
                         <Text style={styles.buttonText}>Lưu</Text>
                     </TouchableOpacity>
                 </View>
@@ -398,14 +542,14 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     saveButtonDisabled: {
-        opacity: 0.5,   
+        opacity: 0.5,
     },
     saveButtonText: {
         color: COLORS.BLUE,
         fontSize: 16,
         fontWeight: 'bold',
     },
-    
+
     content: {
         padding: 16,
     },
@@ -576,7 +720,7 @@ const styles = StyleSheet.create({
         color: COLORS.GRAY_DARK,
         marginBottom: 5,
     },
-    accessContainer:{
+    accessContainer: {
         paddingHorizontal: 10,
         borderRadius: 10,
         borderWidth: 1,

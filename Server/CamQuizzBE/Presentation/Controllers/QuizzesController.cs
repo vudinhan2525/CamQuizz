@@ -68,21 +68,23 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
     [HttpPost]
     public async Task<ActionResult> CreateQuiz([FromBody] CreateQuizDto createQuizDto)
     {
-
-        var quizEntity = new Quizzes
+        _logger.LogInformation("✅ Questions count: {Count}", createQuizDto.Questions.Count);
+        _logger.LogInformation("Raw DTO: {@CreateQuizDto}", createQuizDto);
+        var quizEntity = new CreateQuizBody
         {
             Name = createQuizDto.Name,
             Image = !string.IsNullOrWhiteSpace(createQuizDto.Image) ? createQuizDto.Image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTadtxXyVjVDyg7TfbT8FJIdGSXdrT3ex9yqQ&s",
             GenreId = createQuizDto.GenreId ?? 0,
             UserId = createQuizDto.UserId ?? 0,
-            NumberOfAttended = 0,
-            Status = QuizStatus.Public
+            Status = createQuizDto.Status,
+            UserShareIds = createQuizDto.UserShareIds,
+            GroupShareIds = createQuizDto.GroupShareIds,
+            Questions = createQuizDto.Questions
         };
 
-        await _quizzesService.CreateQuizAsync(quizEntity);
+        var newQuiz = await _quizzesService.CreateQuizAsync(quizEntity);
 
-        // Map back to DTO for response
-        var createdQuizDto = _mapper.Map<QuizzesDto>(quizEntity);
+        var createdQuizDto = _mapper.Map<QuizzesDto>(newQuiz);
 
         var response = new ApiResponse<QuizzesDto>(createdQuizDto);
 

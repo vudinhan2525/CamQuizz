@@ -46,7 +46,8 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.SnakeCaseLower;
         options.JsonSerializerOptions.WriteIndented = true;
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        // options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
     });
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
@@ -69,7 +70,14 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors();
 app.UseRouting();
 
+// builder.Services.Configure<CookiePolicyOptions>(options =>
+// {
+//     options.CheckConsentNeeded = context => false; // Adjust for GDPR if needed
+//     options.MinimumSameSitePolicy = SameSiteMode.None; // Allow cross-site cookies
+//     options.Secure = CookieSecurePolicy.Always; // Enforce HTTPS
+// });
 
+// app.UseCookiePolicy();
 app.UseAuthentication();
 app.UseAuthorization();
 

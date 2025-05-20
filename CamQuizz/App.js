@@ -8,7 +8,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { enableScreens } from 'react-native-screens';
 import { checkAuthStatus } from './src/services/AuthService';
 import { useFocusEffect } from '@react-navigation/native';
-
+import {HubConnectionProvider} from './src/contexts/SignalRContext';
 enableScreens();
 SplashScreen.preventAutoHideAsync();
 const Stack = createStackNavigator();
@@ -69,7 +69,7 @@ const App = () => {
       useCallback(() => {
         console.log('Root navigator focused, checking login status');
         checkLoginStatus();
-        return () => {};
+        return () => { };
       }, [])
     );
 
@@ -98,17 +98,20 @@ const App = () => {
   }
 
   return (
-    <NavigationContainer theme={MyTheme}>
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="auto" />
-        <Stack.Navigator
-          initialRouteName="Root"
-          screenOptions={{ headerShown: false }}
-        >
-          <Stack.Screen name="Root" component={RootNavigator} />
-        </Stack.Navigator>
-      </SafeAreaView>
-    </NavigationContainer>
+    <HubConnectionProvider>
+      <NavigationContainer theme={MyTheme}>
+        <SafeAreaView style={styles.container}>
+          <StatusBar style="auto" />
+          <Stack.Navigator
+            initialRouteName="Root"
+            screenOptions={{ headerShown: false }}
+          >
+            <Stack.Screen name="Root" component={RootNavigator} />
+          </Stack.Navigator>
+        </SafeAreaView>
+      </NavigationContainer>
+    </HubConnectionProvider>
+
   );
 };
 

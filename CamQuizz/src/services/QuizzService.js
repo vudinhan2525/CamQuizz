@@ -24,7 +24,7 @@ class QuizzService {
     static async getQuizzById(id) {
         try {
             const response = await apiClient.get(`/quiz/${id}`);
-            return response.data;
+            return response.data.data;
         } catch (error) {
             console.error(`Error fetching quiz with ID ${id}:`, error);
             throw error;

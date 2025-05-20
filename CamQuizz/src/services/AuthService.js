@@ -59,80 +59,117 @@ export const login = async (email, password) => {
 
       return userData;
     } else {
+      const loginData = {
+        "email": email.trim().toLowerCase(),
+        "password": password
+      };
+
+      console.log('Sending login data:', JSON.stringify(loginData, null, 2));
+
+      // Log the full URL for debugging
+      const loginUrl = `${apiClient.defaults.baseURL}/auth/login`;
+      console.log('Login URL:', loginUrl);
+
       try {
-        const loginData = {
-          "email": email.trim().toLowerCase(),
-          "password": password
-        };
-
-        console.log('Sending login data:', JSON.stringify(loginData, null, 2));
-
-        const response = await fetch(`${apiClient.defaults.baseURL}/auth/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(loginData)
-        });
+        // Use axios instead of fetch for better error handling
+        const response = await apiClient.post('/auth/login', loginData);
 
         console.log('Login response status:', response.status);
+        console.log('Login response data:', response.data);
 
-        const responseData = await response.json();
-        console.log('Login response data:', responseData);
-
-        if (!response.ok) {
-          console.error('API returned error status:', response.status);
-          if (typeof responseData === 'string') {
-            throw new Error(responseData || 'Đăng nhập thất bại');
-          } else if (responseData && responseData.message) {
-            throw new Error(responseData.message);
-          } else {
-            throw new Error('Đăng nhập thất bại');
-          }
+        // Process the response data
+        if (typeof response.data === 'string') {
+          console.error('API returned string instead of user data:', response.data);
+          throw new Error(response.data || 'Đăng nhập thất bại');
         }
 
-        if (typeof responseData === 'string') {
-          console.error('API returned string instead of user data:', responseData);
-          throw new Error(responseData || 'Đăng nhập thất bại');
-        }
-
-        if (!responseData || typeof responseData !== 'object') {
-          console.error('API returned invalid data format:', responseData);
+        if (!response.data || typeof response.data !== 'object') {
+          console.error('API returned invalid data format:', response.data);
           throw new Error('Định dạng dữ liệu không hợp lệ từ máy chủ');
         }
 
-        const userData = responseData;
+        const userData = response.data;
 
-          if (userData.roles && userData.roles.$values) {
-            // Nếu roles có dạng {"$id": "2", "$values": ["Admin"]}
-            userData.roles = userData.roles.$values;
-          } else if (!Array.isArray(userData.roles)) {
-            // Nếu roles không phải là mảng và không có $values, đặt mặc định
-            userData.roles = [];
+        // Process roles
+        if (userData.roles && userData.roles.$values) {
+          // Nếu roles có dạng {"$id": "2", "$values": ["Admin"]}
+          userData.roles = userData.roles.$values;
+        } else if (!Array.isArray(userData.roles)) {
+          // Nếu roles không phải là mảng và không có $values, đặt mặc định
+          userData.roles = [];
+        }
+
+        console.log('Processed user data:', userData);
+
+        // Kiểm tra token trước khi lưu
+        if (!userData.token) {
+          console.error('Token is missing in API response');
+          userData.token = `api-token-${Date.now()}`; // Tạo token tạm thời nếu không có
+        }
+
+        // Lấy thông tin chi tiết người dùng mới nhất từ máy chủ nếu có ID
+        if (userData.id) {
+          try {
+            console.log('Fetching latest user data from server...');
+            const userDetailResponse = await apiClient.get(`/auth/${userData.id}`);
+
+            if (userDetailResponse.data) {
+              console.log('Got latest user details:', userDetailResponse.data);
+
+              // Cập nhật thông tin người dùng với dữ liệu mới nhất từ máy chủ
+              // nhưng giữ lại token và roles từ phản hồi đăng nhập
+              const token = userData.token;
+              const roles = userData.roles;
+
+              // Merge dữ liệu
+              Object.assign(userData, userDetailResponse.data);
+
+              // Đảm bảo giữ lại token và roles
+              userData.token = token;
+              userData.roles = roles;
+            }
+          } catch (detailError) {
+            // Chỉ log lỗi, không dừng quá trình đăng nhập
+            console.error('Failed to fetch latest user details:', detailError);
           }
+        }
 
-          console.log('Processed user data:', userData);
+        // Chỉ lưu token khi nó có giá trị
+        if (userData.token) {
+          await AsyncStorage.setItem('userToken', userData.token);
+          await AsyncStorage.setItem('userData', JSON.stringify(userData));
+          console.log('User data saved to AsyncStorage:', userData);
+        } else {
+          console.error('Cannot save undefined token to AsyncStorage');
+          throw new Error('Đăng nhập thất bại: Token không hợp lệ');
+        }
 
-          // Kiểm tra token trước khi lưu
-          if (!userData.token) {
-            console.error('Token is missing in API response');
-            userData.token = `api-token-${Date.now()}`; // Tạo token tạm thời nếu không có
-          }
+        return userData;
+      } catch (axiosError) {
+        console.error('Axios error:', axiosError);
 
-          // Chỉ lưu token khi nó có giá trị
-          if (userData.token) {
-            await AsyncStorage.setItem('userToken', userData.token);
-            await AsyncStorage.setItem('userData', JSON.stringify(userData));
-          } else {
-            console.error('Cannot save undefined token to AsyncStorage');
-            throw new Error('Đăng nhập thất bại: Token không hợp lệ');
-          }
+        // Handle axios error response
+        if (axiosError.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.log('Error response status:', axiosError.response.status);
+          console.log('Error response data:', axiosError.response.data);
 
-          return userData;
-      } catch (fetchError) {
-        console.error('Fetch error:', fetchError);
-        throw fetchError;
+          const errorMessage =
+            typeof axiosError.response.data === 'string'
+              ? axiosError.response.data
+              : axiosError.response.data?.message || 'Đăng nhập thất bại';
+
+          throw new Error(errorMessage);
+        } else if (axiosError.request) {
+          // The request was made but no response was received
+          console.log('No response received:', axiosError.request);
+          throw new Error('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.log('Error setting up request:', axiosError.message);
+          throw new Error(`Lỗi kết nối: ${axiosError.message}`);
+        }
       }
     }
   } catch (error) {
@@ -188,20 +225,19 @@ export const validateSignup = async (registerData) => {
 
         console.log('Sending validate data:', JSON.stringify(validateData, null, 2));
 
-        const response = await fetch(`${apiClient.defaults.baseURL}/auth/validate-signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(validateData)
-        });
+        // Use axios instead of fetch
+        const response = await apiClient.post('/auth/validate-signup', validateData);
 
-        const responseData = await response.json();
         console.log('Validate response status:', response.status);
-        console.log('Validate response data:', responseData);
+        console.log('Validate response data:', response.data);
 
-        if (!response.ok) {
+        return { isValid: true, data: response.data };
+      } catch (axiosError) {
+        console.error('API validation error:', axiosError);
+
+        if (axiosError.response) {
+          const responseData = axiosError.response.data;
+
           if (typeof responseData === 'string') {
             throw new Error(responseData);
           } else if (responseData && responseData.message) {
@@ -236,12 +272,11 @@ export const validateSignup = async (registerData) => {
           } else {
             throw new Error('Kiểm tra thông tin đăng ký thất bại');
           }
+        } else if (axiosError.request) {
+          throw new Error('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
+        } else {
+          throw new Error(`Lỗi kết nối: ${axiosError.message}`);
         }
-
-        return { isValid: true, data: responseData };
-      } catch (apiError) {
-        console.error('API validation error:', apiError);
-        throw apiError;
       }
     }
   } catch (error) {
@@ -253,13 +288,18 @@ export const validateSignup = async (registerData) => {
 // Kiểm tra trạng thái đăng nhập
 export const checkAuthStatus = async () => {
   try {
+    console.log('Checking auth status...');
     const token = await AsyncStorage.getItem('userToken');
     const userDataString = await AsyncStorage.getItem('userData');
+
+    console.log('Token exists:', !!token);
+    console.log('UserData exists:', !!userDataString);
 
     // Kiểm tra cả token và userData có tồn tại không
     if (token && userDataString) {
       try {
         const userData = JSON.parse(userDataString);
+        console.log('Raw user data from storage:', userData);
 
         // Đảm bảo token được gán vào userData
         userData.token = token;
@@ -273,7 +313,7 @@ export const checkAuthStatus = async () => {
           userData.roles = [];
         }
 
-        console.log('User data from storage:', userData);
+        console.log('Processed user data from storage:', userData);
         return userData;
       } catch (parseError) {
         console.error('Error parsing user data:', parseError);
@@ -339,29 +379,22 @@ export const signup = async (userData) => {
       console.log('Sending signup data to server:', JSON.stringify(registerData, null, 2));
 
       try {
-        const response = await fetch(`${apiClient.defaults.baseURL}/auth/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(registerData)
-        });
+        // Use axios instead of fetch
+        const response = await apiClient.post('/auth/signup', registerData);
 
-        const responseData = await response.json();
         console.log('Signup response status:', response.status);
-        console.log('Signup response data:', responseData);
+        console.log('Signup response data:', response.data);
 
-        if (response.ok) {
-          console.log('Signup API response:', responseData);
+        return {
+          success: true,
+          message: 'Đăng ký thành công',
+          user: response.data
+        };
+      } catch (axiosError) {
+        console.error('Signup error:', axiosError);
 
-          return {
-            success: true,
-            message: 'Đăng ký thành công',
-            user: responseData
-          };
-        } else {
-          // Xử lý lỗi từ server
+        if (axiosError.response) {
+          const responseData = axiosError.response.data;
           console.error('Signup API error response:', responseData);
 
           if (typeof responseData === 'string') {
@@ -397,10 +430,11 @@ export const signup = async (userData) => {
           } else {
             throw new Error('Đăng ký thất bại. Vui lòng thử lại sau.');
           }
+        } else if (axiosError.request) {
+          throw new Error('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
+        } else {
+          throw new Error(`Lỗi kết nối: ${axiosError.message}`);
         }
-      } catch (fetchError) {
-        console.error('Fetch error:', fetchError);
-        throw fetchError;
       }
     }
   } catch (error) {
@@ -412,6 +446,41 @@ export const signup = async (userData) => {
 // Đăng xuất
 export const logout = async () => {
   try {
+    // Lấy thông tin người dùng hiện tại trước khi đăng xuất
+    const userDataString = await AsyncStorage.getItem('userData');
+    const token = await AsyncStorage.getItem('userToken');
+
+    if (userDataString && token) {
+      try {
+        // Parse dữ liệu người dùng
+        const userData = JSON.parse(userDataString);
+
+        // Kiểm tra xem có ID người dùng không
+        if (userData.id) {
+          console.log('Syncing user data with server before logout...');
+
+          // Tạo dữ liệu cập nhật từ thông tin người dùng hiện tại
+          const syncData = {
+            "first_name": userData.first_name,
+            "last_name": userData.last_name,
+            "gender": userData.gender,
+            "date_of_birth": userData.date_of_birth || userData.dateOfBirth
+          };
+
+          // Gọi API để đồng bộ dữ liệu
+          try {
+            await apiClient.put(`/auth/${userData.id}`, syncData);
+            console.log('User data synced successfully with server');
+          } catch (syncError) {
+            // Chỉ log lỗi, không dừng quá trình đăng xuất
+            console.error('Failed to sync user data with server:', syncError);
+          }
+        }
+      } catch (parseError) {
+        console.error('Error parsing user data before logout:', parseError);
+      }
+    }
+
     // Đảm bảo xóa cả token và dữ liệu người dùng
     await AsyncStorage.removeItem('userToken');
     await AsyncStorage.removeItem('userData');
@@ -446,7 +515,7 @@ export const updateUserProfile = async (userId, updateData) => {
         first_name: updateData.firstName || userData.first_name,
         last_name: updateData.lastName || userData.last_name,
         gender: updateData.gender || userData.gender,
-        dateOfBirth: updateData.dateOfBirth || userData.dateOfBirth
+        date_of_birth: updateData.dateOfBirth || userData.dateOfBirth
       };
 
       // Lưu lại thông tin đã cập nhật
@@ -455,25 +524,108 @@ export const updateUserProfile = async (userId, updateData) => {
       return { success: true, message: 'Cập nhật thông tin thành công' };
     } else {
       // Gọi API cập nhật thông tin người dùng
-      const response = await apiClient.put(`/auth/${userId}`, updateData);
+      console.log('Calling API to update user profile:', userId, updateData);
+
+      // Initialize response variable
+      let apiResponse = null;
+
+      try {
+        // Chuyển đổi từ PascalCase sang snake_case theo yêu cầu API
+        const apiUpdateData = {
+          "first_name": updateData.FirstName || updateData.firstName,
+          "last_name": updateData.LastName || updateData.lastName,
+          "gender": updateData.Gender || updateData.gender,
+          "date_of_birth": updateData.DateOfBirth || updateData.dateOfBirth
+        };
+
+        console.log('API URL:', `${apiClient.defaults.baseURL}/auth/${userId}`);
+        console.log('Sending data:', JSON.stringify(apiUpdateData, null, 2));
+
+        // Use axios instead of fetch
+        const response = await apiClient.put(`/auth/${userId}`, apiUpdateData);
+
+        console.log('API response status:', response.status);
+        console.log('API response data:', response.data);
+
+        // Store response data for later use
+        apiResponse = {
+          status: response.status,
+          data: response.data
+        };
+      } catch (axiosError) {
+        console.error('API update error:', axiosError);
+
+        // Continue with local storage update even if API fails
+        if (axiosError.response) {
+          console.log('Error response status:', axiosError.response.status);
+          console.log('Error response data:', axiosError.response.data);
+        } else if (axiosError.request) {
+          console.log('No response received:', axiosError.request);
+        } else {
+          console.log('Error setting up request:', axiosError.message);
+        }
+      }
 
       // Cập nhật thông tin trong AsyncStorage
       const userDataString = await AsyncStorage.getItem('userData');
       if (userDataString) {
         const userData = JSON.parse(userDataString);
 
+        // Create updated user data object
         const updatedUserData = {
           ...userData,
-          first_name: updateData.firstName || userData.first_name,
-          last_name: updateData.lastName || userData.last_name,
-          gender: updateData.gender || userData.gender,
-          dateOfBirth: updateData.dateOfBirth || userData.dateOfBirth
+          first_name: updateData.FirstName || userData.first_name,
+          last_name: updateData.LastName || userData.last_name,
+          gender: updateData.Gender || userData.gender,
+          date_of_birth: updateData.DateOfBirth || userData.date_of_birth
         };
 
+        // Also set dateOfBirth for compatibility
+        if (updateData.DateOfBirth) {
+          updatedUserData.dateOfBirth = updateData.DateOfBirth;
+        }
+
+        console.log('Updating AsyncStorage with:', updatedUserData);
+
+        // Nếu API đã thành công, lấy thông tin mới nhất từ máy chủ
+        if (apiResponse && apiResponse.status >= 200 && apiResponse.status < 300) {
+          try {
+            console.log('Fetching latest user data after update...');
+            const refreshResponse = await apiClient.get(`/auth/${userId}`);
+
+            if (refreshResponse.data) {
+              console.log('Got latest user details after update:', refreshResponse.data);
+
+              // Giữ lại token và roles từ dữ liệu hiện tại
+              const token = updatedUserData.token;
+              const roles = updatedUserData.roles;
+
+              // Cập nhật dữ liệu từ máy chủ
+              Object.assign(updatedUserData, refreshResponse.data);
+
+              // Đảm bảo giữ lại token và roles
+              updatedUserData.token = token;
+              updatedUserData.roles = roles;
+            }
+          } catch (refreshError) {
+            console.error('Failed to fetch latest user data after update:', refreshError);
+            // Tiếp tục với dữ liệu đã cập nhật cục bộ
+          }
+        }
+
+        // Save to AsyncStorage
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
+
+        // Verify the data was saved correctly
+        const verifyData = await AsyncStorage.getItem('userData');
+        console.log('Verification - data in AsyncStorage after update:', verifyData);
       }
 
-      return { success: true, message: 'Cập nhật thông tin thành công', data: response.data };
+      return {
+        success: true,
+        message: 'Cập nhật thông tin thành công',
+        data: apiResponse?.data || { message: 'Đã cập nhật thông tin trong bộ nhớ cục bộ' }
+      };
     }
   } catch (error) {
     console.log('Update profile error details:', error);

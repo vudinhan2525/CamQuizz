@@ -54,7 +54,7 @@ export const Login = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../../assets/logo.png')}
+            source={require('../../../assets/logo.jpg')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -126,7 +126,7 @@ export const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BG,
+    backgroundColor: COLORS.WHITE,
   },
   scrollContainer: {
     flexGrow: 1,

@@ -7,12 +7,14 @@ import * as signalR from '@microsoft/signalr';
 import { API_URL } from '@env';
 import QuizzService from '../../../services/QuizzService';
 import GenreService from '../../../services/GenreService';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import { useHubConnection } from '../../../contexts/SignalRContext';
 const QuizDetail = ({ navigation, route }) => {
     //const { quiz } = route.params;
     const { quizId } = route.params;
     const [quiz, setQuiz] = React.useState({});
-    const [connectionId, setConnectionId] = React.useState(null);
-    const [hubConnection, setHubConnection] = React.useState(null);
+    const { hubConnection, setHubConnection } = useHubConnection();
+    const [room, setRoom] = React.useState(null);
     React.useEffect(() => {
         const fetchQuiz = async () => {
             try {
@@ -38,30 +40,44 @@ const QuizDetail = ({ navigation, route }) => {
         fetchQuiz();
     }, [quizId]);
 
-    const connectToHub = async (connectionId) => {
-        try {
-            console.log("Connecting to SignalR hub with connection ID:", connectionId);
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl(`${API_URL}/quizHub?id=${connectionId}`, {
-                    skipNegotiation: true,
-                    transport: signalR.HttpTransportType.WebSockets
-                })
-                .configureLogging(signalR.LogLevel.Information)
-                .withAutomaticReconnect()
-                .build();
+const createRoom = async (connectionId) => {
+    try {
+        console.log("Connecting to SignalR hub with connection ID:", connectionId);
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${API_URL}/quizHub?id=${connectionId}`, {
+                skipNegotiation: true,
+                transport: signalR.HttpTransportType.WebSockets
+            })
+            .configureLogging(signalR.LogLevel.Information)
+            .withAutomaticReconnect()
+            .build();
 
+        const roomCreatedPromise = new Promise((resolve, reject) => {
+            connection.on("roomcreated", (roomData) => {
+                console.log("Room created (from server):", roomData);
+                resolve(roomData); 
+            });
 
+            setTimeout(() => reject(new Error("Timeout waiting for roomcreated")), 10000);
+        });
 
-            await connection.start();
-            console.log("Connected to SignalR hub");
-            setHubConnection(connection);
+        await connection.start();
+        console.log("Connected to SignalR hub");
+        setHubConnection(connection);
+        await AsyncStorageService.saveConnectionId(connectionId);
 
-            return connection;
-        } catch (error) {
-            console.error("Error connecting to SignalR hub:", error);
-            throw error;
-        }
-    };
+        const userId = await AsyncStorageService.getUserId();
+        await connection.invoke("CreateRoom", { quizId: quizId, userId: userId });
+
+        const roomData = await roomCreatedPromise; 
+        return roomData
+
+    } catch (error) {
+        console.error("Error creating room:", error);
+        throw error;
+    }
+};
+
 
     const handleBegin = async () => {
         try {
@@ -75,19 +91,18 @@ const QuizDetail = ({ navigation, route }) => {
             });
             const data = await response.json();
             const connectionId = data.connectionId;
-            setConnectionId(connectionId);
             console.log('Connection data:', data);
 
             if (response.ok) {
                 // Connect to SignalR hub
-                await connectToHub(connectionId);
-
-                // Navigate to lobby with the connection data
-                // navigation.navigate(SCREENS.LOBBY, {
-                //     quizId: quiz.id,
-                //     connectionData: data,
-                //     hubConnection: hubConnection
-                // });
+                const roomData = await createRoom(connectionId);
+                console.log("Room data:", roomData);
+                navigation.navigate(SCREENS.LOBBY, {
+                    quizId: roomData.QuizId,
+                    isHost: true,
+                    roomCode: roomData.RoomId,
+                    roomPlayers: roomData.PlayerList,
+                });
             } else {
                 console.error('Failed to negotiate connection:', data);
             }

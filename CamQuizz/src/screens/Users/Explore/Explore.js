@@ -14,6 +14,9 @@ import SCREENS from '../../index';
 import GenreService from '../../../services/GenreService';
 import QuizzService from '../../../services/QuizzService';
 import { mockPlayers, mockQuiz } from '../../../components/data/MockQuizPlayData';
+import { useHubConnection } from '../../../contexts/SignalRContext';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+
 export const Explore = ({navigation}) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const [userName, setUserName] = useState('Nguyen Duy An');
@@ -28,6 +31,9 @@ export const Explore = ({navigation}) => {
     page: 1,
     limit: 5,
   });
+  const { hubConnection } = useHubConnection();
+  const [isJoining, setIsJoining] = useState(false);
+
   React.useEffect(() => {
     const fetchCategories = async () => {
       const genres = await GenreService.getAllGenres();
@@ -61,6 +67,35 @@ export const Explore = ({navigation}) => {
       fetchQuizzes();
   }, [selectedCategory]);
 
+  React.useEffect(() => {
+    if (!hubConnection) return;
+
+    const handlePlayerJoined = (room) => {
+      console.log("Successfully joined room:", room);
+      navigation.navigate(SCREENS.LOBBY, {
+        quizId: room.QuizId,
+        isHost: false,
+        gameCode: room.RoomId,
+        hubConnection
+      });
+      setJoinCode('');
+      setIsJoining(false);
+    };
+
+    const handleError = (error) => {
+      console.error("Hub error:", error);
+      Alert.alert("Lỗi", error.Message || "Không thể tham gia phòng");
+      setIsJoining(false);
+    };
+
+    hubConnection.on("playerJoined", handlePlayerJoined);
+    hubConnection.on("error", handleError);
+
+    return () => {
+      hubConnection.off("playerJoined", handlePlayerJoined);
+      hubConnection.off("error", handleError);
+    };
+  }, [hubConnection]);
 
   const handleSeeMore = async (category, navigate) => {
     // Xử lý sự kiện khi nhấn nút "Xem thêm"
@@ -88,30 +123,44 @@ export const Explore = ({navigation}) => {
     setIsAll(false);
   };
 
-  // Thêm hàm xử lý tham gia trò chơi
-  const handleJoinGame = () => {
+  const handleJoinGame = async () => {
     if (!joinCode.trim()) {
-      // Hiển thị thông báo nếu không nhập mã
       Alert.alert('Thông báo', 'Vui lòng nhập mã tham gia');
       return;
     }
 
-    const roomFound = true;
-
-    if (roomFound) {
-      // Điều hướng đến màn hình Lobby với vai trò người chơi (không phải host)
-      navigation.navigate(SCREENS.LOBBY, {
-        quizId: mockQuiz.id,
-        isHost: false,
-        roomCode: joinCode
+    try {
+      setIsJoining(true);
+      const userId = await AsyncStorageService.getUserId();
+      
+      await hubConnection.invoke("JoinRoom", {
+        userId: userId,
+        roomId: joinCode
       });
-
-      setJoinCode('');
-    } else {
-      Alert.alert('Thông báo', 'Không tìm thấy phòng với mã tham gia này');
+    } catch (error) {
+      console.error('Error joining room:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể tham gia phòng. Vui lòng kiểm tra mã phòng và thử lại!'
+      );
+      setIsJoining(false);
     }
   };
 
+  const renderJoinButton = () => (
+    <TouchableOpacity 
+      style={[
+        styles.joinButton,
+        isJoining && styles.joinButtonDisabled
+      ]} 
+      onPress={handleJoinGame}
+      disabled={isJoining}
+    >
+      <Text style={styles.joinButtonText}>
+        {isJoining ? 'Đang tham gia...' : 'Tham gia trò chơi'}
+      </Text>
+    </TouchableOpacity>
+  );
 
   const content = () => (
     <>
@@ -123,10 +172,9 @@ export const Explore = ({navigation}) => {
           placeholderTextColor={COLORS.GRAY_LIGHT}
           value={joinCode}
           onChangeText={setJoinCode}
+          editable={!isJoining}
         />
-        <TouchableOpacity style={styles.joinButton} onPress={handleJoinGame}>
-          <Text style={styles.joinButtonText}>Tham gia trò chơi</Text>
-        </TouchableOpacity>
+        {renderJoinButton()}
       </View>
       <Text style={styles.title}>Khám phá</Text>
       {/* Categories */}
@@ -422,6 +470,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  joinButtonDisabled: {
+    backgroundColor: COLORS.GRAY_LIGHT,
   },
   title: {
     fontSize: 28,

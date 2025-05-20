@@ -4,88 +4,167 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
 import { mockPlayers, generateRoomCode, mockQuiz } from '../../../components/data/MockQuizPlayData';
+import { useHubConnection } from '../../../contexts/SignalRContext';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import QuizzService from '../../../services/QuizzService';
 
 const Lobby = ({ navigation, route }) => {
-    const { quizId, isHost = true, roomCode } = route.params;
+    const { quizId, isHost, roomCode, roomPlayers } = route.params;
+    const { hubConnection, setHubConnection } = useHubConnection();
     const [gameCode, setGameCode] = useState('');
-    const [modalVisible, setModalVisible] = useState(false);
     const [players, setPlayers] = useState([]);
     const [quiz, setQuiz] = useState(null);
-    
+
     useEffect(() => {
-        // Nếu là host, tạo mã phòng mới
-        // Nếu là người chơi, sử dụng mã phòng đã được cung cấp
-        if (isHost) {
-            setGameCode(generateRoomCode());
-        } else {
-            setGameCode(roomCode || '');
-        }
-        
-        setPlayers(mockPlayers);
-        
-        setQuiz(mockQuiz);
-        
-        if (!isHost) {
-            // Thêm người chơi hiện tại vào danh sách
-            const currentPlayer = {
-                id: 'current-player',
-                name: 'Bạn',
-                avatar: 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
-                score: 0,
-                isCurrentPlayer: true
-            };
-            
-            setPlayers(prevPlayers => [...prevPlayers, currentPlayer]);
-        }
+        const fetchData = async () => {
+            const userId = await AsyncStorageService.getUserId();
+            setGameCode(roomCode);
+            setQuiz(mockQuiz);
+
+            if (!isHost) {
+                const currentPlayer = players.find(player => player.Id === userId);
+                if (currentPlayer) {
+                    const updatedPlayer = { ...currentPlayer, isCurrentPlayer: true };
+                    setPlayers(prevPlayers => [...prevPlayers, updatedPlayer]);
+                }
+            } else {
+                const currentPlayer = roomPlayers.find(player => player.Id === userId);
+                const updatedPlayer = currentPlayer
+                if (currentPlayer) {
+                    const updatedPlayer = { ...currentPlayer, isCurrentPlayer: true };
+                    setPlayers([updatedPlayer]);
+                }
+            }
+        };
+
+        fetchData();
     }, [isHost, roomCode]);
 
-    const handleStartGame = () => {
-        // Navigate to the first question
-     navigation.navigate(SCREENS.QUESTION_PLAY, {
-        duration: 60,
-        isHost: true,
-        multipleCorrect: false,
-        question: 'What is the capital of France?',
-        questionImage: 'https://example.com/paris.jpg', // optional
-        answers: [
-            { text: 'Paris', image: 'https://example.com/paris.jpg' },
-            { text: 'London', image: 'https://example.com/london.jpg' },
-            { text: 'Berlin', image: null },
-            { text: 'Madrid', image: null }
-        ],
-        showRankingAfterEnd: true,         
-        rankingDisplayTime: 10  
-    });
-    };
+    useEffect(() => {
+        if (!hubConnection) return;
+
+        const handlePlayerLeft = async (updatedRoom) => {
+            console.log("Player left, updated room:", updatedRoom);
+            setPlayers(updatedRoom.PlayerList);
+
+            // If current user is new host
+            const userId = await AsyncStorageService.getUserId();
+            if (updatedRoom.HostId === userId) {
+                navigation.setParams({ isHost: true });
+            }
+        };
+
+        const handleGameStarted = (data) => {
+            console.log("Game started:", data);
+            navigation.navigate(SCREENS.QUESTION_PLAY, {
+                questionId: data.firstQuestion.Id,
+                question: data.firstQuestion.Content,
+                duration: data.firstQuestion.TimeLimit,
+                answers: data.firstQuestion.Options.map(opt => ({
+                    text: opt.Content,
+                    label: opt.Label,
+                    image: opt.Image,
+                })),
+                isHost,
+                roomId: data.RoomId,
+                questionImage: data.firstQuestion.Image,
+            });
+        };
+        const handlePlayerJoined = (room) => {
+            console.log("Player joined, updated room:", room);
+            setPlayers(room.PlayerList);
+        };
+        const handleError = (error) => {
+            console.error("Hub error:", error);
+            Alert.alert("Lỗi", error.Message);
+        };
+
+        hubConnection.on("playerJoined", handlePlayerJoined);
+        hubConnection.on("playerLeft", handlePlayerLeft);
+        hubConnection.on("gameStarted", handleGameStarted);
+        hubConnection.on("error", handleError);
+
+        return () => {
+            hubConnection.off("playerLeft", handlePlayerLeft);
+            hubConnection.off("gameStarted", handleGameStarted);
+            hubConnection.off("error", handleError);
+            hubConnection.off("playerJoined", handlePlayerJoined);
+        };
+    }, [hubConnection]);
     
+
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            try {
+                const quizData = await QuizzService.getQuizzById(quizId);
+                console.log('Fetched quiz data:', quizData);
+                if (quizData) {
+                    setQuiz(
+                        {
+                            id: quizId,
+                            title: quizData.name,
+                            author: quizData.author,
+                            attended_num: quizData.number_of_attended,
+                            question_num: quizData.number_of_questions,
+                            duration: quizData.duration,
+                        }
+                    );
+                } else {
+                    console.error('Quiz not found');
+                }
+            } catch (error) {
+                console.error('Error fetching quiz:', error);
+            }
+        };
+        fetchQuiz();
+    }, [quizId]);
+
+
+    const handleStartGame = async () => {
+        try {
+            await hubConnection.invoke("StartGame", {
+                roomId: gameCode
+            });
+        } catch (error) {
+            console.error("Error starting game:", error);
+            Alert.alert("Lỗi", "Không thể bắt đầu trò chơi. Vui lòng thử lại!");
+        }
+    };
+
     const handleLeaveRoom = () => {
-        // Xử lý khi người chơi rời phòng
         Alert.alert(
             'Xác nhận',
             'Bạn có chắc muốn rời khỏi phòng chơi?',
             [
-                {
-                    text: 'Hủy',
-                    style: 'cancel'
-                },
+                { text: 'Hủy', style: 'cancel' },
                 {
                     text: 'Rời phòng',
-                    onPress: () => {
-                        navigation.reset({
-                            index: 0,
-                            routes: [
-                                {
-                                    name: SCREENS.USER_TAB,
-                                    state: {
-                                        index: 0,
-                                        routes: [
-                                            { name: SCREENS.EXPLORE_TAB }
-                                        ]
+                    onPress: async () => {
+                        try {
+                            const userId = await AsyncStorageService.getUserId();
+                            await hubConnection.invoke("LeaveRoom", {
+                                userId: userId,
+                                roomId: gameCode
+                            });
+
+                            setHubConnection(null);
+                            navigation.reset({
+                                index: 0,
+                                routes: [
+                                    {
+                                        name: SCREENS.USER_TAB,
+                                        state: {
+                                            index: 0,
+                                            routes: [{ name: SCREENS.EXPLORE_TAB }]
+                                        }
                                     }
-                                }
-                            ],
-                        });
-                        Alert.alert('Thông báo', 'Bạn đã rời khỏi phòng chơi');}
+                                ],
+                            });
+                        } catch (error) {
+                            console.error("Error leaving room:", error);
+                            Alert.alert("Lỗi", "Không thể rời phòng. Vui lòng thử lại!");
+                        }
+                    }
                 }
             ]
         );
@@ -95,61 +174,37 @@ const Lobby = ({ navigation, route }) => {
         Alert.alert('Thông báo', 'Đã sao chép mã phòng: ' + gameCode);
     };
 
-
-    const renderPlayerItem = ({ item }) => (
-        <View style={[
-            styles.playerItem,
-            item.isCurrentPlayer && styles.currentPlayerItem
-        ]}>
-            <Image source={{ uri: item.avatar }} style={styles.playerAvatar} />
-            <Text style={styles.playerName}>
-                {item.isCurrentPlayer ? 'Bạn' : item.name}
-            </Text>
-        </View>
-    );
-
-    // const handleKickPlayer = (playerId) => {
-    //     Alert.alert(
-    //         'Xác nhận',
-    //         'Bạn có chắc muốn đuổi người chơi này?',
-    //         [
-    //             {
-    //                 text: 'Hủy',
-    //                 style: 'cancel'
-    //             },
-    //             {
-    //                 text: 'Đuổi',
-    //                 onPress: () => {
-    //                     setPlayers(prevPlayers => prevPlayers.filter(p => p.id !== playerId));
-    //                     Alert.alert('Thông báo', 'Đã đuổi người chơi khỏi phòng');
-    //                 }
-    //             }
-    //         ]
-    //     );
-    // };
+    const formatTime = (duration) => {
+        if (!duration && duration !== 0) return '0:00';
+        const minutes = Math.floor(duration / 60);
+        const seconds = duration % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
 
     return (
         <View style={styles.container}>
-            {/* Header with back button */}
+            { /* Header with back button */}
             <View style={styles.headerWithBack}>
-                
                 <Text style={styles.title}>Phòng chờ</Text>
                 <View style={styles.placeholder} />
             </View>
-            
+
             {/* Quiz Info */}
             {quiz && (
                 <View style={styles.quizInfoContainer}>
                     <Text style={styles.quizTitle}>{quiz.title}</Text>
                     <Text style={styles.quizAuthor}>Tác giả: {quiz.author}</Text>
+                    <Text style={styles.quizAuthor}>Số người đã tham gia: {quiz.attended_num}</Text>
+                    <Text style={styles.quizAuthor}>Số câu hỏi: {quiz.question_num}</Text>
+                    <Text style={styles.quizAuthor}>Thời lượng: {formatTime(quiz.duration)} phút</Text>
                 </View>
             )}
-            
+
             {/* Room Code */}
             <View style={styles.codeContainer}>
                 <Text style={styles.codeLabel}>Mã phòng:</Text>
                 <Text style={styles.codeValue}>{gameCode}</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={styles.copyButton}
                     onPress={handleCopyCode}
                 >
@@ -161,35 +216,52 @@ const Lobby = ({ navigation, route }) => {
             <View style={styles.playerCountContainer}>
                 <Ionicons name="people" size={24} color={COLORS.BLUE} />
                 <Text style={styles.playerCount}>{players.length} người chơi</Text>
-                {/* <TouchableOpacity 
-                    style={styles.viewAllButton}
-                    onPress={() => setModalVisible(true)}
-                >
-                    <Text style={styles.viewAllText}>Xem tất cả</Text>
-                </TouchableOpacity> */}
             </View>
 
             {/* Players Grid */}
             <View style={styles.playersContainer}>
-                <FlatList
-                    data={players}
-                    renderItem={renderPlayerItem}
-                    keyExtractor={item => item.id.toString()}
-                    numColumns={4}
-                    contentContainerStyle={styles.playersList}
-                />
+                <ScrollView>
+                    <View style={styles.playersWrapContainer}>
+                        {players.map((item) => (
+                            <View
+                                key={item.Id}
+                                style={[
+                                    styles.playerItem,
+                                    item.isCurrentPlayer && styles.currentPlayerItem
+                                ]}
+                            >
+                                {item.Avatar && item.Avatar !== "" ? (
+                                    <Image
+                                        source={{ uri: item.Avatar }}
+                                        style={styles.playerAvatar}
+                                    />
+                                ) : (
+                                    <Ionicons
+                                        name="person-circle"
+                                        size={50}
+                                        color={COLORS.BLUE}
+                                        style={styles.playerAvatar}
+                                    />
+                                )}
+                                <Text style={styles.playerName}>
+                                    {item.isCurrentPlayer ? 'Bạn' : item.Name}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                </ScrollView>
             </View>
 
             {/* Start Button (only for host) */}
             {isHost ? (
                 <View style={styles.buttonContainer}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.cancelButton}
                         onPress={handleLeaveRoom}
                     >
                         <Text style={styles.cancelButtonText}>Hủy</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.startButton}
                         onPress={handleStartGame}
                     >
@@ -201,7 +273,7 @@ const Lobby = ({ navigation, route }) => {
                     <View style={styles.waitingContainer}>
                         <Text style={styles.waitingText}>Đang chờ chủ phòng bắt đầu...</Text>
                     </View>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.exitButton}
                         onPress={handleLeaveRoom}
                     >
@@ -209,44 +281,6 @@ const Lobby = ({ navigation, route }) => {
                     </TouchableOpacity>
                 </View>
             )}
-
-            {/* Players Modal */}
-            {/* <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Danh sách người chơi</Text>
-                            <TouchableOpacity 
-                                style={styles.closeButton}
-                                onPress={() => setModalVisible(false)}
-                            >
-                                <Ionicons name="close" size={24} color={COLORS.BLACK} />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <ScrollView style={styles.modalPlayersList}>
-                            {players.map(player => (
-                                <View key={player.id} style={styles.modalPlayerItem}>
-                                    <Image source={{ uri: player.avatar }} style={styles.modalPlayerAvatar} />
-                                    <Text style={styles.modalPlayerName}>
-                                        {player.isCurrentPlayer ? 'Bạn' : player.name}
-                                    </Text>
-                                    {isHost && !player.isCurrentPlayer && (
-                                        <TouchableOpacity style={styles.kickButton} onPress={() => handleKickPlayer(player.id)}>
-                                            <MaterialIcons name="remove-circle-outline" size={24} color={COLORS.RED} />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal> */}
         </View>
     );
 };
@@ -333,19 +367,24 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 16,
     },
-    playersList: {
-        alignItems: 'center',
+    playersWrapContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'flex-start',
     },
     playerItem: {
-        width: '25%',
+        margin: 8,
+        padding: 8,
+        backgroundColor: COLORS.GRAY_BG,
+        borderRadius: 12,
         alignItems: 'center',
-        marginBottom: 16,
+        minWidth: 80,
+        maxWidth: '30%',
     },
     currentPlayerItem: {
-        // Highlight the current player
         backgroundColor: COLORS.BLUE_LIGHT,
-        borderRadius: 8,
-        padding: 4,
+        borderWidth: 1,
+        borderColor: COLORS.BLUE,
     },
     playerAvatar: {
         width: 50,
@@ -354,8 +393,10 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     playerName: {
-        fontSize: 12,
+        fontSize: 14,
         textAlign: 'center',
+        color: COLORS.BLACK,
+        fontWeight: '500',
     },
     morePlayersButton: {
         width: 50,
@@ -373,14 +414,14 @@ const styles = StyleSheet.create({
     buttonContainer: {
         padding: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderTopColor: COLORS.GRAY_BG,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
     playerButtonContainer: {
         padding: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderTopColor: COLORS.GRAY_BG,
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',

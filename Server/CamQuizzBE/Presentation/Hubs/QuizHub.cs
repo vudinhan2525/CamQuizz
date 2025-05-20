@@ -328,7 +328,7 @@ public class QuizHub : Hub
             var firstQuestion = new GameQuestionResponse
             {
                 Id = questions[0].Id,
-                Content = questions[0].Description,
+                Content = questions[0].Name,
                 TimeLimit = quiz.Duration > 0 ? quiz.Duration : 30,
                 Options = questions[0].Answers.Select((a, index) => new GameQuestionOption 
                 { 

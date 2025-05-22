@@ -26,6 +26,8 @@ IdentityDbContext<
     public DbSet<GroupQuiz> GroupQuizzes { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
     public DbSet<GroupShared> GroupShared { get; set; }
+    public DbSet<QuizAttempts> QuizAttempts { get; set; }
+    public DbSet<UserAnswers> UserAnswers { get; set; }
 
     override protected void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -210,6 +212,15 @@ IdentityDbContext<
             .WithMany()
             .HasForeignKey(gq => gq.SharedById)
             .OnDelete(DeleteBehavior.NoAction);
+        // QuizAttempt relationships
+        modelBuilder.Entity<UserAnswers>()
+            .HasOne(ua => ua.Attempt)
+            .WithMany(qa => qa.UserAnswers)
+            .HasForeignKey(ua => ua.AttemptId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+
+
     }
 }
     

@@ -426,9 +426,50 @@
 //             await Task.Delay(TimeSpan.FromSeconds(2));
 //             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarted");
 
-//             // Initialize and start timer non-blocking
+//             // Initialize and start timer
 //             gameState.TimerCancellation = new CancellationTokenSource();
-//             _ = Task.Run(() => StartQuestionTimer(request.RoomId, duration, gameState), gameState.TimerCancellation.Token);
+//             var timer = new System.Timers.Timer(5000); // Fire every 5 seconds
+//             int time = (int)duration;
+
+//             timer.Elapsed += async (sender, e) =>
+//             {
+//                 try
+//                 {
+//                     if (gameState.TimerCancellation.Token.IsCancellationRequested || gameState.IsPaused || gameState.IsEnded)
+//                     {
+//                         timer.Stop();
+//                         timer.Dispose();
+//                         return;
+//                     }
+
+//                     gameState.TimeRemaining = time;
+//                     await hubContext.Clients.Group(request.RoomId).SendAsync("timerUpdate", new
+//                     {
+//                         RoomId = request.RoomId,
+//                         TimeRemaining = time
+//                     });
+
+//                     if (time <= 0)
+//                     {
+//                         timer.Stop();
+//                         timer.Dispose();
+//                         if (!gameState.IsEnded)
+//                         {
+//                             await ProcessQuestionEnd(request.RoomId, hubContext, _quizService, isTimeUp: true);
+//                         }
+//                     }
+//                     time -= 5; // Decrease by 5 seconds each tick
+//                 }
+//                 catch (Exception ex)
+//                 {
+//                     _logger.LogError(ex, "Error in timer tick for room {RoomId}", request.RoomId);
+//                     timer.Stop();
+//                     timer.Dispose();
+//                 }
+//             };
+
+//             timer.Start();
+//             _logger.LogInformation("Timer started for first question in room {RoomId}", request.RoomId);
 //         }
 //         catch (Exception ex)
 //         {
@@ -483,11 +524,20 @@
 //                 throw new Exception("Invalid question ID");
 //             }
 
+//             string playerName;
 //             lock (gameState)
 //             {
 //                 gameState.PlayerAnswers[request.UserId] = request.Answer;
 //                 _logger.LogInformation("Stored answer for player {UserId}: [{Answers}]", request.UserId, string.Join(",", request.Answer));
+//                 playerName = room.PlayerList.First(p => p.Id == request.UserId).Name;
 //             }
+            
+//             // Tell other players that someone answered
+//             await Clients.GroupExcept(request.RoomId, Context.ConnectionId).SendAsync("playerAnswered", new
+//             {
+//                 PlayerId = request.UserId,
+//                 PlayerName = playerName
+//             });
 
 //             gameState.LastAnswerTime = DateTime.Now;
 //             gameState.ShowRanking = true;
@@ -814,12 +864,10 @@
 //                 Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
 //             }).ToList();
 
-//             if (gameState.ShowRanking)
-//             {
-//                 await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
-//                 await Task.Delay(TimeSpan.FromSeconds(1));
-//             }
-
+//             // Always show ranking after scores are calculated
+//             await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
+//             await Task.Delay(TimeSpan.FromSeconds(1));
+//             await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
 //             await Task.Delay(TimeSpan.FromSeconds(1));
 
 //             GameQuestionResponse nextQuestion = null;
@@ -864,7 +912,54 @@
 //                 roomId, currentQuestion.Id, nextQuestion?.Id);
 //             await hubContext.Clients.Group(roomId).SendAsync("doneQuestion", result);
 
-//             if (!hasNextQuestion)
+//             if (hasNextQuestion)
+//             {
+//                 // Set up and start timer for next question
+//                 gameState.TimerCancellation = new CancellationTokenSource();
+//                 var timer = new System.Timers.Timer(5000); // Fire every 5 seconds
+//                 int time = (int)nextQuestion.TimeLimit;
+
+//                 timer.Elapsed += async (sender, e) =>
+//                 {
+//                     try
+//                     {
+//                         if (gameState.TimerCancellation.Token.IsCancellationRequested || gameState.IsPaused || gameState.IsEnded)
+//                         {
+//                             timer.Stop();
+//                             timer.Dispose();
+//                             return;
+//                         }
+
+//                         gameState.TimeRemaining = time;
+//                         await hubContext.Clients.Group(roomId).SendAsync("timerUpdate", new
+//                         {
+//                             RoomId = roomId,
+//                             TimeRemaining = time
+//                         });
+
+//                         if (time <= 0)
+//                         {
+//                             timer.Stop();
+//                             timer.Dispose();
+//                             if (!gameState.IsEnded)
+//                             {
+//                                 await ProcessQuestionEnd(roomId, hubContext, quizService, isTimeUp: true);
+//                             }
+//                         }
+//                         time -= 5; // Decrease by 5 seconds each tick
+//                     }
+//                     catch (Exception ex)
+//                     {
+//                         _logger.LogError(ex, "Error in timer tick for room {RoomId}", roomId);
+//                         timer.Stop();
+//                         timer.Dispose();
+//                     }
+//                 };
+
+//                 timer.Start();
+//                 _logger.LogInformation("Timer started for next question in room {RoomId}", roomId);
+//             }
+//             else
 //             {
 //                 var quizResult = new QuizResultResponse
 //                 {

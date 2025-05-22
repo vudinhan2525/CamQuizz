@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Applications.DTOs.Questions;
+using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Infras.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -395,6 +396,23 @@ public class QuizHub : Hub
             _games[request.RoomId] = gameState;
 
             var duration = 30; // Hardcoded for testing
+
+            // Create quiz attempts for all players in the room
+            var attemptContext = _serviceProvider.GetRequiredService<DataContext>();
+            foreach (var player in room.PlayerList)
+            {
+                var attempt = new QuizAttempts
+                {
+                    QuizId = room.QuizId,
+                    UserId = player.Id,
+                    RoomId = room.RoomId,
+                    Score = 0,
+                    StartTime = DateTime.UtcNow,
+                };
+
+                await attemptContext.QuizAttempts.AddAsync(attempt);
+            }
+            await attemptContext.SaveChangesAsync();
             _logger.LogInformation("Starting game for room {RoomId}, question {QuestionId}, duration: {Duration}s",
                 request.RoomId, questions[0].Id, duration);
 
@@ -524,6 +542,61 @@ public class QuizHub : Hub
                 throw new Exception("Invalid question ID");
             }
 
+            // Save the answer to database
+            using (var scope = _serviceProvider.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                
+                // Get the current attempt for this user
+                var attempt = await context.QuizAttempts
+                    .FirstOrDefaultAsync(a =>
+                        a.QuizId == room.QuizId &&
+                        a.UserId == request.UserId &&
+                        a.RoomId == request.RoomId);
+
+                if (attempt == null)
+                {
+                    throw new Exception("Quiz attempt not found");
+                }
+
+                var question = await context.Questions
+                    .Include(q => q.Answers)
+                    .FirstOrDefaultAsync(q => q.Id == request.QuestionId);
+
+                if (question == null)
+                {
+                    throw new Exception("Question not found");
+                }
+
+                var answerId = question.Answers
+                    .FirstOrDefault(a => request.Answer.Contains(((char)('A' + question.Answers.ToList().IndexOf(a))).ToString()))?.Id;
+
+                if (answerId.HasValue)
+                {
+                    var answerTime = gameState.QuestionStartTime.HasValue
+                        ? DateTime.UtcNow.Subtract(gameState.QuestionStartTime.Value).TotalSeconds
+                        : 0.0; // Fallback to 0 if QuestionStartTime is null
+
+                    if (!gameState.QuestionStartTime.HasValue)
+                    {
+                        _logger.LogWarning("QuestionStartTime is null for room {RoomId}, question {QuestionId}. Using AnswerTime=0",
+                            request.RoomId, request.QuestionId);
+                    }
+
+                    var userAnswer = new UserAnswers
+                    {
+                        AttemptId = attempt.Id,
+                        QuestionId = question.Id,
+                        AnswerId = answerId.Value,
+                        AnswerTime = answerTime
+                    };
+
+                    await context.UserAnswers.AddAsync(userAnswer);
+                    await context.SaveChangesAsync();
+                }
+            }
+
+            // Update game state
             string playerName;
             lock (gameState)
             {

@@ -79,4 +79,34 @@ public class ReportController : ControllerBase
             throw;
         }
     }
+
+    // GET: api/v1/reports/quiz/{quizId}/attempts
+    [HttpGet("quiz/{quizId}/attempts")]
+    public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetUserAttempts(int quizId)
+    {
+        try
+        {
+            if (quizId <= 0)
+            {
+                throw new ValidatorException("Invalid quiz ID. Must be greater than 0.");
+            }
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            _logger.LogInformation("Getting attempts for user {UserId} on quiz {QuizId}", userId, quizId);
+            
+            var attempts = await _reportService.GetUserAttemptsAsync(userId, quizId);
+            if (attempts == null)
+            {
+                throw new KeyNotFoundException("No attempts found.");
+            }
+
+            var response = new ApiResponse<List<OldAttemptReportDto>>(attempts, "User attempts retrieved successfully.");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user attempts for quiz {QuizId}", quizId);
+            throw;
+        }
+    }
 }

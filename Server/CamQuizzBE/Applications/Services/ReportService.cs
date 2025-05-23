@@ -60,11 +60,23 @@ public class ReportService : IReportService
 
            
 
-            // Calculate average answer time
-            stats.AverageAnswerTime = userAnswers.Any()
-                ? userAnswers.Where(a => a.AnswerTime.HasValue)
-                           .Average(a => a.AnswerTime.Value)
+            // Calculate average time from valid answers with proper bounds
+            var validAnswers = userAnswers.Where(a =>
+                a.AnswerId.HasValue &&
+                a.AnswerTime.HasValue &&
+                a.AnswerTime.Value >= 0 &&
+                a.AnswerTime.Value <= question.Duration);
+
+            stats.AverageAnswerTime = validAnswers.Any()
+                ? validAnswers.Average(a => a.AnswerTime.Value)
                 : 0;
+
+            _logger.LogInformation(
+                "Question {QuestionId}: Found {ValidAnswers} answers within bounds out of {TotalAnswers}, average={Average:F2}s",
+                question.Id,
+                validAnswers.Count(),
+                userAnswers.Count,
+                stats.AverageAnswerTime);
 
             // Get total attempts for this quiz
             var totalAttempts = await _context.QuizAttempts

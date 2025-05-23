@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, Modal, ScrollView, Alert } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
 import { mockPlayers, generateRoomCode, mockQuiz } from '../../../components/data/MockQuizPlayData';
+import { useHubConnection } from '../../../contexts/SignalRContext';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import QuizzService from '../../../services/QuizzService';
+import SettingsModal from './SettingsModal';
 
 const Lobby = ({ navigation, route }) => {
     const { quizId, isHost = true, roomCode } = route.params;
+    const {hubConnection } = useHubConnection();
     const [gameCode, setGameCode] = useState('');
-    const [modalVisible, setModalVisible] = useState(false);
-    const [players, setPlayers] = useState([]);
+    const [players, setPlayers] = useState(roomPlayers);
     const [quiz, setQuiz] = useState(null);
-    
+    const [showRankObj, setShowRankObj] = useState({ show: true, time: 1 });
+    const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
+
     useEffect(() => {
         // Nếu là host, tạo mã phòng mới
         // Nếu là người chơi, sử dụng mã phòng đã được cung cấp
@@ -39,23 +45,103 @@ const Lobby = ({ navigation, route }) => {
         }
     }, [isHost, roomCode]);
 
-    const handleStartGame = () => {
-        // Navigate to the first question
-     navigation.navigate(SCREENS.QUESTION_PLAY, {
-        duration: 60,
-        isHost: true,
-        multipleCorrect: false,
-        question: 'What is the capital of France?',
-        questionImage: 'https://example.com/paris.jpg', // optional
-        answers: [
-            { text: 'Paris', image: 'https://example.com/paris.jpg' },
-            { text: 'London', image: 'https://example.com/london.jpg' },
-            { text: 'Berlin', image: null },
-            { text: 'Madrid', image: null }
-        ],
-        showRankingAfterEnd: true,         
-        rankingDisplayTime: 10  
-    });
+    useEffect(() => {
+        if (!hubConnection) return;
+
+        const handlePlayerLeft = async (updatedRoom) => {
+            console.log("Player left, updated room:", updatedRoom);
+            setPlayers(updatedRoom.PlayerList);
+
+            // If current user is new host
+            const userId = await AsyncStorageService.getUserId();
+            if (updatedRoom.HostId === userId) {
+                navigation.setParams({ isHost: true });
+            }
+        };
+
+        const handleGameStarted = async (data) => {
+            console.log("Game started:", data);
+            const userId = await AsyncStorageService.getUserId();
+            navigation.navigate(SCREENS.QUESTION_PLAY, {
+                questionId: 1,
+                question: data.firstQuestion.Name,
+                duration: data.firstQuestion.TimeLimit,
+                answers: data.firstQuestion.Options.map(opt => ({
+                    text: opt.Content,
+                    label: opt.Label,
+                    image: opt.Image,
+                })),
+                isHost,
+                roomId: data.RoomId,
+                questionImage: data.firstQuestion.Image,
+                userId: userId,
+                multipleCorrect: false,
+                totalQuestions: quiz.question_num,
+                quizId: quiz.id,
+                playerList:players,
+                trueAnswer: data.firstQuestion.TrueAnswer,
+                showRankObj: showRankObj, // Add this line
+            });
+        };
+        const handlePlayerJoined = (room) => {
+            console.log("Player joined, updated room:", room);
+            setPlayers(room.PlayerList);
+        };
+        const handleError = (error) => {
+            console.error("Hub error:", error);
+            Alert.alert("Lỗi", error.Message);
+        };
+
+        hubConnection.on("playerJoined", handlePlayerJoined);
+        hubConnection.on("playerLeft", handlePlayerLeft);
+        hubConnection.on("gameStarted", handleGameStarted);
+        hubConnection.on("error", handleError);
+
+        return () => {
+            hubConnection.off("playerLeft", handlePlayerLeft);
+            hubConnection.off("gameStarted", handleGameStarted);
+            hubConnection.off("error", handleError);
+            hubConnection.off("playerJoined", handlePlayerJoined);
+        };
+    }, [hubConnection,quiz, showRankObj]);
+
+
+    useEffect(() => {
+        const fetchQuiz = async () => {
+            try {
+                const quizData = await QuizzService.getQuizzById(quizId);
+                console.log('Fetched quiz data:', quizData);
+                if (quizData) {
+                    setQuiz(
+                        {
+                            id: quizId,
+                            title: quizData.name,
+                            author: quizData.author,
+                            attended_num: quizData.number_of_attended,
+                            question_num: quizData.number_of_questions,
+                            duration: quizData.duration,
+                        }
+                    );
+                } else {
+                    console.error('Quiz not found');
+                }
+            } catch (error) {
+                console.error('Error fetching quiz:', error);
+            }
+        };
+        fetchQuiz();
+    }, [quizId]);
+
+
+    const handleStartGame = async () => {
+        try {
+            await hubConnection.invoke("StartGame", {
+                roomId: gameCode
+            });
+        } catch (error) {
+            console.error("Error starting game:", error);
+            Alert.alert("Lỗi", "Không thể bắt đầu trò chơi. Vui lòng thử lại!");
+        }
     };
     
     const handleLeaveRoom = () => {
@@ -128,13 +214,25 @@ const Lobby = ({ navigation, route }) => {
     //     );
     // };
 
+    const handleSettingsChange = (newSettings) => {
+        setShowRankObj(newSettings);
+        setIsSettingsModalVisible(false);
+    };
+
     return (
         <View style={styles.container}>
             {/* Header with back button */}
             <View style={styles.headerWithBack}>
                 
                 <Text style={styles.title}>Phòng chờ</Text>
-                <View style={styles.placeholder} />
+                {isHost && (
+                    <TouchableOpacity
+                        style={styles.settingButton}
+                        onPress={() => setIsSettingsModalVisible(true)}
+                    >
+                        <Ionicons name="settings-outline" size={24} color={COLORS.BLUE} />
+                    </TouchableOpacity>
+                )}
             </View>
             
             {/* Quiz Info */}
@@ -210,43 +308,13 @@ const Lobby = ({ navigation, route }) => {
                 </View>
             )}
 
-            {/* Players Modal */}
-            {/* <Modal
-                animationType="slide"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Danh sách người chơi</Text>
-                            <TouchableOpacity 
-                                style={styles.closeButton}
-                                onPress={() => setModalVisible(false)}
-                            >
-                                <Ionicons name="close" size={24} color={COLORS.BLACK} />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <ScrollView style={styles.modalPlayersList}>
-                            {players.map(player => (
-                                <View key={player.id} style={styles.modalPlayerItem}>
-                                    <Image source={{ uri: player.avatar }} style={styles.modalPlayerAvatar} />
-                                    <Text style={styles.modalPlayerName}>
-                                        {player.isCurrentPlayer ? 'Bạn' : player.name}
-                                    </Text>
-                                    {isHost && !player.isCurrentPlayer && (
-                                        <TouchableOpacity style={styles.kickButton} onPress={() => handleKickPlayer(player.id)}>
-                                            <MaterialIcons name="remove-circle-outline" size={24} color={COLORS.RED} />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal> */}
+            {/* Add the SettingsModal component before the closing View tag */}
+            <SettingsModal
+                visible={isSettingsModalVisible}
+                onClose={() => setIsSettingsModalVisible(false)}
+                settings={showRankObj}
+                onSettingsChange={handleSettingsChange}
+            />
         </View>
     );
 };
@@ -259,7 +327,7 @@ const styles = StyleSheet.create({
     headerWithBack: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'space-between', // Change this from space-around
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 8,
@@ -273,6 +341,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 20,
         fontWeight: 'bold',
+        color: COLORS.BLUE,
     },
     quizInfoContainer: {
         padding: 16,
@@ -481,6 +550,10 @@ const styles = StyleSheet.create({
     },
     kickButton: {
         padding: 8,
+    },
+    settingButton: {
+        padding: 8,
+        marginLeft: 8,
     },
 });
 

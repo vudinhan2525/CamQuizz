@@ -2,27 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import COLORS from '../../../constant/colors';
 
-const RankingItem = ({ user, newScore, oldScore, isCorrect, index, animationDuration }) => {
-    const translateY = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        if (newScore !== oldScore) {
-            const movement = (oldScore - newScore) * 60; // 60 is the height of each item
-            translateY.setValue(movement);
-            
-            Animated.timing(translateY, {
-                toValue: 0,
-                duration: animationDuration,
-                useNativeDriver: true,
-            }).start();
-        }
-    }, [newScore, oldScore]);
+const RankingItem = ({ user, newScore, oldScore, isCorrect, index }) => {
 
     return (
         <Animated.View 
-            style={[
+            style={[    
                 styles.rankingItem,
-                { transform: [{ translateY }] }
             ]}
         >
             <Text style={styles.rank}>{index + 1}</Text>
@@ -36,19 +21,18 @@ const RankingItem = ({ user, newScore, oldScore, isCorrect, index, animationDura
     );
 };
 
-const Ranking = ({ users, displayTime }) => {
+const Ranking = ({ users }) => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Ranking</Text>
+            <Text style={styles.title}>Bảng Xếp Hạng</Text>
             {users.map((user, index) => (
                 <RankingItem
-                    key={user.id}
+                    key={user.UserId}
                     user={user}
                     newScore={user.newScore}
                     oldScore={user.oldScore}
                     isCorrect={user.isCorrect}
                     index={index}
-                    animationDuration={displayTime * 0.8} // Leave some time for showing final positions
                 />
             ))}
         </View>
@@ -72,7 +56,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.GRAY_LIGHT,
+        borderBottomColor: COLORS.GRAY_BG,
         height: 60,
     },
     rank: {

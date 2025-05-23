@@ -1,55 +1,320 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useHubConnection } from '../../../contexts/SignalRContext';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
-import Ranking from './Ranking'; 
-// navigation.navigate(SCREEN.QUESTION_PLAY, {
-//     duration: 60,
-//     isHost: true,
-//     multipleCorrect: false,
-//     question: 'What is the capital of France?',
-//     questionImage: 'https://example.com/paris.jpg', // optional
-//     answers: [
-//         { text: 'Paris', image: 'https://example.com/paris.jpg' },
-//         { text: 'London', image: 'https://example.com/london.jpg' },
-//         { text: 'Berlin', image: null },
-//         { text: 'Madrid', image: null }
-//     ],
-//     showRankingAfterEnd: true,         
-//     rankingDisplayTime: 10  
-// });
+import Ranking from './Ranking';
+import SettingsModal from './SettingsModal';
+import Toast from 'react-native-toast-message';
 
 const QuestionPlay = ({ navigation, route }) => {
+    const {
+        questionId,
+        question,
+        duration,
+        answers,
+        roomId,
+        userId,
+        multipleCorrect,
+        totalQuestions,
+        quizId,
+        questionImage,
+        playerList,
+        trueAnswer,
+        showRankObj: initialShowRankObj, // Add this line
+    } = route.params;
+    const { hubConnection } = useHubConnection();
     const [timeLeft, setTimeLeft] = useState(route.params.duration);
     const [isPaused, setIsPaused] = useState(false);
     const [showRanking, setShowRanking] = useState(false);
+    const [selectedAnswers, setSelectedAnswers] = useState([]);
+    const [currentQuestion, setCurrentQuestion] = useState(questionId);
+    const [players, setPlayers] = useState(playerList);
+    const [showRankObj, setShowRankObj] = useState(initialShowRankObj || { show: true, time: 1 });
+    const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
     const isHost = route.params.isHost;
-    
-    // Mock data for ranking demonstration
-    const mockRankingData = [
-        { id: 1, name: 'User 1', newScore: 100, oldScore: 80, isCorrect: true },
-        { id: 2, name: 'User 2', newScore: 90, oldScore: 95, isCorrect: false },
-        // Add more mock data as needed
-    ];
-    const handleEndQuestion = () => {
-        navigation.navigate(SCREENS.ENDQUIZ, {
-        quizId:"12345",
-        finalRanking: [
-            { id: 'u1', name: 'Nguyễn Văn A', score: 85 },
-            { id: 'u2', name: 'Trần Thị B', score: 75 },
-            { id: 'u3', name: 'Lê Văn C', score: 60 },
-            { id: 'u4', name: 'Phạm Thị D', score: 50 },
-            { id: 'u5', name: 'Nguyễn Văn E', score: 40 },
-        ]
+
+
+    // Update useEffect for SignalR event handlers
+    useEffect(() => {
+        if (hubConnection) {
+            const handlers = {
+                timerUpdate: handleTimerUpdate,
+                questionStarting: handleQuestionStarting,
+                questionStarted: handleQuestionStarted,
+                showingResult: handleShowingResult,
+                showingRanking: handleShowingRanking,
+                updateRanking: handleUpdateRanking,
+                playerAnswered: handlePlayerAnswered,
+                doneQuestion: handleDoneQuestion,
+                doneQuiz: handleDoneQuiz,
+                error: handleError,
+                timerPaused: handleTimerPaused,
+                timerResumed: handleTimerResumed,
+                timerResuming: handleTimerResuming,
+            };
+
+            // Register all handlers
+            Object.entries(handlers).forEach(([event, handler]) => {
+                hubConnection.on(event, handler);
+            });
+            return () => {
+                if (hubConnection) {
+                    Object.keys(handlers).forEach(event => {
+                        hubConnection.off(event);
+                    });
+                }
+            };
+
+        }
+    }, [hubConnection]);
+
+    // Add these handler functions
+    const handleTimerUpdate = (data) => {
+        if (data.RoomId === roomId) {
+            setTimeLeft(data.TimeRemaining);
+        }
+    };
+
+    const handleQuestionStarting = () => {
+        // You can add animation or loading state here
+        console.log('Question starting...');
+    };
+
+    const handleQuestionStarted = () => {
+        setShowRanking(false);
+        setSelectedAnswers([]);
+    };
+
+    const handleShowingResult = (result) => {
+        const { QuestionId, TrueAnswer, YourAnswer, Duration } = result;
+        // Add visual feedback for correct/wrong answers
+        setSelectedAnswers([]); // Clear selected answers
+        // You can add animation or visual feedback here
+    };
+
+    const handleShowingRanking = () => {
+        setShowRanking(true);
+    };
+
+    const handleUpdateRanking = (ranking) => {
+        setPlayers(ranking.map(r => ({
+            id: r.UserId,
+            name: r.Name,
+            newScore: r.Score,
+            oldScore: players.find(p => p.id === r.UserId)?.Score || 0,
+            isCorrect: r.Score > (players.find(p => p.id === r.UserId)?.Score || 0),
+        })));
+    };
+
+    const handlePlayerAnswered = (data) => {
+        // Show toast or notification that a player has answered
+        Toast.show({
+            type: 'info',
+            text1: 'Player Answered',
+            text2: `${data.PlayerName} has submitted an answer`,
+            position: 'top',
+            visibilityTime: 2000,
         });
+    };
 
+    const handleDoneQuiz = (result) => {
+        console.log('Quiz ended:', result);
+        const updatedPlayer = updateRanking(result)
+        navigation.replace(SCREENS.ENDQUIZ, {
+            quizId: result.QuizId,
+            finalRanking: updatedPlayer,
+        });
+    };
+
+    const handleError = (error) => {
+        console.error('Hub error:', error);
+        Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: error.Message || 'Something went wrong',
+            position: 'top',
+            visibilityTime: 3000,
+        });
+    };
+
+    const handleTimerResuming = () => {
+        // Show countdown or animation before timer resumes
+        Toast.show({
+            type: 'info',
+            text1: 'Timer Resuming',
+            text2: 'Get ready...',
+            position: 'top',
+            visibilityTime: 1000,
+        });
+    };
+    const updateRanking = (result) => {
+        const oldUsers = players.map(player => ({
+            ...player,
+
+            oldScore: player.Score || 0, // Add fallback for undefined Score
+        }));
+        const sortedRanking = [...result.Ranking].sort((a, b) => b.Score - a.Score);
+        const updatedUsers = sortedRanking.map(r => {
+            const old = oldUsers.find(u => u.id === r.UserId) || { oldScore: 0 };
+            return {
+                id: r.UserId,
+                name: r.Name,
+                newScore: r.Score,
+                oldScore: old.oldScore,
+                // Fix the isCorrect check
+                isCorrect: r.Score > old.oldScore,
+            };
+        });
+        return updatedUsers
     }
-    const handleNextQuestion = () => {
-    }
+    const handleDoneQuestion = (result) => {
+        console.log('Received doneQuestion event:', result);
+
+
+        if (!result.IsLastResult && result.Ranking) {
+            const updatedUsers = updateRanking(result)
+            setPlayers(updatedUsers);
+
+            if (showRankObj.show) {
+                setShowRanking(true);
+            } else {
+                // Show toast notification with score and rank
+                const currentPlayer = updatedUsers.find(u => u.id === userId);
+                const playerRank = updatedUsers.findIndex(u => u.id === userId) + 1;
+
+                Toast.show({
+                    type: currentPlayer.isCorrect ? 'success' : 'error',
+                    text1: currentPlayer.isCorrect ? 'Correct Answer!' : 'Wrong Answer',
+                    text2: `Score: ${currentPlayer.newScore} | Rank: #${playerRank}`,
+                    position: 'top',
+                    visibilityTime: 2000,
+                });
+            }
+        }
+        setSelectedAnswers([]);
+        setTimeLeft(duration);
+
+        setTimeout(() => {
+            setShowRanking(false);
+
+            if (result.NextQuestion) {
+                navigation.replace(SCREENS.QUESTION_PLAY, {
+                    questionId: currentQuestion + 1,
+                    question: result.NextQuestion.Name,
+                    duration: result.NextQuestion.TimeLimit,
+                    answers: result.NextQuestion.Options.map(opt => ({
+                        text: opt.Content,
+                        label: opt.Label,
+                    })),
+                    isHost,
+                    roomId,
+                    userId,
+                    multipleCorrect,
+                    quizId,
+                    playerList: players,
+                    totalQuestions,
+                    showRankObj: showRankObj,
+                });
+            } else {
+
+                const updatedUsers = updateRanking(result)
+
+                navigation.replace(SCREENS.ENDQUIZ, {
+                    quizId: result.QuizId,
+                    finalRanking: updatedUsers,
+                });
+            }
+        },
+            // (route.params.rankingDisplayTime || 5) * 1000);
+            1000);
+
+    };
+
+
+    const handleTimerPaused = (data) => {
+        if (data.RoomId === roomId) {
+            setIsPaused(true);
+            setTimeLeft(data.TimeRemaining);
+        }
+    };
+
+    const handleTimerResumed = (data) => {
+        if (data.RoomId === roomId) {
+            setIsPaused(false);
+            setTimeLeft(data.TimeRemaining);
+        }
+    };
     const handleAnswerSelect = (index) => {
+        const answer = answers[index].label;
+        let newSelectedAnswers;
 
-    }
+        if (multipleCorrect) {
+            newSelectedAnswers = selectedAnswers.includes(answer)
+                ? selectedAnswers.filter(a => a !== answer)
+                : [...selectedAnswers, answer];
+        } else {
+            newSelectedAnswers = [answer];
+        }
+
+        setSelectedAnswers(newSelectedAnswers);
+
+        if (hubConnection) {
+            hubConnection.invoke('SubmitAnswer', {
+                roomId,
+                userId,
+                questionId: currentQuestion,
+                answer: newSelectedAnswers
+            }).catch(err => {
+                console.error('Error submitting answer:', err);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Failed to submit answer',
+                    position: 'top',
+                    visibilityTime: 2000,
+                });
+            });
+        }
+    };
+
+    const handleNextQuestion = () => {
+        if (hubConnection && isHost) {
+            hubConnection.invoke('NextQuestion', {
+                roomId,
+                userId,
+            }).catch(err => {
+                console.error('Error requesting next question:', err);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Failed to move to next question',
+                    position: 'top',
+                    visibilityTime: 2000,
+                });
+            });
+        }
+    };
+
+    const toggleTimer = () => {
+        if (!hubConnection || !isHost) return;
+
+        const request = {
+            roomId,
+            userId,
+            showRanking: showRankObj.show
+        };
+
+        if (isPaused) {
+            hubConnection.invoke('ResumeTimer', request)
+                .catch(err => console.error('Error resuming timer:', err));
+        } else {
+            hubConnection.invoke('PauseTimer', request)
+                .catch(err => console.error('Error pausing timer:', err));
+        }
+    };
+
     useEffect(() => {
         let timer;
         if (!isPaused && timeLeft > 0) {
@@ -67,38 +332,27 @@ const QuestionPlay = ({ navigation, route }) => {
     }, [timeLeft, isPaused]);
 
     const handleTimeUp = () => {
-        // Kiểm tra settings từ route params
-        const { showRankingAfterEnd = true, rankingDisplayTime = 5 } = route.params;
-        
-        if (showRankingAfterEnd) {
-            setShowRanking(true);
-            // Tự động ẩn ranking sau thời gian hiển thị
-            setTimeout(() => {
-                setShowRanking(false);
-                if (isHost) {
-                    // Chuyển sang câu hỏi tiếp theo hoặc kết thúc
-                    handleNextQuestion();
-                }
-            }, rankingDisplayTime * 1000);
-        } else {
-            if (isHost) {
-                handleNextQuestion();
-            }
+        if (isHost && currentQuestion < totalQuestions) {
+            handleNextQuestion();
         }
     };
-
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const handleSettingsChange = (newSettings) => {
+        setShowRankObj(newSettings);
+        setIsSettingsModalVisible(false);
+    };
+
     const renderQuestion = () => (
         <View style={styles.questionContainer}>
-            <Text style={styles.question}>{route.params.question}</Text>
-            {route.params.questionImage && (
+            <Text style={styles.question}>{question}</Text>
+            {questionImage && (
                 <Image
-                    source={{ uri: route.params.questionImage }}
+                    source={{ uri: questionImage }}
                     style={styles.questionImage}
                     resizeMode="contain"
                 />
@@ -107,9 +361,12 @@ const QuestionPlay = ({ navigation, route }) => {
     );
 
     const renderAnswer = (answer, index) => (
-        <TouchableOpacity 
+        <TouchableOpacity
             key={index}
-            style={styles.answerItem}
+            style={[
+                styles.answerItem,
+                selectedAnswers.includes(answer.label) && styles.selectedAnswer
+            ]}
             onPress={() => handleAnswerSelect(index)}
         >
             <View style={styles.answerContent}>
@@ -128,24 +385,26 @@ const QuestionPlay = ({ navigation, route }) => {
     return (
         <View style={styles.container}>
             {showRanking ? (
-                <Ranking 
-                    users={mockRankingData}
-                    displayTime={route.params.rankingDisplayTime || 5}
+                <Ranking
+                    users={players}
                 />
             ) : (
                 <>
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.questionInfo}>
-                            <Text style={styles.questionType}>
+                            {/* <Text style={styles.questionType}>
                                 {route.params.multipleCorrect ? 'Multiple Answer' : 'Single Answer'}
+                            </Text> */}
+                            <Text style={styles.questionType}>
+                                {currentQuestion} / {totalQuestions}
                             </Text>
                             <Text style={styles.timer}>{formatTime(timeLeft)}</Text>
                         </View>
                         {isHost && (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.settingButton}
-                                onPress={() => navigation.navigate(SCREENS.QUESTION_PLAY_SETTING )}
+                                onPress={() => setIsSettingsModalVisible(true)}
                             >
                                 <Ionicons name="settings-outline" size={24} color={COLORS.WHITE} />
                             </TouchableOpacity>
@@ -153,13 +412,13 @@ const QuestionPlay = ({ navigation, route }) => {
                     </View>
 
                     {/* Content */}
-                    <ScrollView 
+                    <ScrollView
                         style={styles.content}
                         contentContainerStyle={styles.contentContainer}
                     >
                         {renderQuestion()}
                         <View style={styles.answersList}>
-                            {route.params.answers.map((answer, index) => 
+                            {route.params.answers.map((answer, index) =>
                                 renderAnswer(answer, index)
                             )}
                         </View>
@@ -168,32 +427,38 @@ const QuestionPlay = ({ navigation, route }) => {
                     {/* Footer */}
                     {isHost && (
                         <View style={styles.footer}>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.footerButton}
-                                onPress={() => setIsPaused(!isPaused)}
+                                onPress={() => toggleTimer()}
                             >
-                                <Ionicons 
-                                    name={isPaused ? "play" : "pause"} 
-                                    size={24} 
-                                    color={COLORS.WHITE} 
+                                <Ionicons
+                                    name={isPaused ? "play" : "pause"}
+                                    size={24}
+                                    color={COLORS.WHITE}
                                 />
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.footerButton}
                                 onPress={handleNextQuestion}
                             >
                                 <Text style={styles.buttonText}>Next</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            {/* <TouchableOpacity 
                                 style={styles.footerButton}
                                 onPress={handleEndQuestion}
                             >
                                 <Text style={styles.buttonText}>End</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
                         </View>
                     )}
                 </>
             )}
+            <SettingsModal
+                visible={isSettingsModalVisible}
+                onClose={() => setIsSettingsModalVisible(false)}
+                settings={showRankObj}
+                onSettingsChange={handleSettingsChange}
+            />
         </View>
     );
 };
@@ -285,6 +550,11 @@ const styles = StyleSheet.create({
     buttonText: {
         color: COLORS.WHITE,
         fontWeight: 'bold',
+    },
+    selectedAnswer: {
+        backgroundColor: COLORS.LIGHT_BLUE,
+        borderColor: COLORS.BLUE,
+        borderWidth: 2,
     },
 });
 

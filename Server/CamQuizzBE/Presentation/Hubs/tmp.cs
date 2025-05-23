@@ -1,6 +1,7 @@
 // using Microsoft.AspNetCore.SignalR;
 // using CamQuizzBE.Applications.DTOs.Quizzes;
 // using CamQuizzBE.Applications.DTOs.Questions;
+// using CamQuizzBE.Domain.Entities;
 // using CamQuizzBE.Domain.Interfaces;
 // using CamQuizzBE.Infras.Data;
 // using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +17,10 @@
 // public record JoinRoomRequest(string RoomId, int UserId);
 // public record LeaveRoomRequest(string RoomId, int UserId);
 // public record StartGameRequest(string RoomId);
-// public record SubmitAnswerRequest(string RoomId, int UserId, int QuestionId, List<string> Answer);
+// public record SubmitAnswerRequest(string RoomId, int UserId, int? QuestionId, List<string> Answer);
 // public record RejoinGameRequest(int UserId);
 // public record NextQuestionRequest(string RoomId, int UserId);
-// public record PauseTimerRequest(string RoomId, int UserId);
+// public record PauseTimerRequest(string RoomId, int UserId, bool ShowRanking = false);
 // public record ResumeTimerRequest(string RoomId, int UserId);
 
 // public class PlayerDto
@@ -112,18 +113,18 @@
 //     private readonly ILogger<QuizHub> _logger;
 //     private readonly IUserService _userService;
 //     private readonly IQuizzesService _quizService;
-//     private readonly IServiceProvider _serviceProvider;
+//     private readonly IServiceScopeFactory _scopeFactory;
 
 //     public QuizHub(
 //         ILogger<QuizHub> logger,
 //         IUserService userService,
 //         IQuizzesService quizService,
-//         IServiceProvider serviceProvider)
+//         IServiceScopeFactory scopeFactory)
 //     {
 //         _logger = logger;
 //         _userService = userService;
 //         _quizService = quizService;
-//         _serviceProvider = serviceProvider;
+//         _scopeFactory = scopeFactory;
 //     }
 
 //     public override async Task OnConnectedAsync()
@@ -208,7 +209,7 @@
 //                 Id = currentQuestion.Id,
 //                 Name = currentQuestion.Name,
 //                 Explanation = currentQuestion.Description,
-//                 TimeLimit = 30, // Hardcoded for testing
+//                 TimeLimit = currentQuestion.Duration,
 //                 Options = currentQuestion.Answers.Select((a, index) => new GameQuestionOption
 //                 {
 //                     Label = ((char)('A' + index)).ToString(),
@@ -310,7 +311,7 @@
 //                 });
 //             }
 
-//             await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomId);
+//             await Groups.AddToGroupAsync(Context.ConnectionId, request.RoomId);
 //             await Clients.Group(request.RoomId).SendAsync("playerJoined", room);
 //         }
 //         catch (Exception ex)
@@ -379,13 +380,21 @@
 //             }
 //             var questions = quiz.Questions.ToList();
 
+//             var duration = questions[0].Duration;
+//             if (duration <= 0 || duration > 300)
+//             {
+//                 _logger.LogError("Invalid duration {Duration} for question {QuestionId}", duration, questions[0].Id);
+//                 throw new Exception($"Invalid duration {duration} for question {questions[0].Id}");
+//             }
+//             _logger.LogInformation("First question duration: {Duration}s", duration);
+
 //             var gameState = new GameState
 //             {
 //                 IsStarted = true,
 //                 CurrentQuestionIndex = 0,
 //                 QuestionStartTime = DateTime.Now,
-//                 OriginalDuration = 30, // Hardcoded for testing
-//                 TimeRemaining = 30, // Hardcoded for testing
+//                 OriginalDuration = duration,
+//                 TimeRemaining = duration,
 //                 IsPaused = false,
 //                 ShowRanking = false,
 //                 IsEnded = false,
@@ -394,9 +403,30 @@
 
 //             _games[request.RoomId] = gameState;
 
-//             var duration = 30; // Hardcoded for testing
+//             // Create quiz attempts for all players in the room
+//             using (var dbScope = _scopeFactory.CreateScope()) // Renamed to dbScope
+//             {
+//                 var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
+//                 foreach (var player in room.PlayerList)
+//                 {
+//                     var attempt = new QuizAttempts
+//                     {
+//                         QuizId = room.QuizId,
+//                         UserId = player.Id,
+//                         RoomId = room.RoomId,
+//                         Score = 0,
+//                         StartTime = DateTime.UtcNow,
+//                     };
+//                     await context.QuizAttempts.AddAsync(attempt);
+//                 }
+//                 await context.SaveChangesAsync();
+//             }
+
 //             _logger.LogInformation("Starting game for room {RoomId}, question {QuestionId}, duration: {Duration}s",
 //                 request.RoomId, questions[0].Id, duration);
+
+//             // Get answers in consistent order for first question
+//             var orderedAnswers = questions[0].Answers.OrderBy(a => a.Id).ToList();
 
 //             var firstQuestion = new GameQuestionResponse
 //             {
@@ -404,7 +434,7 @@
 //                 Name = questions[0].Name,
 //                 Explanation = questions[0].Description,
 //                 TimeLimit = duration,
-//                 Options = questions[0].Answers.Select((a, index) => new GameQuestionOption
+//                 Options = orderedAnswers.Select((a, index) => new GameQuestionOption
 //                 {
 //                     Label = ((char)('A' + index)).ToString(),
 //                     Content = a.Answer
@@ -412,8 +442,13 @@
 //                 RoomId = room.RoomId
 //             };
 
-//             using var scope = _serviceProvider.CreateScope();
-//             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+//             _logger.LogInformation(
+//                 "First question {QuestionId} options: {Options}",
+//                 questions[0].Id,
+//                 string.Join(", ", orderedAnswers.Select((a, i) => $"{(char)('A' + i)}: {a.Answer} (ID: {a.Id})")));
+
+//             using var hubScope = _scopeFactory.CreateScope(); // Renamed to hubScope
+//             var hubContext = hubScope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 
 //             // Game start sequence
 //             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarting");
@@ -426,56 +461,15 @@
 //             await Task.Delay(TimeSpan.FromSeconds(2));
 //             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarted");
 
-//             // Initialize and start timer
+//             // Start timer using StartQuestionTimer
 //             gameState.TimerCancellation = new CancellationTokenSource();
-//             var timer = new System.Timers.Timer(5000); // Fire every 5 seconds
-//             int time = (int)duration;
-
-//             timer.Elapsed += async (sender, e) =>
-//             {
-//                 try
-//                 {
-//                     if (gameState.TimerCancellation.Token.IsCancellationRequested || gameState.IsPaused || gameState.IsEnded)
-//                     {
-//                         timer.Stop();
-//                         timer.Dispose();
-//                         return;
-//                     }
-
-//                     gameState.TimeRemaining = time;
-//                     await hubContext.Clients.Group(request.RoomId).SendAsync("timerUpdate", new
-//                     {
-//                         RoomId = request.RoomId,
-//                         TimeRemaining = time
-//                     });
-
-//                     if (time <= 0)
-//                     {
-//                         timer.Stop();
-//                         timer.Dispose();
-//                         if (!gameState.IsEnded)
-//                         {
-//                             await ProcessQuestionEnd(request.RoomId, hubContext, _quizService, isTimeUp: true);
-//                         }
-//                     }
-//                     time -= 5; // Decrease by 5 seconds each tick
-//                 }
-//                 catch (Exception ex)
-//                 {
-//                     _logger.LogError(ex, "Error in timer tick for room {RoomId}", request.RoomId);
-//                     timer.Stop();
-//                     timer.Dispose();
-//                 }
-//             };
-
-//             timer.Start();
-//             _logger.LogInformation("Timer started for first question in room {RoomId}", request.RoomId);
+//             _ = Task.Run(() => StartQuestionTimer(request.RoomId, duration, gameState), gameState.TimerCancellation.Token);
 //         }
 //         catch (Exception ex)
 //         {
 //             _logger.LogError(ex, "Error starting game in room {RoomId}", request.RoomId);
-//             using var scope = _serviceProvider.CreateScope();
-//             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+//             using var errorScope = _scopeFactory.CreateScope(); // Use unique name
+//             var hubContext = errorScope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 //             await hubContext.Clients.Group(request.RoomId).SendAsync("error", new { Message = "Error starting game", Error = ex.Message });
 
 //             if (_games.ContainsKey(request.RoomId))
@@ -490,7 +484,7 @@
 //     {
 //         try
 //         {
-//             _logger.LogInformation("User {UserId} submitting answer for question {QuestionId} in room {RoomId}",
+//             _logger.LogInformation("User {UserId} submitting answer for question order {QuestionId} in room {RoomId}",
 //                 request.UserId, request.QuestionId, request.RoomId);
 
 //             if (!_rooms.TryGetValue(request.RoomId, out var room))
@@ -517,18 +511,104 @@
 //                 throw new Exception("User not in room");
 //             }
 
+//             // Validate question order
 //             if (request.QuestionId != gameState.CurrentQuestionIndex + 1)
 //             {
-//                 _logger.LogWarning("Invalid QuestionId {QuestionId} for current question index {Index} in room {RoomId}",
+//                 _logger.LogWarning("Invalid question order {QuestionId} for current index {Index} in room {RoomId}",
 //                     request.QuestionId, gameState.CurrentQuestionIndex, request.RoomId);
-//                 throw new Exception("Invalid question ID");
+//                 throw new Exception("Invalid question order");
 //             }
 
+//             // Save the answer to database
+//             using (var scope = _scopeFactory.CreateScope())
+//             {
+//                 var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                
+//                 var attempt = await context.QuizAttempts
+//                     .FirstOrDefaultAsync(a =>
+//                         a.QuizId == room.QuizId &&
+//                         a.UserId == request.UserId &&
+//                         a.RoomId == request.RoomId);
+
+//                 if (attempt == null)
+//                 {
+//                     throw new Exception("Quiz attempt not found");
+//                 }
+
+//                 // Get quiz questions to map order to actual question_id
+//                 var quiz = await context.Quizzes
+//                     .Include(q => q.Questions)
+//                         .ThenInclude(q => q.Answers)
+//                     .FirstOrDefaultAsync(q => q.Id == room.QuizId);
+
+//                 if (quiz == null || quiz.Questions == null || !quiz.Questions.Any())
+//                 {
+//                     throw new Exception("Quiz or questions not found");
+//                 }
+
+//                 var questions = quiz.Questions.OrderBy(q => q.Id).ToList();
+//                 if (gameState.CurrentQuestionIndex >= questions.Count)
+//                 {
+//                     throw new Exception("Invalid question index");
+//                 }
+
+//                 var question = questions[gameState.CurrentQuestionIndex]; // Map order to actual question
+
+//                 // Verify the question belongs to the quiz
+//                 if (question.QuizId != room.QuizId)
+//                 {
+//                     _logger.LogError("Question {QuestionId} does not belong to quiz {QuizId}", question.Id, room.QuizId);
+//                     throw new Exception("Question does not belong to this quiz");
+//                 }
+
+//                 // Map the letter (A,B,C) to answer using index from ordered list
+//                 var answers = question.Answers.OrderBy(a => a.Id).ToList();
+//                 var letter = request.Answer.FirstOrDefault();
+//                 int? answerId = null;
+
+//                 if (!string.IsNullOrEmpty(letter))
+//                 {
+//                     var letterIndex = letter[0] - 'A';
+//                     if (letterIndex >= 0 && letterIndex < answers.Count)
+//                     {
+//                         answerId = answers[letterIndex].Id;
+//                     }
+//                     else
+//                     {
+//                         _logger.LogWarning(
+//                             "Question {QuestionId}: Invalid letter index {Index}, max valid index is {MaxIndex}",
+//                             question.Id, letterIndex, answers.Count - 1);
+//                     }
+//                 }
+
+//                 // Calculate answer time
+//                 var answerTime = gameState.QuestionStartTime.HasValue
+//                     ? DateTime.UtcNow.Subtract(gameState.QuestionStartTime.Value).TotalSeconds
+//                     : 0.0;
+
+
+//                 // Create and save the user answer
+//                 var userAnswer = new UserAnswers
+//                 {
+//                     AttemptId = attempt.Id,
+//                     QuestionId = question.Id, // Use actual question_id (13, 14)
+//                     AnswerId = answerId,
+//                     AnswerTime = answerTime
+//                 };
+
+//                 await context.UserAnswers.AddAsync(userAnswer);
+//                 await context.SaveChangesAsync();
+
+//                 // _logger.LogInformation(
+//                 //     "Saved user answer for question {QuestionId}: AnswerId={AnswerId}, AttemptId={AttemptId}",
+//                 //     question.Id, answerId, attempt.Id);
+//             }
+
+//             // Update game state
 //             string playerName;
 //             lock (gameState)
 //             {
 //                 gameState.PlayerAnswers[request.UserId] = request.Answer;
-//                 _logger.LogInformation("Stored answer for player {UserId}: [{Answers}]", request.UserId, string.Join(",", request.Answer));
 //                 playerName = room.PlayerList.First(p => p.Id == request.UserId).Name;
 //             }
             
@@ -550,7 +630,7 @@
 //                 gameState.TimerCancellation?.Dispose();
 //                 gameState.TimerCancellation = null;
 
-//                 using var scope = _serviceProvider.CreateScope();
+//                 using var scope = _scopeFactory.CreateScope();
 //                 var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
 //                 var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 //                 await ProcessQuestionEnd(request.RoomId, hubContext, quizService, triggeredByUserId: request.UserId);
@@ -595,7 +675,7 @@
 //             gameState.TimerCancellation?.Dispose();
 //             gameState.TimerCancellation = null;
 
-//             using var scope = _serviceProvider.CreateScope();
+//             using var scope = _scopeFactory.CreateScope();
 //             var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
 //             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 //             await ProcessQuestionEnd(request.RoomId, hubContext, quizService, triggeredByUserId: request.UserId);
@@ -647,10 +727,26 @@
 
 //             _logger.LogInformation("Timer paused for room {RoomId}, timeRemaining: {TimeRemaining}s", request.RoomId, gameState.TimeRemaining);
 
+//             gameState.ShowRanking = request.ShowRanking;
+//             if (request.ShowRanking)
+//             {
+//                 var playerScores = room.PlayerList.Select(p => new PlayerScore
+//                 {
+//                     UserId = p.Id,
+//                     Name = p.Name,
+//                     Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
+//                 }).OrderByDescending(p => p.Score).ToList();
+
+//                 await Clients.Group(request.RoomId).SendAsync("showingRanking");
+//                 await Task.Delay(TimeSpan.FromSeconds(1));
+//                 await Clients.Group(request.RoomId).SendAsync("updateRanking", playerScores);
+//             }
+
 //             await Clients.Group(request.RoomId).SendAsync("timerPaused", new
 //             {
 //                 RoomId = request.RoomId,
-//                 TimeRemaining = gameState.TimeRemaining
+//                 TimeRemaining = gameState.TimeRemaining,
+//                 ShowRanking = request.ShowRanking
 //             });
 //         }
 //         catch (Exception ex)
@@ -692,9 +788,8 @@
 
 //             gameState.TimerCancellation = new CancellationTokenSource();
 
+//             // Start timer using StartQuestionTimer
 //             _ = Task.Run(() => StartQuestionTimer(request.RoomId, gameState.TimeRemaining, gameState), gameState.TimerCancellation.Token);
-
-//             _logger.LogInformation("Timer resumed for room {RoomId}, timeRemaining: {TimeRemaining}s", request.RoomId, gameState.TimeRemaining);
 
 //             await Clients.Group(request.RoomId).SendAsync("timerResumed", new
 //             {
@@ -714,16 +809,22 @@
 //     {
 //         try
 //         {
-//             using var scope = _serviceProvider.CreateScope();
+//             using var scope = _scopeFactory.CreateScope();
 //             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 
 //             _logger.LogInformation("Starting timer for room {RoomId}, duration: {Duration}s", roomId, duration);
+//             if (duration <= 0 || duration > 300)
+//             {
+//                 _logger.LogError("Invalid duration {Duration} in StartQuestionTimer for room {RoomId}", duration, roomId);
+//                 throw new Exception($"Invalid duration {duration}");
+//             }
 
 //             gameState.QuestionStartTime = DateTime.Now;
 //             gameState.TimeRemaining = duration;
 
-//             for (int time = (int)duration; time >= 0 && !gameState.TimerCancellation.Token.IsCancellationRequested; time--)
+//             for (int time = (int)Math.Ceiling(duration); time >= 0 && !gameState.TimerCancellation.Token.IsCancellationRequested; time--)
 //             {
+//                 _logger.LogDebug("Timer tick for room {RoomId}, time: {Time}s", roomId, time);
 //                 gameState.TimeRemaining = time;
 //                 await hubContext.Clients.Group(roomId).SendAsync("timerUpdate", new
 //                 {
@@ -739,7 +840,8 @@
 //             if (!gameState.IsPaused && _games.ContainsKey(roomId) && !gameState.IsEnded)
 //             {
 //                 _logger.LogInformation("Timer expired for room {RoomId}", roomId);
-//                 var quizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
+//                 using var quizScope = _scopeFactory.CreateScope();
+//                 var quizService = quizScope.ServiceProvider.GetRequiredService<IQuizzesService>();
 //                 await ProcessQuestionEnd(roomId, hubContext, quizService, isTimeUp: true);
 //             }
 //             else
@@ -757,7 +859,7 @@
 //             _logger.LogError(ex, "Timer error for room {RoomId}", roomId);
 //             try
 //             {
-//                 using var scope = _serviceProvider.CreateScope();
+//                 using var scope = _scopeFactory.CreateScope();
 //                 var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 //                 await hubContext.Clients.Group(roomId).SendAsync("error",
 //                     new { Message = "Timer error", Error = ex.Message });
@@ -786,7 +888,10 @@
 //             gameState.TimerCancellation?.Dispose();
 //             gameState.TimerCancellation = null;
 
-//             var quiz = await quizService.GetQuizByIdAsync(room.QuizId);
+//             using var scope = _scopeFactory.CreateScope();
+//             var scopedQuizService = scope.ServiceProvider.GetRequiredService<IQuizzesService>();
+
+//             var quiz = await scopedQuizService.GetQuizByIdAsync(room.QuizId);
 //             if (quiz?.Questions == null || !quiz.Questions.Any())
 //             {
 //                 _logger.LogWarning("Quiz or questions not found for room {RoomId}", roomId);
@@ -800,20 +905,28 @@
 //             }
 //             var currentQuestion = questions[gameState.CurrentQuestionIndex];
 
-//             var correctAnswers = currentQuestion.Answers
+//             // Get answers in consistent order
+//             var orderedAnswers = currentQuestion.Answers.OrderBy(a => a.Id).ToList();
+
+//             // Map correct answers to letters based on ordered position
+//             var correctAnswers = orderedAnswers
 //                 .Select((a, index) => new { Answer = a, Label = ((char)('A' + index)).ToString() })
 //                 .Where(x => x.Answer.IsCorrect)
 //                 .Select(x => x.Label)
 //                 .ToList();
 
-//             // Calculate scores
+//             // _logger.LogInformation(
+//             //     "Question {QuestionId} answers: {Answers}, Correct answers: {CorrectAnswers}",
+//             //     currentQuestion.Id,
+//             //     string.Join(", ", orderedAnswers.Select((a, i) => $"{(char)('A' + i)}: {a.Answer} (ID: {a.Id})")),
+//             //     string.Join(", ", correctAnswers));
+
 //             foreach (var player in room.PlayerList)
 //             {
 //                 var currentScore = gameState.PlayerScores.GetValueOrDefault(player.Id, 0);
 //                 if (gameState.PlayerAnswers.TryGetValue(player.Id, out var playerAnswer))
 //                 {
-//                     _logger.LogInformation("Player {PlayerId} answered: [{Answers}], Correct: [{Correct}]",
-//                         player.Id, string.Join(",", playerAnswer), string.Join(",", correctAnswers));
+//                     _logger.LogInformation("Player {PlayerId} answered: [{Answers}]", player.Id, string.Join(",", playerAnswer));
 
 //                     var isCorrect = playerAnswer != null &&
 //                                     playerAnswer.Count > 0 &&
@@ -840,12 +953,25 @@
 
 //                 gameState.PlayerScores[player.Id] = currentScore;
 //                 player.Score = currentScore;
+
+//                 using (var dbScope = _scopeFactory.CreateScope())
+//                 {
+//                     var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
+//                     var attempt = await context.QuizAttempts
+//                         .FirstOrDefaultAsync(a =>
+//                             a.QuizId == room.QuizId &&
+//                             a.UserId == player.Id &&
+//                             a.RoomId == room.RoomId);
+//                     if (attempt != null)
+//                     {
+//                         attempt.Score = currentScore;
+//                         context.QuizAttempts.Update(attempt);
+//                         await context.SaveChangesAsync();
+//                     }
+//                 }
 //             }
 
-//             // Save answers before clearing
 //             var playerAnswers = new Dictionary<int, List<string>>(gameState.PlayerAnswers);
-
-//             // Send results
 //             await hubContext.Clients.Group(roomId).SendAsync("showingResult", new
 //             {
 //                 QuestionId = currentQuestion.Id,
@@ -864,7 +990,6 @@
 //                 Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
 //             }).ToList();
 
-//             // Always show ranking after scores are calculated
 //             await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
 //             await Task.Delay(TimeSpan.FromSeconds(1));
 //             await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
@@ -876,14 +1001,23 @@
 //             if (hasNextQuestion)
 //             {
 //                 var next = questions[gameState.CurrentQuestionIndex + 1];
-//                 var nextDuration = 30; // Hardcoded for testing
+//                 var nextDuration = next.Duration;
+//                 if (nextDuration <= 0 || nextDuration > 300)
+//                 {
+//                     _logger.LogError("Invalid duration {Duration} for question {QuestionId}", nextDuration, next.Id);
+//                     throw new Exception($"Invalid duration {nextDuration} for question {next.Id}");
+//                 }
+//                 _logger.LogInformation("Next question duration: {Duration}s", nextDuration);
+//                 // Get answers in consistent order for next question
+//                 var nextOrderedAnswers = next.Answers.OrderBy(a => a.Id).ToList();
+
 //                 nextQuestion = new GameQuestionResponse
 //                 {
 //                     Id = next.Id,
 //                     Name = next.Name,
 //                     Explanation = next.Description,
 //                     TimeLimit = nextDuration,
-//                     Options = next.Answers.Select((a, index) => new GameQuestionOption
+//                     Options = nextOrderedAnswers.Select((a, index) => new GameQuestionOption
 //                     {
 //                         Label = ((char)('A' + index)).ToString(),
 //                         Content = a.Answer
@@ -894,7 +1028,7 @@
 //                 gameState.OriginalDuration = nextDuration;
 //                 gameState.TimeRemaining = nextDuration;
 //                 gameState.IsPaused = false;
-//                 gameState.ShowRanking = false; // Reset for next question
+//                 gameState.ShowRanking = false;
 //             }
 
 //             var result = new QuestionResultResponse
@@ -914,50 +1048,12 @@
 
 //             if (hasNextQuestion)
 //             {
-//                 // Set up and start timer for next question
+//                 await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
+//                 await Task.Delay(TimeSpan.FromSeconds(2));
+//                 await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
+
 //                 gameState.TimerCancellation = new CancellationTokenSource();
-//                 var timer = new System.Timers.Timer(5000); // Fire every 5 seconds
-//                 int time = (int)nextQuestion.TimeLimit;
-
-//                 timer.Elapsed += async (sender, e) =>
-//                 {
-//                     try
-//                     {
-//                         if (gameState.TimerCancellation.Token.IsCancellationRequested || gameState.IsPaused || gameState.IsEnded)
-//                         {
-//                             timer.Stop();
-//                             timer.Dispose();
-//                             return;
-//                         }
-
-//                         gameState.TimeRemaining = time;
-//                         await hubContext.Clients.Group(roomId).SendAsync("timerUpdate", new
-//                         {
-//                             RoomId = roomId,
-//                             TimeRemaining = time
-//                         });
-
-//                         if (time <= 0)
-//                         {
-//                             timer.Stop();
-//                             timer.Dispose();
-//                             if (!gameState.IsEnded)
-//                             {
-//                                 await ProcessQuestionEnd(roomId, hubContext, quizService, isTimeUp: true);
-//                             }
-//                         }
-//                         time -= 5; // Decrease by 5 seconds each tick
-//                     }
-//                     catch (Exception ex)
-//                     {
-//                         _logger.LogError(ex, "Error in timer tick for room {RoomId}", roomId);
-//                         timer.Stop();
-//                         timer.Dispose();
-//                     }
-//                 };
-
-//                 timer.Start();
-//                 _logger.LogInformation("Timer started for next question in room {RoomId}", roomId);
+//                 _ = Task.Run(() => StartQuestionTimer(roomId, nextQuestion.TimeLimit, gameState), gameState.TimerCancellation.Token);
 //             }
 //             else
 //             {
@@ -976,15 +1072,7 @@
 //                 await Task.Delay(TimeSpan.FromSeconds(5));
 //                 _games.Remove(roomId);
 //                 _logger.LogInformation("Game ended for room {RoomId}, all questions completed", roomId);
-//                 return;
 //             }
-
-//             await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
-//             await Task.Delay(TimeSpan.FromSeconds(2));
-//             await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
-
-//             gameState.TimerCancellation = new CancellationTokenSource();
-//             _ = Task.Run(() => StartQuestionTimer(roomId, gameState.TimeRemaining, gameState), gameState.TimerCancellation.Token);
 //         }
 //         catch (Exception ex)
 //         {

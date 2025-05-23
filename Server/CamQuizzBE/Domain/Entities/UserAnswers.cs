@@ -25,12 +25,11 @@ public class UserAnswers
     [ForeignKey("QuestionId")]
     public Questions Question { get; set; } = null!;
 
-    [Column("answer_id")]
-    [Required]
-    public int AnswerId { get; set; }
+   [Column("answer_id")]
+    public int? AnswerId { get; set; }  
 
     [ForeignKey("AnswerId")]
-    public Answers Answer { get; set; } = null!;
+    public Answers? Answer { get; set; }  
 
     [Column("answer_time")]
     public double? AnswerTime { get; set; }

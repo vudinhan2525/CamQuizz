@@ -45,11 +45,20 @@ public class ReportService : IReportService
                 QuestionName = question.Name
             };
 
-            // Get all answers for this question from UserAnswers
+            // Get all answers for this question
             var userAnswers = await _context.UserAnswers
-                .Where(a => a.QuestionId == question.Id)
-                .Where(a => a.Attempt.QuizId == quizId)
+                .Include(ua => ua.Attempt)
+                .Include(ua => ua.Answer)
+                .Where(ua => ua.QuestionId == question.Id)
+                .Where(ua => ua.Attempt.QuizId == quizId)
                 .ToListAsync();
+
+            // Log attempts for verification
+            var attempts = await _context.QuizAttempts
+                .Where(a => a.QuizId == quizId)
+                .ToListAsync();
+
+           
 
             // Calculate average answer time
             stats.AverageAnswerTime = userAnswers.Any()
@@ -57,13 +66,16 @@ public class ReportService : IReportService
                            .Average(a => a.AnswerTime.Value)
                 : 0;
 
-            // Calculate option selection rates per answer
+            // Get total attempts for this quiz
+            var totalAttempts = await _context.QuizAttempts
+                .Where(a => a.QuizId == quizId)
+                .CountAsync();
+
+            // Calculate option selection rates
             foreach (var option in question.Answers)
             {
                 var selections = userAnswers.Count(a => a.AnswerId == option.Id);
-                var rate = userAnswers.Any()
-                    ? (selections * 100.0) / userAnswers.Count
-                    : 0;
+                var rate = totalAttempts > 0 ? (selections * 100.0) / totalAttempts : 0;
 
                 stats.OptionStats.Add(new OptionStatsDto
                 {
@@ -72,7 +84,6 @@ public class ReportService : IReportService
                     SelectionRate = rate
                 });
             }
-
             report.QuestionStats.Add(stats);
         }
 

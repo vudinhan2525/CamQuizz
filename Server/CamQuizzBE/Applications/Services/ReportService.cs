@@ -83,11 +83,12 @@ public class ReportService : IReportService
                 .Where(a => a.QuizId == quizId)
                 .CountAsync();
 
-            // Calculate option selection rates
+            // Calculate option selection rates excluding null answers
+            var answeredAttempts = userAnswers.Count(a => a.AnswerId.HasValue);
             foreach (var option in question.Answers)
             {
                 var selections = userAnswers.Count(a => a.AnswerId == option.Id);
-                var rate = totalAttempts > 0 ? (selections * 100.0) / totalAttempts : 0;
+                var rate = answeredAttempts > 0 ? (selections * 100.0) / answeredAttempts : 0;
 
                 stats.OptionStats.Add(new OptionStatsDto
                 {
@@ -127,7 +128,7 @@ public class ReportService : IReportService
 
         var report = new OldAttemptReportDto
         {
-            AttemptNumber = 1, // You might want to calculate this based on previous attempts
+            AttemptNumber = 1, 
             Timestamp = attempt.StartTime,
             Score = attempt.Score
         };
@@ -146,14 +147,32 @@ public class ReportService : IReportService
                 QuestionName = question.Name
             };
 
-            // Add all selected answers for this question
+            // Add selected answers for this question
             foreach (var userAnswer in questionGroup)
             {
-                review.SelectedAnswers.Add(new SelectedAnswerDto
+                if (userAnswer.Answer != null)
                 {
-                    AnswerId = userAnswer.Answer.Id,
-                    AnswerText = userAnswer.Answer.Answer,
-                    IsCorrect = userAnswer.Answer.IsCorrect
+                    review.SelectedAnswers.Add(new SelectedAnswerDto
+                    {
+                        AnswerId = userAnswer.Answer.Id,
+                        AnswerText = userAnswer.Answer.Answer,
+                        IsCorrect = userAnswer.Answer.IsCorrect
+                    });
+                }
+            }
+
+            // Add correct answers
+            var correctAnswers = await _context.Answers
+                .Where(a => a.QuestionId == question.Id && a.IsCorrect)
+                .ToListAsync();
+
+            foreach (var answer in correctAnswers)
+            {
+                review.CorrectAnswers.Add(new SelectedAnswerDto
+                {
+                    AnswerId = answer.Id,
+                    AnswerText = answer.Answer,
+                    IsCorrect = true
                 });
             }
 
@@ -162,5 +181,80 @@ public class ReportService : IReportService
         }
 
         return report;
+    }
+
+    public async Task<List<OldAttemptReportDto>> GetUserAttemptsAsync(int userId, int quizId)
+    {
+        var attempts = await _context.QuizAttempts
+            .Include(a => a.UserAnswers)
+                .ThenInclude(a => a.Question)
+            .Include(a => a.UserAnswers)
+                .ThenInclude(a => a.Answer)
+            .Where(a => a.UserId == userId && a.QuizId == quizId)
+            .OrderByDescending(a => a.StartTime)
+            .ToListAsync();
+
+        _logger.LogInformation(
+            "Found {Count} attempts for user {UserId} on quiz {QuizId}",
+            attempts.Count, userId, quizId);
+
+        var reports = new List<OldAttemptReportDto>();
+        for (int i = 0; i < attempts.Count; i++)
+        {
+            var attempt = attempts[i];
+            var report = new OldAttemptReportDto
+            {
+                AttemptNumber = attempts.Count - i, 
+                Timestamp = attempt.StartTime,
+                Score = attempt.Score
+            };
+
+            var answersGrouped = attempt.UserAnswers
+                .OrderBy(a => a.Question.Id)
+                .GroupBy(a => a.Question);
+
+            foreach (var questionGroup in answersGrouped)
+            {
+                var question = questionGroup.Key;
+                var review = new QuestionReviewDto
+                {
+                    QuestionId = question.Id,
+                    QuestionName = question.Name
+                };
+
+                foreach (var userAnswer in questionGroup)
+                {
+                    if (userAnswer.Answer != null) 
+                    {
+                        review.SelectedAnswers.Add(new SelectedAnswerDto
+                        {
+                            AnswerId = userAnswer.Answer.Id,
+                            AnswerText = userAnswer.Answer.Answer,
+                            IsCorrect = userAnswer.Answer.IsCorrect
+                        });
+                    }
+                }
+
+                var correctAnswers = await _context.Answers
+                    .Where(a => a.QuestionId == question.Id && a.IsCorrect)
+                    .ToListAsync();
+
+                foreach (var answer in correctAnswers)
+                {
+                    review.CorrectAnswers.Add(new SelectedAnswerDto
+                    {
+                        AnswerId = answer.Id,
+                        AnswerText = answer.Answer,
+                        IsCorrect = true
+                    });
+                }
+
+                report.QuestionReviews.Add(review);
+            }
+
+            reports.Add(report);
+        }
+
+        return reports;
     }
 }

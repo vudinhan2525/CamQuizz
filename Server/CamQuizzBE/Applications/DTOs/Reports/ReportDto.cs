@@ -36,6 +36,7 @@ public class QuestionReviewDto
     public int QuestionId { get; set; }
     public string QuestionName { get; set; } = string.Empty;
     public List<SelectedAnswerDto> SelectedAnswers { get; set; } = new();
+    public List<SelectedAnswerDto> CorrectAnswers { get; set; } = new();
 }
 
 public class SelectedAnswerDto

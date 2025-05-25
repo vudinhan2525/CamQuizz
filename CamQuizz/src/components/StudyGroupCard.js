@@ -10,11 +10,11 @@ export const StudyGroupCard = ({
 }) => {
     const getStatusColor = (status) => {
         switch (status) {
-            case 'active':
+            case 'Active':
                 return COLORS.GREEN;
-            case 'archived':
+            case 'OnHold':
                 return COLORS.GRAY;
-            case 'deleted':
+            case 'Deleted':
                 return COLORS.RED;
             default:
                 return COLORS.GRAY;
@@ -23,11 +23,11 @@ export const StudyGroupCard = ({
 
     const getStatusText = (status) => {
         switch (status) {
-            case 'active':
+            case 'Active':
                 return 'Đang hoạt động';
-            case 'archived':
+            case 'OnHold':
                 return 'Đã lưu trữ';
-            case 'deleted':
+            case 'Deleted':
                 return 'Đã xóa';
             default:
                 return 'Không xác định';
@@ -64,8 +64,10 @@ export const StudyGroupCard = ({
 
             <View style={styles.content}>
                 <Text style={styles.groupName} numberOfLines={2}>
-                    {group.name}
+                    {group.name} {/* Hiển thị tên nhóm */}
                 </Text>
+                {/* Log để kiểm tra dữ liệu nhóm */}
+                {console.log(`StudyGroupCard rendering group: ${group.id}, name: ${group.name}`)}
 
                 <View style={styles.infoRow}>
                     <View style={styles.infoItem}>
@@ -180,4 +182,4 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-}); 
+});

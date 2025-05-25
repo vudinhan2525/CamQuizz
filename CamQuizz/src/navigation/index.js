@@ -194,7 +194,7 @@ function LibraryStack() {
             options={{ title: 'Được chia sẻ' }}
             />
             <Stack.Screen
-                name={SCREENS.FLASHCARD_SET_DETAIL}
+                name="LibraryFlashcardSetDetail"
                 component={FlashcardSetDetail}
                 options={{ headerShown: false }}
             />

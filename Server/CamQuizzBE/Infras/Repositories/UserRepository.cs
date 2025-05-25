@@ -10,7 +10,8 @@ namespace CamQuizzBE.Infras.Repositories;
 public class UserRepository(
     UserManager<AppUser> userManager,
     DataContext context,
-    IMapper mapper
+    IMapper mapper,
+    ILogger<UserRepository> logger
 ) : IUserRepository
 {
     public async Task<IdentityResult> ChangePasswordAsync(
@@ -117,7 +118,7 @@ public class UserRepository(
         // First save changes to context
         context.Users.Update(user);
         await context.SaveChangesAsync();
-        
+
         // Then update in UserManager
         return await userManager.UpdateAsync(user);
     }

@@ -132,11 +132,19 @@ public class AuthController(
     }
    [HttpPut("{id}")]
    [Authorize]
-    public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
-    {
-        var result = await userService.UpdateUserAsync(id, updateUserDto);
-        if (!result.Succeeded) return BadRequest(result.Errors);
-        return Ok("User updated successfully");
+   public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
+   {
+       var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+       
+       // Check if user is trying to update their own account or is admin
+       if (currentUserId != id && !User.IsInRole("Admin"))
+       {
+           return Unauthorized("You can only update your own account");
+       }
+
+       var result = await userService.UpdateUserAsync(id, updateUserDto);
+       if (!result.Succeeded) return BadRequest(result.Errors);
+       return Ok("User updated successfully");
     }
 
     [HttpDelete("{id}")]

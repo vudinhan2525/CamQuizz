@@ -14,7 +14,7 @@ const GroupMembers = ({ navigation, route }) => {
   const [members, setMembers] = useState([]);
   const [pendingMembers, setPendingMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   useEffect(() => {
     loadMembersData();
@@ -49,38 +49,60 @@ const GroupMembers = ({ navigation, route }) => {
   const loadMembers = async () => {
     try {
       console.log(`Fetching members for group ${group.id}`);
-      const response = await GroupService.getMembersByGroupId(group.id);
 
-      console.log('Members response:', response);
+      // Gọi cả hai API song song
+      const [membersResponse, pendingResponse] = await Promise.all([
+        GroupService.getMembersByGroupId(group.id),
+        GroupService.getPendingMembersByGroupId(group.id)
+      ]);
 
-      // Xử lý dữ liệu response
+      console.log('Members response:', membersResponse);
+      console.log('Pending members response:', pendingResponse);
+
+      // Xử lý dữ liệu approved members
       let membersData = [];
-      if (response && response.data) {
-        membersData = Array.isArray(response.data) ? response.data : [response.data];
-      } else if (Array.isArray(response)) {
-        membersData = response;
+      if (membersResponse && membersResponse.data) {
+        membersData = Array.isArray(membersResponse.data) ? membersResponse.data : [membersResponse.data];
+      } else if (Array.isArray(membersResponse)) {
+        membersData = membersResponse;
       }
 
-      // Transform data để phù hợp với UI
+      // Xử lý dữ liệu pending members
+      let pendingData = [];
+      if (pendingResponse && pendingResponse.data) {
+        pendingData = Array.isArray(pendingResponse.data) ? pendingResponse.data : [pendingResponse.data];
+      } else if (Array.isArray(pendingResponse)) {
+        pendingData = pendingResponse;
+      }
+
+      // Transform approved members
       const transformedMembers = membersData.map((item, index) => ({
         id: item.userId || item.id || index.toString(),
         name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
         email: item.email || 'No email',
-        role: item.status === 'Approved' ? (item.userId === group.ownerId ? 'Leader' : 'Member') : 'Pending',
-        status: item.status || 'Unknown',
+        role: item.userId === group.ownerId ? 'Leader' : 'Member',
+        status: item.status || 'Approved',
         joinedAt: item.joinedAt || new Date().toISOString(),
         avatar: item.avatar || tmpURL,
         isOwner: item.userId === group.ownerId
       }));
 
-      // Phân loại members và pending members
-      const approvedMembers = transformedMembers.filter(member => member.status === 'Approved');
-      const pendingMembersList = transformedMembers.filter(member => member.status === 'Pending');
+      // Transform pending members
+      const transformedPendingMembers = pendingData.map((item, index) => ({
+        id: item.userId || item.id || `pending_${index}`,
+        name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
+        email: item.email || 'No email',
+        role: 'Pending',
+        status: 'Pending',
+        joinedAt: item.joinedAt || new Date().toISOString(),
+        avatar: item.avatar || tmpURL,
+        isOwner: false
+      }));
 
-      setMembers(approvedMembers);
-      setPendingMembers(pendingMembersList);
+      setMembers(transformedMembers);
+      setPendingMembers(transformedPendingMembers);
 
-      console.log(`Loaded ${approvedMembers.length} approved members and ${pendingMembersList.length} pending members`);
+      console.log(`Loaded ${transformedMembers.length} approved members and ${transformedPendingMembers.length} pending members`);
 
     } catch (error) {
       console.error('Error loading members:', error);
@@ -96,11 +118,49 @@ const GroupMembers = ({ navigation, route }) => {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadMembersData();
-    setRefreshing(false);
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email để mời');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email hợp lệ');
+      return;
+    }
+
+    try {
+      setInviting(true);
+      console.log(`Inviting ${inviteEmail} to group ${group.id}`);
+
+      await GroupService.inviteMemberByEmail(group.id, inviteEmail);
+
+      Alert.alert(
+        'Thành công',
+        `Đã gửi lời mời đến ${inviteEmail}`,
+        [{ text: 'OK' }]
+      );
+
+      // Clear email input
+      setInviteEmail('');
+
+      // Reload members data to show new pending member
+      await loadMembersData();
+
+    } catch (error) {
+      console.error('Error inviting member:', error);
+      Alert.alert(
+        'Lỗi',
+        error.message || 'Không thể gửi lời mời. Vui lòng thử lại.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setInviting(false);
+    }
   };
+
   const renderPendingMember = ({ item }) => (
     <View style={styles.pendingMemberItem}>
       <Image
@@ -180,9 +240,6 @@ const GroupMembers = ({ navigation, route }) => {
           <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{group.name}</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={24} color={COLORS.BLUE} />
-        </TouchableOpacity>
       </View>
 
       {isLeader && (
@@ -197,8 +254,14 @@ const GroupMembers = ({ navigation, route }) => {
               onChangeText={setInviteEmail}
               placeholder="Nhập email để mời"
             />
-            <TouchableOpacity style={styles.inviteButton}>
-              <Text style={styles.inviteButtonText}>Mời</Text>
+            <TouchableOpacity
+              style={[styles.inviteButton, inviting && styles.inviteButtonDisabled]}
+              onPress={handleInvite}
+              disabled={inviting}
+            >
+              <Text style={styles.inviteButtonText}>
+                {inviting ? 'Đang mời...' : 'Mời'}
+              </Text>
             </TouchableOpacity>
           </View>
           {pendingMembers.length > 0 ? (
@@ -226,8 +289,6 @@ const GroupMembers = ({ navigation, route }) => {
           keyExtractor={item => item.id}
           contentContainerStyle={members.length === 0 ? styles.emptyContent : styles.membersList}
           ListEmptyComponent={renderEmptyMembers}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
           showsVerticalScrollIndicator={false}
         />
       </View>
@@ -281,6 +342,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     justifyContent: 'center',
+  },
+  inviteButtonDisabled: {
+    backgroundColor: COLORS.GRAY,
+    opacity: 0.6,
   },
   inviteButtonText: {
     color: COLORS.WHITE,
@@ -345,9 +410,7 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
   },
-  refreshButton: {
-    padding: 4,
-  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

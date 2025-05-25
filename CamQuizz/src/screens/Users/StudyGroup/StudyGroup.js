@@ -367,39 +367,13 @@ export const StudyGroup = ({ navigation, route }) => {
       // Cập nhật state với bản sao mới
       setSelectedGroup(updatedSelectedGroup);
 
-      // Cập nhật nhóm trong danh sách hiện tại
-      const updatedGroups = groups.map(group => {
-        if (group.id === selectedGroup.id) {
-          // Log trước khi cập nhật
-          console.log('Updating group in groups array:', group.id, group.name, '->', editedGroupName.trim());
-
-          // Tạo bản sao của đối tượng group thay vì dùng JSON.parse/stringify
-          return {
-            ...group,
-            name: editedGroupName.trim()
-          };
-        }
-        return group;
-      });
-
-      // Log sau khi cập nhật
-      console.log('Updated groups:', updatedGroups.map(g => ({ id: g.id, name: g.name })));
-
-      // Sử dụng dữ liệu trả về từ API để cập nhật UI
-      console.log('Sử dụng dữ liệu từ API để cập nhật UI');
-
-      // Tạo bản sao hoàn toàn mới của mảng groups và filteredGroups
-      const brandNewGroups = JSON.parse(JSON.stringify(groups));
-      const brandNewFilteredGroups = JSON.parse(JSON.stringify(filteredGroups));
-
       // Lấy tên nhóm từ response hoặc từ editedGroupName nếu response không có tên
-      const updatedName = response.name || editedGroupName.trim();
-
+      const updatedName = (response && response.name) || editedGroupName.trim();
       console.log('Tên nhóm sẽ được cập nhật trong UI:', updatedName);
 
-      // Cập nhật tên nhóm trong bản sao mới của groups
-      const updatedBrandNewGroups = brandNewGroups.map(group => {
-        if (group.id.toString() === selectedGroup.id.toString()) {
+      // Cập nhật nhóm trong danh sách groups
+      const updatedGroups = groups.map(group => {
+        if (group.id === selectedGroup.id) {
           console.log(`Cập nhật nhóm trong groups: ID ${group.id}, tên cũ: "${group.name}", tên mới: "${updatedName}"`);
           return {
             ...group,
@@ -409,14 +383,9 @@ export const StudyGroup = ({ navigation, route }) => {
         return group;
       });
 
-      // Cập nhật state với bản sao hoàn toàn mới
-      console.log('Cập nhật groups với:',
-        updatedBrandNewGroups.map(g => ({ id: g.id, name: g.name })));
-      setGroups(updatedBrandNewGroups);
-
-      // Cập nhật tên nhóm trong bản sao mới của filteredGroups
-      const updatedBrandNewFilteredGroups = brandNewFilteredGroups.map(group => {
-        if (group.id.toString() === selectedGroup.id.toString()) {
+      // Cập nhật nhóm trong danh sách filteredGroups
+      const updatedFilteredGroups = filteredGroups.map(group => {
+        if (group.id === selectedGroup.id) {
           console.log(`Cập nhật nhóm trong filteredGroups: ID ${group.id}, tên cũ: "${group.name}", tên mới: "${updatedName}"`);
           return {
             ...group,
@@ -426,37 +395,13 @@ export const StudyGroup = ({ navigation, route }) => {
         return group;
       });
 
-      // Cập nhật state với bản sao hoàn toàn mới
-      console.log('Cập nhật filteredGroups với:',
-        updatedBrandNewFilteredGroups.map(g => ({ id: g.id, name: g.name })));
-      setFilteredGroups(updatedBrandNewFilteredGroups);
+      // Log trước khi cập nhật state
+      console.log('Cập nhật groups với:', updatedGroups.map(g => ({ id: g.id, name: g.name })));
+      console.log('Cập nhật filteredGroups với:', updatedFilteredGroups.map(g => ({ id: g.id, name: g.name })));
 
-      // Lưu thay đổi cục bộ vào AsyncStorage để đảm bảo nó không bị mất
-      try {
-        // Đọc thay đổi cục bộ hiện tại (nếu có)
-        const localChangesString = await AsyncStorage.getItem('localGroupChanges');
-        let localChanges = [];
-
-        if (localChangesString) {
-          localChanges = JSON.parse(localChangesString);
-
-          // Xóa thay đổi cũ cho nhóm này (nếu có)
-          localChanges = localChanges.filter(change => change.id !== selectedGroup.id);
-        }
-
-        // Thêm thay đổi mới
-        localChanges.push({
-          id: selectedGroup.id,
-          name: updatedName,
-          timestamp: new Date().toISOString()
-        });
-
-        // Lưu lại vào AsyncStorage
-        await AsyncStorage.setItem('localGroupChanges', JSON.stringify(localChanges));
-        console.log('Đã lưu thay đổi cục bộ vào AsyncStorage:', localChanges);
-      } catch (error) {
-        console.error('Lỗi khi lưu thay đổi cục bộ:', error);
-      }
+      // Cập nhật state
+      setGroups(updatedGroups);
+      setFilteredGroups(updatedFilteredGroups);
 
       // Tăng updateCounter để kích hoạt re-render
       setUpdateCounter(prev => {
@@ -474,57 +419,7 @@ export const StudyGroup = ({ navigation, route }) => {
       setShowSettingsModal(false);
       setSelectedGroup(null);
 
-      // Sử dụng setTimeout để đảm bảo UI được cập nhật sau khi modal đóng
-      setTimeout(() => {
-        console.log('=== TIMEOUT: FINAL UI UPDATE ===');
-
-        // Tăng updateCounter một lần nữa để đảm bảo FlatList được render lại
-        setUpdateCounter(prev => prev + 1);
-
-        // Đảo ngược forceRender để kích hoạt re-render
-        setForceRender(prev => !prev);
-
-        console.log('=== KẾT THÚC FINAL UPDATE ===');
-      }, 300);
-
-      // KHÔNG tải lại danh sách nhóm từ server ngay lập tức
-      // Điều này sẽ ghi đè lên thay đổi cục bộ của chúng ta
-      console.log('⚠️ KHÔNG tải lại danh sách nhóm từ server ngay lập tức để tránh ghi đè lên thay đổi cục bộ');
-
-      // Thay vào đó, đặt một timeout để tải lại sau khi UI đã được cập nhật
-      setTimeout(async () => {
-        console.log('Tải lại danh sách nhóm từ server sau 2 giây');
-
-        try {
-          // Kiểm tra xem server đã cập nhật thành công chưa
-          const response = await GroupService.getGroupById(selectedGroup.id);
-          console.log('Kiểm tra dữ liệu nhóm từ server:', response);
-
-          if (response && response.name === updatedName) {
-            console.log('✅ Server đã cập nhật thành công, xóa thay đổi cục bộ');
-
-            // Xóa thay đổi cục bộ cho nhóm này
-            try {
-              const localChangesString = await AsyncStorage.getItem('localGroupChanges');
-              if (localChangesString) {
-                let localChanges = JSON.parse(localChangesString);
-                localChanges = localChanges.filter(change => change.id !== selectedGroup.id);
-                await AsyncStorage.setItem('localGroupChanges', JSON.stringify(localChanges));
-                console.log('Đã xóa thay đổi cục bộ sau khi server cập nhật thành công');
-              }
-            } catch (error) {
-              console.error('Lỗi khi xóa thay đổi cục bộ:', error);
-            }
-          } else {
-            console.log('❌ Server chưa cập nhật thành công, giữ lại thay đổi cục bộ');
-          }
-
-          // Tải lại danh sách nhóm
-          await fetchGroups();
-        } catch (error) {
-          console.log('Error refreshing groups after update:', error);
-        }
-      }, 2000);
+      console.log('✅ Cập nhật UI thành công');
     } catch (error) {
       console.error('Lỗi khi cập nhật nhóm:', error);
       Alert.alert('Lỗi', error.message || 'Không thể cập nhật nhóm. Vui lòng thử lại sau.');

@@ -5,6 +5,7 @@ import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
 import Entypo from 'react-native-vector-icons/Entypo';
 import GroupService from '../../../services/GroupService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GroupScreen = ({ navigation, route }) => {
   const { group: routeGroup, isLeader: routeIsLeader } = route.params || {};
@@ -14,33 +15,95 @@ const GroupScreen = ({ navigation, route }) => {
   const [isLeader, setIsLeader] = useState(routeIsLeader || false);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [memberStatus, setMemberStatus] = useState({
+    isMember: false,
+    isOwner: false,
+    status: null
+  });
+
+  // Fetch user ID from AsyncStorage
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
-    loadGroupData();
-  }, [group.id]);
+    if (userId && group.id) {
+      loadGroupData();
+    }
+  }, [group.id, userId]);
 
   const loadGroupData = async () => {
-    if (!group.id) {
-      console.warn('No group ID provided');
+    if (!group.id || !userId) {
+      console.warn('No group ID or user ID provided');
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      console.log(`Loading data for group ID: ${group.id}`);
+      console.log(`Loading data for group ID: ${group.id}, user ID: ${userId}`);
 
-      // Gọi API để lấy shared quizzes
-      await loadSharedQuizzes();
+      // Kiểm tra member status của user
+      console.log(`=== CHECKING MEMBER STATUS ===`);
+      console.log(`Group ID: ${group.id}`);
+      console.log(`User ID: ${userId}`);
+      console.log(`Group object:`, group);
+
+      const memberStatusResult = await GroupService.checkMemberStatus(group.id, userId);
+      setMemberStatus(memberStatusResult);
+
+      console.log('=== MEMBER STATUS RESULT ===');
+      console.log('Member status result:', memberStatusResult);
+      console.log(`isMember: ${memberStatusResult.isMember}`);
+      console.log(`isOwner: ${memberStatusResult.isOwner}`);
+      console.log(`status: ${memberStatusResult.status}`);
+
+      // Fallback logic: If API check failed but we have isLeader from route params
+      let finalMemberStatus = memberStatusResult;
+      if (memberStatusResult.status === 'Error' && isLeader) {
+        console.log('=== USING FALLBACK LOGIC ===');
+        console.log('API check failed but isLeader is true, using fallback');
+        finalMemberStatus = {
+          isMember: true,
+          isOwner: true,
+          status: 'Owner (Fallback)'
+        };
+        setMemberStatus(finalMemberStatus);
+      }
+
+      // Load shared quizzes nếu user là member (approved)
+      if (finalMemberStatus.isMember) {
+        console.log('User is a member, loading shared quizzes');
+        await loadSharedQuizzes();
+      } else {
+        // Nếu không phải member, set empty array và không báo lỗi
+        setQuizzes([]);
+        console.log('User is not a member, not loading shared quizzes');
+      }
 
     } catch (error) {
       console.error('Error loading group data:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể tải dữ liệu nhóm. Vui lòng thử lại.',
-        [{ text: 'OK' }]
-      );
+      // Chỉ báo lỗi nếu user là member
+      if (memberStatus.isMember) {
+        Alert.alert(
+          'Lỗi',
+          'Không thể tải dữ liệu nhóm. Vui lòng thử lại.',
+          [{ text: 'OK' }]
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -90,11 +153,7 @@ const GroupScreen = ({ navigation, route }) => {
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadGroupData();
-    setRefreshing(false);
-  };
+
 
   const renderQuizItem = ({ item }) => (
     <TouchableOpacity
@@ -122,9 +181,9 @@ const GroupScreen = ({ navigation, route }) => {
       <Ionicons name="library-outline" size={64} color={COLORS.GRAY} />
       <Text style={styles.emptyTitle}>Chưa có quiz nào được chia sẻ</Text>
       <Text style={styles.emptySubtitle}>
-        {isLeader
+        {memberStatus.isOwner
           ? 'Hãy chia sẻ quiz đầu tiên cho nhóm của bạn!'
-          : 'Chờ trưởng nhóm chia sẻ quiz cho nhóm.'
+          : 'Chờ các thành viên chia sẻ quiz cho nhóm.'
         }
       </Text>
     </View>
@@ -184,23 +243,30 @@ const GroupScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      <View style={styles.quizHeader}>
-        <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
-        <TouchableOpacity onPress={onRefresh} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={20} color={COLORS.BLUE} />
-        </TouchableOpacity>
-      </View>
+      {memberStatus.isMember ? (
+        <>
+          <View style={styles.quizHeader}>
+            <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
+          </View>
 
-      <FlatList
-        data={quizzes}
-        renderItem={renderQuizItem}
-        keyExtractor={(item, index) => item.id || index.toString()}
-        contentContainerStyle={quizzes.length === 0 ? styles.emptyContent : styles.content}
-        ListEmptyComponent={renderEmptyState}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        showsVerticalScrollIndicator={false}
-      />
+          <FlatList
+            data={quizzes}
+            renderItem={renderQuizItem}
+            keyExtractor={(item, index) => item.id || index.toString()}
+            contentContainerStyle={quizzes.length === 0 ? styles.emptyContent : styles.content}
+            ListEmptyComponent={renderEmptyState}
+            showsVerticalScrollIndicator={false}
+          />
+        </>
+      ) : (
+        <View style={styles.nonMemberContainer}>
+          <Ionicons name="people-outline" size={64} color={COLORS.GRAY} />
+          <Text style={styles.nonMemberTitle}>Chỉ thành viên nhóm mới có thể xem quiz được chia sẻ</Text>
+          <Text style={styles.nonMemberSubtitle}>
+            Bạn cần là thành viên của nhóm để có thể xem các quiz được chia sẻ trong nhóm này.
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -291,9 +357,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   quizHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: COLORS.WHITE,
@@ -305,9 +368,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.BLACK,
   },
-  refreshButton: {
-    padding: 4,
-  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -337,6 +398,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.GRAY,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  nonLeaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  nonLeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.BLACK,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  nonLeaderSubtitle: {
+    fontSize: 14,
+    color: COLORS.GRAY,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  nonMemberContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  nonMemberTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.BLACK,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  nonMemberSubtitle: {
     fontSize: 14,
     color: COLORS.GRAY,
     marginTop: 8,

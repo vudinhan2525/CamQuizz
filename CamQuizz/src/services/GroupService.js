@@ -321,25 +321,19 @@ class GroupService {
             // Xử lý dữ liệu trả về từ API
             let returnData;
 
-            // Kiểm tra xem response.data có phải là string không
-            if (typeof response.data === 'string') {
-                try {
-                    // Thử parse string thành JSON
-                    returnData = JSON.parse(response.data);
-                    console.log('Đã parse string thành object:', JSON.stringify(returnData, null, 2));
-                } catch (e) {
-                    console.log('Không thể parse string thành JSON, sử dụng dữ liệu mặc định');
-                    returnData = {
-                        id: groupId,
-                        name: formattedData.name,
-                        description: formattedData.description,
-                        message: 'Group updated successfully but string data could not be parsed'
-                    };
-                }
-            }
-            // Kiểm tra xem response.data có phải là null hoặc undefined không
-            else if (response.data === null || response.data === undefined) {
-                console.log('Server trả về null hoặc undefined, sử dụng dữ liệu mặc định');
+            // Backend trả về dữ liệu trong format ApiResponse<GroupDto>
+            // { "data": { "id": 1, "name": "...", ... }, "status": "success" }
+            if (response.data && response.data.data) {
+                // Lấy dữ liệu từ response.data.data
+                returnData = response.data.data;
+                console.log('✅ Lấy dữ liệu từ response.data.data:', JSON.stringify(returnData, null, 2));
+            } else if (response.data) {
+                // Fallback: sử dụng response.data trực tiếp
+                returnData = response.data;
+                console.log('⚠️ Sử dụng response.data trực tiếp:', JSON.stringify(returnData, null, 2));
+            } else {
+                // Fallback: tạo dữ liệu mặc định
+                console.log('❌ Không có dữ liệu từ server, tạo dữ liệu mặc định');
                 returnData = {
                     id: groupId,
                     name: formattedData.name,
@@ -347,28 +341,19 @@ class GroupService {
                     message: 'Group updated successfully but no data returned'
                 };
             }
-            // Nếu response.data là object, sử dụng nó
-            else {
-                returnData = response.data;
 
-                // Đảm bảo returnData có đủ thông tin cần thiết
-                if (!returnData.id) {
-                    console.log('Server không trả về ID, thêm ID vào dữ liệu');
-                    returnData.id = groupId;
-                }
-
-                if (!returnData.name) {
-                    console.log('Server không trả về tên, thêm tên vào dữ liệu');
-                    returnData.name = formattedData.name;
-                }
-
-                if (!returnData.description && formattedData.description) {
-                    console.log('Server không trả về mô tả, thêm mô tả vào dữ liệu');
-                    returnData.description = formattedData.description;
-                }
+            // Đảm bảo returnData có đủ thông tin cần thiết
+            if (!returnData.id) {
+                console.log('Server không trả về ID, thêm ID vào dữ liệu');
+                returnData.id = groupId;
             }
 
-            console.log('Group updated successfully:', JSON.stringify(returnData, null, 2));
+            if (!returnData.name) {
+                console.log('Server không trả về tên, thêm tên vào dữ liệu');
+                returnData.name = formattedData.name;
+            }
+
+            console.log('✅ Group updated successfully:', JSON.stringify(returnData, null, 2));
             return returnData;
         } catch (error) {
             console.error(`Error updating group ${groupId}:`, error);
@@ -593,6 +578,175 @@ class GroupService {
 
             if (error.response && error.response.status === 403) {
                 throw new Error('You do not have permission to view members in this group');
+            }
+
+            throw error;
+        }
+    }
+
+    // Get pending members for a group
+    static async getPendingMembersByGroupId(groupId) {
+        try {
+            console.log(`Calling getPendingMembersByGroupId API for group ${groupId}`);
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            const response = await apiClient.get(`/groups/${groupId}/pending-members`);
+            console.log('getPendingMembersByGroupId API response:', response.data);
+
+            if (response.data && response.data.data) {
+                return response.data;
+            } else {
+                return { data: response.data };
+            }
+        } catch (error) {
+            console.error(`Error fetching pending members for group ${groupId}:`, error);
+
+            if (error.response && error.response.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            if (error.response && error.response.status === 404) {
+                throw new Error('Group not found or no pending members');
+            }
+
+            if (error.response && error.response.status === 403) {
+                throw new Error('You do not have permission to view pending members in this group');
+            }
+
+            throw error;
+        }
+    }
+
+    // Check if user is a member of the group
+    static async checkMemberStatus(groupId, userId) {
+        try {
+            console.log(`Checking member status for user ${userId} in group ${groupId}`);
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            // First, get group info to check if user is owner
+            const groupResponse = await this.getGroupById(groupId);
+            let groupData = null;
+            if (groupResponse && groupResponse.data) {
+                groupData = groupResponse.data;
+            } else if (groupResponse) {
+                groupData = groupResponse;
+            }
+
+            console.log('Group data:', groupData);
+            console.log('Checking if user', userId, 'is owner of group with ownerId:', groupData?.ownerId);
+
+            // Check if user is owner
+            const isOwner = groupData && (
+                groupData.ownerId === parseInt(userId) ||
+                groupData.owner_id === parseInt(userId) ||
+                groupData.ownerId === userId ||
+                groupData.owner_id === userId
+            );
+
+            console.log('Is owner check result:', isOwner);
+
+            if (isOwner) {
+                // Owner is always a member
+                return {
+                    isMember: true,
+                    isOwner: true,
+                    status: 'Owner'
+                };
+            }
+
+            // If not owner, check members list
+            const response = await this.getMembersByGroupId(groupId);
+
+            let membersData = [];
+            if (response && response.data) {
+                membersData = Array.isArray(response.data) ? response.data : [response.data];
+            } else if (Array.isArray(response)) {
+                membersData = response;
+            }
+
+            console.log('Members data:', membersData);
+
+            const userMember = membersData.find(member => {
+                const memberUserId = member.userId || member.id;
+                const isMatch = (
+                    memberUserId === parseInt(userId) ||
+                    memberUserId === userId
+                ) && member.status === 'Approved';
+
+                console.log(`Checking member ${memberUserId} against user ${userId}, status: ${member.status}, match: ${isMatch}`);
+                return isMatch;
+            });
+
+            console.log('Found user member:', userMember);
+
+            return {
+                isMember: !!userMember,
+                isOwner: false,
+                status: userMember ? userMember.status : null
+            };
+
+        } catch (error) {
+            console.error(`Error checking member status:`, error);
+            console.log('Using fallback logic due to error');
+
+            return {
+                isMember: false,
+                isOwner: false,
+                status: 'Error'
+            };
+        }
+    }
+
+    // Invite member by email
+    static async inviteMemberByEmail(groupId, email) {
+        try {
+            console.log(`Inviting member ${email} to group ${groupId}`);
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            const inviteData = {
+                email: email.trim()
+            };
+
+            console.log('Sending invite data:', inviteData);
+
+            const response = await apiClient.post(`/groups/${groupId}/invite`, inviteData, {
+                timeout: 10000
+            });
+
+            console.log('Invite API response:', response.data);
+
+            if (response.data && response.data.data) {
+                return response.data;
+            } else {
+                return { data: response.data, message: `Invitation sent to ${email}` };
+            }
+
+        } catch (error) {
+            console.error(`Error inviting member ${email} to group ${groupId}:`, error);
+
+            if (error.response && error.response.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            if (error.response && error.response.status === 404) {
+                throw new Error('User with this email not found');
+            }
+
+            if (error.response && error.response.status === 400) {
+                const errorMessage = error.response.data?.message || error.response.data || 'Bad request';
+                throw new Error(errorMessage);
             }
 
             throw error;

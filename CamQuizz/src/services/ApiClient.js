@@ -5,7 +5,7 @@ import {API_URL}  from '@env';
 // API base URL - using ngrok for remote access
 // const API_BASE_URL = `${API_URL}/api/v1`;
 
-const API_BASE_URL = 'https://889e-14-169-73-215.ngrok-free.app/api/v1';
+const API_BASE_URL = 'https://5642-14-169-73-215.ngrok-free.app/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

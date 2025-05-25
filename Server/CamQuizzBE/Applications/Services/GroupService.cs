@@ -87,7 +87,7 @@ public class GroupService : IGroupService
 
         return await _groupRepo.GetMyGroupsAsync(userId);
     }
-    
+
     public async Task<GroupDto?> GetGroupByIdAsync(int id)
     {
         if (id <= 0)
@@ -219,6 +219,7 @@ public class GroupService : IGroupService
             throw new NotFoundException("Group not found");
 
         await _groupRepo.UpdateAsync(id, updateGroupDto);
+        // SaveChangesAsync() đã được gọi trong UpdateAsync()
 
         return await _groupRepo.GetGroupByIdAsync(id) ??
             throw new NotFoundException("Group not found after update");

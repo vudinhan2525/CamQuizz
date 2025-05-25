@@ -22,7 +22,7 @@ public class AuthController(
     ITokenService tokenService,
     UserManager<AppUser> userManager,
     IMapper mapper,
-    IUserService userService 
+    IUserService userService
 ) : BaseApiController
 {
     private Dictionary<string, UserMap> pincodeMap = [];
@@ -135,7 +135,7 @@ public class AuthController(
    public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
    {
        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-       
+
        // Check if user is trying to update their own account or is admin
        if (currentUserId != id && !User.IsInRole("Admin"))
        {
@@ -152,7 +152,7 @@ public class AuthController(
     public async Task<IActionResult> DeleteUser(int id)
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         // Check if user is trying to delete their own account or is admin
         if (currentUserId != id && !User.IsInRole("Admin"))
         {
@@ -169,16 +169,16 @@ public class AuthController(
     {
         var user = await userService.GetUserByIdAsync(id);
         if (user == null) return NotFound("User not found");
-        
+
         var userDto = mapper.Map<UserDto>(user);
         return Ok(userDto);
     }
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllUser(
-        [FromQuery] string? kw, 
-        [FromQuery] int limit = 10, 
-        [FromQuery] int page = 1, 
+        [FromQuery] string? kw,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
         [FromQuery] string? sort = null)
     {
         var userParams = new UserParams();
@@ -192,7 +192,7 @@ public class AuthController(
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         var result = await userService.ChangePasswordAsync(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
-        
+
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
@@ -237,7 +237,7 @@ public class AuthController(
     //     }
 
     //     var user = await userManager.FindByEmailAsync(userInfo.Email);
-        
+
     //     if (user == null)
     //     {
     //         user = new AppUser
@@ -264,7 +264,7 @@ public class AuthController(
     //     {
     //         var addLoginResult = await userManager.AddLoginAsync(user,
     //             new UserLoginInfo("Google", userInfo.Sub, "Google"));
-            
+
     //         if (!addLoginResult.Succeeded)
     //             return BadRequest("Failed to link Google account");
     //     }
@@ -272,7 +272,7 @@ public class AuthController(
     //     // Return user with token as per your existing pattern
     //     var userDto = mapper.Map<UserDto>(user);
     //     userDto.Token = await tokenService.CreateTokenAsync(user);
-        
+
     //     return Ok(userDto);
     // }
     // catch (Exception ex)
@@ -301,52 +301,7 @@ public class AuthController(
         return Ok($"User has been {(banUserDto.IsBanned ? "banned" : "unbanned")} successfully");
     }
 
-    [HttpGet("debug-token")]
-    [AllowAnonymous]
-    public IActionResult DebugToken()
-    {
-        try
-        {
-            // Lấy token từ header
-            var authHeader = Request.Headers["Authorization"].ToString();
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
-            {
-                return BadRequest("Không tìm thấy token");
-            }
 
-            var token = authHeader.Substring("Bearer ".Length).Trim();
-            
-            // Giải mã token mà không kiểm tra tính hợp lệ
-            var handler = new JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadJwtToken(token);
-            
-            // Lấy thông tin từ token
-            var header = jsonToken.Header;
-            var claims = jsonToken.Claims.ToDictionary(c => c.Type, c => c.Value);
-            var expiration = jsonToken.ValidTo;
-            var issuedAt = jsonToken.ValidFrom;
-            
-            // Kiểm tra xem token có hết hạn không
-            var isExpired = DateTime.UtcNow > expiration;
-            
-            return Ok(new
-            {
-                TokenPreview = token.Substring(0, Math.Min(20, token.Length)) + "...",
-                Header = header,
-                Algorithm = header.Alg,
-                Claims = claims,
-                Expiration = expiration,
-                IssuedAt = issuedAt,
-                CurrentTime = DateTime.UtcNow,
-                IsExpired = isExpired,
-                TokenLength = token.Length
-            });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest($"Lỗi khi kiểm tra token: {ex.Message}");
-        }
-    }
 
 }
 

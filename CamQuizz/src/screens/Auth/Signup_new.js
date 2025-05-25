@@ -89,7 +89,6 @@ export const Signup = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>CamQuizz</Text>
         </View>
 
         <Text style={styles.title}>Đăng ký</Text>
@@ -198,8 +197,8 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 150,
   },
   appName: {
     fontSize: 20,

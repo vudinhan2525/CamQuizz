@@ -321,11 +321,7 @@ export const validateToken = async () => {
     // Thực hiện một request đơn giản để kiểm tra token với server
     try {
       console.log('Making validation request to server...');
-      const response = await apiClient.get('/auth/debug-token', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await apiClient.get(`/auth/test-token?token=${encodeURIComponent(token)}`);
 
       const isValid = response.status === 200;
       console.log('Token validation result:', isValid);
@@ -809,36 +805,96 @@ export const checkTokenFormat = async () => {
   }
 };
 
-// Hàm làm mới token
-export const refreshToken = async () => {
+// Đổi mật khẩu
+export const changePassword = async (currentPassword, newPassword) => {
   try {
-    const userData = await AsyncStorage.getItem('userData');
-    if (!userData) return false;
+    console.log('Calling change password API...');
 
-    const user = JSON.parse(userData);
-
-    // Gọi API để làm mới token
-    const response = await apiClient.post('/auth/refresh-token', {
-      email: user.email,
-      refreshToken: user.refreshToken // Nếu có
-    });
-
-    if (response.data && response.data.token) {
-      await AsyncStorage.setItem('userToken', response.data.token);
-
-      // Cập nhật userData với token mới
-      const updatedUserData = { ...user, token: response.data.token };
-      await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-
-      console.log('Token refreshed successfully');
-      return true;
+    // Validate input parameters
+    if (!currentPassword || !newPassword) {
+      throw new Error('Mật khẩu hiện tại và mật khẩu mới không được để trống');
     }
 
-    return false;
+    if (currentPassword.length < 8 || newPassword.length < 8) {
+      throw new Error('Mật khẩu phải có ít nhất 8 ký tự');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new Error('Mật khẩu mới phải khác mật khẩu hiện tại');
+    }
+
+    // Prepare request data according to ChangePasswordDto structure
+    // Backend expects snake_case property names due to JsonNamingPolicy.SnakeCaseLower
+    const changePasswordData = {
+      current_password: currentPassword,
+      new_password: newPassword
+    };
+
+    console.log('Change password request data:', {
+      currentPassword: '***hidden***',
+      newPassword: '***hidden***'
+    });
+
+    // Make API call to change password endpoint
+    const response = await apiClient.post('/auth/change-password', changePasswordData);
+
+    console.log('Change password response status:', response.status);
+    console.log('Change password response data:', response.data);
+
+    // Handle successful response
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: response.data || 'Đổi mật khẩu thành công'
+      };
+    } else {
+      throw new Error('Đổi mật khẩu thất bại');
+    }
+
   } catch (error) {
-    console.error('Error refreshing token:', error);
-    return false;
+    console.error('Change password error:', error);
+
+    // Handle different types of errors
+    if (error.response) {
+      const responseData = error.response.data;
+      console.error('Change password API error response:', responseData);
+
+      // Handle specific error status codes
+      switch (error.response.status) {
+        case 400:
+          // Bad request - validation errors or incorrect current password
+          if (responseData && Array.isArray(responseData)) {
+            // Handle validation errors array
+            const errorMessages = responseData.map(err => {
+              if (typeof err === 'string') return err;
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}: ${err.description || 'Validation error'}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
+          } else if (typeof responseData === 'string') {
+            throw new Error(responseData);
+          } else {
+            throw new Error('Mật khẩu hiện tại không đúng hoặc dữ liệu không hợp lệ');
+          }
+        case 401:
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại');
+        case 403:
+          throw new Error('Bạn không có quyền thực hiện thao tác này');
+        case 422:
+          throw new Error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin');
+        case 500:
+          throw new Error('Lỗi máy chủ. Vui lòng thử lại sau');
+        default:
+          throw new Error(responseData || 'Đổi mật khẩu thất bại');
+      }
+    } else if (error.request) {
+      throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng');
+    } else {
+      throw new Error(error.message || 'Đã xảy ra lỗi không xác định');
+    }
   }
 };
+
 
 

@@ -8,7 +8,7 @@ import EditableSection from './EditableSection';
 import PasswordSection from './PasswordSection';
 import GenderSection from './GenderSection';
 import DateOfBirthSection from './DateOfBirthSection';
-import { logout, checkAuthStatus, updateUserProfile } from '../../services/AuthService';
+import { logout, checkAuthStatus, updateUserProfile, changePassword } from '../../services/AuthService';
 import COLORS from '../../constant/colors';
 
 const ProfileSection = () => {
@@ -153,6 +153,29 @@ const ProfileSection = () => {
     }
   };
 
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    try {
+      console.log('Starting password change process...');
+
+      const result = await changePassword(currentPassword, newPassword);
+
+      if (result.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: result.message || 'Đổi mật khẩu thành công'
+        });
+      }
+    } catch (error) {
+      console.error('Change password error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi đổi mật khẩu',
+        text2: error.message || 'Có lỗi xảy ra khi đổi mật khẩu'
+      });
+    }
+  };
+
   const handleLogout = () => {
   Alert.alert(
     'Đăng xuất',
@@ -234,15 +257,7 @@ const ProfileSection = () => {
 
         <PasswordSection
           title="Mật khẩu"
-          onSave={({ currentPassword, newPassword }) => {
-            // This will be implemented later when the API is available
-            Toast.show({
-              type: 'info',
-              text1: 'Chức năng đang phát triển',
-              text2: 'Tính năng thay đổi mật khẩu sẽ được cập nhật sau'
-            });
-            console.log('Password change requested:', { currentPassword, newPassword });
-          }}
+          onSave={handleChangePassword}
           icon={<Icon name="lock" size={16} color="#666" />}
         />
       </View>

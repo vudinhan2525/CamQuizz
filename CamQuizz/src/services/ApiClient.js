@@ -5,7 +5,7 @@ import {API_URL}  from '@env';
 // API base URL - using ngrok for remote access
 // const API_BASE_URL = `${API_URL}/api/v1`;
 
-const API_BASE_URL = 'https://5642-14-169-73-215.ngrok-free.app/api/v1';
+const API_BASE_URL = 'https://ca3c-14-169-33-91.ngrok-free.app/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -23,28 +23,28 @@ apiClient.interceptors.request.use(
   async (config) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
-      
+
       if (token) {
         console.log('Token for API request:', token.substring(0, 15) + '...');
         console.log('Token length:', token.length);
-        
+
         // Đảm bảo token không có khoảng trắng
         const cleanToken = token.trim();
-        
+
         // Thêm token vào header
         config.headers.Authorization = `Bearer ${cleanToken}`;
-        
+
         // Log đầy đủ header để debug
         console.log('Request headers:', JSON.stringify(config.headers));
       } else {
         console.warn('No token available for request');
       }
-      
+
       console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
       if (config.data) {
         console.log('Request data:', config.data);
       }
-      
+
       return config;
     } catch (error) {
       console.error('Error in request interceptor:', error);

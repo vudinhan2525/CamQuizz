@@ -46,7 +46,7 @@ public class GroupController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetGroupById(int id)
+    public async Task<IActionResult> GetGroupById([FromRoute] int id)
     {
         var group = await _groupService.GetGroupByIdAsync(id);
         if (group == null)
@@ -74,22 +74,63 @@ public class GroupController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Shares a quiz within a group
+    /// </summary>
+    /// <param name="groupId">ID of the group</param>
+    /// <param name="shareDto">Quiz sharing details</param>
+    /// <returns>Details of the shared quiz</returns>
+    /// <response code="200">Quiz was successfully shared</response>
+    /// <response code="400">If quiz is already shared or other validation errors</response>
+    /// <response code="401">If user is not authorized to share quizzes</response>
+    /// <response code="404">If quiz or group is not found</response>
     [HttpPost("{groupId}/quizzes")]
     [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<GroupQuiz>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ShareQuizWithGroup(int groupId, [FromBody] ShareQuizDto shareDto)
     {
-        var sharerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-        // Check if user is a member
-        if (!await _groupService.IsMember(groupId, sharerId))
+        try
         {
-            return Unauthorized("You must be a member to share quizzes");
+            var sharerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (sharerId == 0)
+            {
+                return Unauthorized(new ApiResponse<string>(null, "User not authenticated"));
+            }
+
+            var sharedQuiz = await _groupService.ShareQuizWithGroupAsync(groupId, sharerId, shareDto.QuizId);
+            
+            _logger.LogInformation(
+                "User {UserId} successfully shared quiz {QuizId} in group {GroupId}",
+                sharerId, shareDto.QuizId, groupId);
+
+            var response = new ApiResponse<GroupQuiz>(
+                sharedQuiz,
+                "Quiz shared successfully"
+            );
+
+            return Ok(response);
         }
-
-        var sharedQuiz = await _groupService.ShareQuizWithGroupAsync(groupId, sharerId, shareDto.QuizId);
-        var response = new ApiResponse<GroupQuiz>(sharedQuiz);
-
-        return Ok(response);
+        catch (ValidatorException ex)
+        {
+            _logger.LogWarning(ex, "Validation error while sharing quiz {QuizId} in group {GroupId}",
+                shareDto.QuizId, groupId);
+            return BadRequest(new ApiResponse<string>(null, ex.Message));
+        }
+        catch (NotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Not found error while sharing quiz {QuizId} in group {GroupId}",
+                shareDto.QuizId, groupId);
+            return NotFound(new ApiResponse<string>(null, ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sharing quiz {QuizId} in group {GroupId}",
+                shareDto.QuizId, groupId);
+            return StatusCode(500, new ApiResponse<string>(null, "An error occurred while sharing the quiz"));
+        }
     }
 
     [HttpGet("{groupId}/quizzes")]
@@ -123,6 +164,39 @@ public class GroupController : ControllerBase
         return Ok(new ApiResponse<string>("Quiz removed from group"));
     }
 
+    [HttpGet("shared-with-me")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<List<SharedQuizDto>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetQuizzesSharedWithMe()
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            if (userId == 0)
+            {
+                return Unauthorized(new ApiResponse<object>(null, "User not authenticated"));
+            }
+
+            var sharedQuizzes = await _groupService.GetAllSharedQuizzesForUserAsync(userId);
+            
+            _logger.LogInformation("Retrieved {Count} shared quizzes for user {UserId}",
+                sharedQuizzes.Count, userId);
+                
+            var response = new ApiResponse<List<SharedQuizDto>>(
+                sharedQuizzes,
+                $"Successfully retrieved {sharedQuizzes.Count} shared quizzes"
+            );
+            
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving shared quizzes for user");
+            return StatusCode(500, new ApiResponse<object>(null, "Error retrieving shared quizzes"));
+        }
+    }
     [HttpGet("{groupId}/chat")]
     [Authorize]
     public async Task<IActionResult> GetChatHistory(int groupId, [FromQuery] int limit = 50)
@@ -211,4 +285,5 @@ public class GroupController : ControllerBase
 
         return Ok(response);
     }
+
 }

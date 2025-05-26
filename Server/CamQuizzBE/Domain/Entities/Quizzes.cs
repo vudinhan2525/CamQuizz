@@ -31,6 +31,12 @@ public class Quizzes
     [Column("question_nums")]
     public int NumberOfQuestions { get; set; } = 0;
 
+    public void IncrementAttendance(int count)
+    {
+        NumberOfAttended += count;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

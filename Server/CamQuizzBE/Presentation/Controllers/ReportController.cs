@@ -100,6 +100,25 @@ public class ReportController : ControllerBase
         }
     }
 
+    // GET: api/v1/reports/my-quiz-history
+    [HttpGet("my-quiz-history")]
+    public async Task<ActionResult<ApiResponse<List<QuizHistoryDto>>>> GetMyQuizHistory(
+        [FromQuery] int? limit = 10,
+        [FromQuery] int? page = 1)
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var history = await _reportService.GetMyQuizHistoryAsync(userId, limit, page);
+            return Ok(new ApiResponse<List<QuizHistoryDto>>(history, "Quiz history retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting quiz history");
+            throw;
+        }
+    }
+
     // GET: api/v1/reports/user/{userId}/attempts
     [HttpGet("user/{userId}/attempts")]
     public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetAttemptsByUser(

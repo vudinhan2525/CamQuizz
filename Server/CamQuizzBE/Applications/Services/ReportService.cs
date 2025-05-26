@@ -115,6 +115,8 @@ public class ReportService : IReportService
     public async Task<OldAttemptReportDto> GenerateOldAttemptReportAsync(int attemptId, int userId)
     {
         var attempt = await _context.QuizAttempts
+            .Include(a => a.Quiz)
+                .ThenInclude(q => q.Genre)
             .Include(a => a.UserAnswers)
                 .ThenInclude(a => a.Question)
             .Include(a => a.UserAnswers)
@@ -128,10 +130,23 @@ public class ReportService : IReportService
 
         var report = new OldAttemptReportDto
         {
-            AttemptNumber = 1, 
+            AttemptNumber = 1,
             Timestamp = attempt.StartTime,
-            Score = attempt.Score
+            Score = attempt.Score,
+            Duration = attempt.EndTime.HasValue ? (attempt.EndTime.Value - attempt.StartTime) : null,
+            QuizId = attempt.QuizId,
+            QuizName = attempt.Quiz.Name,
+            QuizImage = attempt.Quiz.Image,
+            GenreId = attempt.Quiz.GenreId,
+            GenreName = attempt.Quiz.Genre.Name,
+            TotalQuestions = attempt.Quiz.NumberOfQuestions,
+            TotalCorrect = attempt.UserAnswers.Count(ua => ua.Answer?.IsCorrect == true)
         };
+
+        // Calculate accuracy rate
+        report.AccuracyRate = report.TotalQuestions > 0
+            ? (double)report.TotalCorrect / report.TotalQuestions * 100
+            : 0;
 
         // Group answers by question for the review
         var answersGrouped = attempt.UserAnswers
@@ -186,6 +201,8 @@ public class ReportService : IReportService
     public async Task<List<OldAttemptReportDto>> GetUserAttemptsAsync(int userId, int quizId)
     {
         var attempts = await _context.QuizAttempts
+            .Include(a => a.Quiz)
+                .ThenInclude(q => q.Genre)
             .Include(a => a.UserAnswers)
                 .ThenInclude(a => a.Question)
             .Include(a => a.UserAnswers)
@@ -204,10 +221,23 @@ public class ReportService : IReportService
             var attempt = attempts[i];
             var report = new OldAttemptReportDto
             {
-                AttemptNumber = attempts.Count - i, 
+                AttemptNumber = attempts.Count - i,
                 Timestamp = attempt.StartTime,
-                Score = attempt.Score
+                Score = attempt.Score,
+                Duration = attempt.EndTime.HasValue ? (attempt.EndTime.Value - attempt.StartTime) : null,
+                QuizId = attempt.QuizId,
+                QuizName = attempt.Quiz.Name,
+                QuizImage = attempt.Quiz.Image,
+                GenreId = attempt.Quiz.GenreId,
+                GenreName = attempt.Quiz.Genre.Name,
+                TotalQuestions = attempt.Quiz.NumberOfQuestions,
+                TotalCorrect = attempt.UserAnswers.Count(ua => ua.Answer?.IsCorrect == true)
             };
+
+            // Calculate accuracy rate
+            report.AccuracyRate = report.TotalQuestions > 0
+                ? (double)report.TotalCorrect / report.TotalQuestions * 100
+                : 0;
 
             var answersGrouped = attempt.UserAnswers
                 .OrderBy(a => a.Question.Id)
@@ -225,6 +255,96 @@ public class ReportService : IReportService
                 foreach (var userAnswer in questionGroup)
                 {
                     if (userAnswer.Answer != null) 
+                    {
+                        review.SelectedAnswers.Add(new SelectedAnswerDto
+                        {
+                            AnswerId = userAnswer.Answer.Id,
+                            AnswerText = userAnswer.Answer.Answer,
+                            IsCorrect = userAnswer.Answer.IsCorrect
+                        });
+                    }
+                }
+
+                var correctAnswers = await _context.Answers
+                    .Where(a => a.QuestionId == question.Id && a.IsCorrect)
+                    .ToListAsync();
+
+                foreach (var answer in correctAnswers)
+                {
+                    review.CorrectAnswers.Add(new SelectedAnswerDto
+                    {
+                        AnswerId = answer.Id,
+                        AnswerText = answer.Answer,
+                        IsCorrect = true
+                    });
+                }
+
+                report.QuestionReviews.Add(review);
+            }
+
+            reports.Add(report);
+        }
+
+        return reports;
+    }
+
+    public async Task<List<OldAttemptReportDto>> GetAttemptsByUserAsync(int userId, int limit, int page, string sort)
+    {
+        var attempts = await _context.QuizAttempts
+            .Include(a => a.Quiz)
+                .ThenInclude(q => q.Genre)
+            .Include(a => a.UserAnswers)
+                .ThenInclude(ua => ua.Question)
+            .Include(a => a.UserAnswers)
+                .ThenInclude(ua => ua.Answer)
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.StartTime)
+            .Skip((page - 1) * limit)
+            .Take(limit)
+            .ToListAsync();
+
+        var reports = new List<OldAttemptReportDto>();
+        foreach (var attempt in attempts)
+        {
+            var report = new OldAttemptReportDto
+            {
+                AttemptNumber = attempt.Id,
+                Timestamp = attempt.StartTime,
+                Score = attempt.Score,
+                Duration = attempt.EndTime - attempt.StartTime,
+                
+                // Quiz information
+                QuizId = attempt.QuizId,
+                QuizName = attempt.Quiz.Name,
+                QuizImage = attempt.Quiz.Image,
+                GenreId = attempt.Quiz.GenreId,
+                GenreName = attempt.Quiz.Genre.Name,
+                
+                // Statistics
+                TotalQuestions = attempt.Quiz.NumberOfQuestions,
+                TotalCorrect = attempt.UserAnswers.Count(ua => ua.Answer?.IsCorrect == true),
+            };
+
+            report.AccuracyRate = report.TotalQuestions > 0
+                ? (double)report.TotalCorrect / report.TotalQuestions * 100
+                : 0;
+
+            var answersGrouped = attempt.UserAnswers
+                .OrderBy(a => a.Question.Id)
+                .GroupBy(a => a.Question);
+
+            foreach (var questionGroup in answersGrouped)
+            {
+                var question = questionGroup.Key;
+                var review = new QuestionReviewDto
+                {
+                    QuestionId = question.Id,
+                    QuestionName = question.Name
+                };
+
+                foreach (var userAnswer in questionGroup)
+                {
+                    if (userAnswer.Answer != null)
                     {
                         review.SelectedAnswers.Add(new SelectedAnswerDto
                         {

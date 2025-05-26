@@ -487,13 +487,13 @@ public class QuizHub : Hub
 
             // Game start sequence
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarting");
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            //await Task.Delay(TimeSpan.FromSeconds(2));
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarted", new { room.RoomId, firstQuestion });
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            //await Task.Delay(TimeSpan.FromSeconds(2));
 
             // Start first question
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarting");
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            //await Task.Delay(TimeSpan.FromSeconds(2));
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarted");
 
             // Set question start time after announcing question started
@@ -1062,7 +1062,7 @@ public class QuizHub : Hub
             });
 
             gameState.PlayerAnswers.Clear();
-            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            //await Task.Delay(TimeSpan.FromMilliseconds(500));
 
             var playerScores = room.PlayerList.Select(p => new PlayerScore
             {
@@ -1071,10 +1071,13 @@ public class QuizHub : Hub
                 Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
             }).ToList();
 
-            await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
-            await Task.Delay(TimeSpan.FromSeconds(1));
-            await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
-            await Task.Delay(TimeSpan.FromSeconds(1));
+            if (gameState.ShowRanking)
+            {
+                await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
+                //await Task.Delay(TimeSpan.FromSeconds(1));
+                await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
 
             GameQuestionResponse nextQuestion = null;
             bool hasNextQuestion = gameState.CurrentQuestionIndex < questions.Count - 1;
@@ -1130,7 +1133,7 @@ public class QuizHub : Hub
             if (hasNextQuestion)
             {
                 await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                //await Task.Delay(TimeSpan.FromSeconds(2));
 
                 // Reset state for next question
                 gameState.QuestionStartTime = null; // Clear old time

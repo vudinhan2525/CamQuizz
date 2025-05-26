@@ -80,6 +80,55 @@ public class ReportController : ControllerBase
         }
     }
 
+    // GET: api/v1/reports/my-attempts
+    [HttpGet("my-attempts")]
+    public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetMyAttempts(
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "attempt_date")
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var response = await _reportService.GetAttemptsByUserAsync(userId, limit, page, sort);
+            return Ok(new ApiResponse<List<OldAttemptReportDto>>(response, "User attempts retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user attempts");
+            throw;
+        }
+    }
+
+    // GET: api/v1/reports/user/{userId}/attempts
+    [HttpGet("user/{userId}/attempts")]
+    public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetAttemptsByUser(
+        int userId,
+        [FromQuery] string? quizId = null,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "attempt_date")
+    {
+        try
+        {
+            var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            
+            // Check if user is trying to access their own attempts or is admin
+            if (currentUserId != userId && !User.IsInRole("Admin"))
+            {
+                return Unauthorized("You can only access your own attempts");
+            }
+
+            var response = await _reportService.GetAttemptsByUserAsync(userId, limit, page, sort);
+            return Ok(new ApiResponse<List<OldAttemptReportDto>>(response, "User attempts retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user attempts for user {UserId}", userId);
+            throw;
+        }
+    }
+
     // GET: api/v1/reports/quiz/{quizId}/attempts
     [HttpGet("quiz/{quizId}/attempts")]
     public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetUserAttempts(int quizId)

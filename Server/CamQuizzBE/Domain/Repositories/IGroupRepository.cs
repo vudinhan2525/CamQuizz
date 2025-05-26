@@ -26,6 +26,7 @@ public interface IGroupRepository
     // Shared quizzes management
     Task<GroupQuiz?> GetSharedQuizAsync(int groupId, int quizId);
     Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(int groupId);
+    Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(List<int> groupIds);
     Task AddSharedQuizAsync(GroupQuiz sharedQuiz);
     Task RemoveSharedQuizAsync(GroupQuiz sharedQuiz);
 

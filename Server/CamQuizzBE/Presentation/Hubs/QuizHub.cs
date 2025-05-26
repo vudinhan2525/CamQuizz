@@ -403,10 +403,28 @@ public class QuizHub : Hub
 
             _games[request.RoomId] = gameState;
 
-            // Create or update quiz attempts for all players
+            // Create or update quiz attempts and increment attendance count
             using (var dbScope = _scopeFactory.CreateScope())
             {
                 var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
+
+                // Increment attendance count for the quiz
+                var quizEntity = await context.Quizzes.FindAsync(room.QuizId);
+                if (quizEntity != null)
+                {
+                    var previousAttendance = quizEntity.NumberOfAttended;
+                    quizEntity.IncrementAttendance(room.PlayerList.Count);
+                    context.Quizzes.Update(quizEntity);
+                    
+                    _logger.LogInformation(
+                        "Updated attendance count for quiz {QuizId} from {Previous} to {New}, last updated at {UpdatedAt}",
+                        quizEntity.Id, previousAttendance, quizEntity.NumberOfAttended, quizEntity.UpdatedAt);
+                }
+                else
+                {
+                    _logger.LogWarning("Quiz {QuizId} not found when updating attendance count", room.QuizId);
+                }
+
                 foreach (var player in room.PlayerList)
                 {
                     // Check for existing attempt
@@ -1076,7 +1094,7 @@ public class QuizHub : Hub
                 await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
                 //await Task.Delay(TimeSpan.FromSeconds(1));
                 await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                // await Task.Delay(TimeSpan.FromSeconds(5));
             }
 
             GameQuestionResponse nextQuestion = null;

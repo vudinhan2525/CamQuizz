@@ -14,4 +14,8 @@ public class SharedQuizDto
     public string SharedByName { get; set; } = string.Empty;
     public DateTime SharedAt { get; set; }
     public QuizStatus Status { get; set; }
+    
+    // Group information
+    public int GroupId { get; set; }
+    public string GroupName { get; set; } = string.Empty;
 }

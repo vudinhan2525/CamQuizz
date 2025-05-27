@@ -431,4 +431,36 @@ public class GroupService : IGroupService
     {
         return await _groupRepo.GetChatHistoryAsync(groupId, limit);
     }
+
+    public async Task<List<SharedQuizDto>> GetAllSharedQuizzesForUserAsync(int userId)
+    {
+        // Get all groups where user is a member
+        var memberGroups = await _groupRepo.GetMyGroupsAsync(userId);
+        var groupIds = memberGroups.Select(g => g.Id).ToList();
+
+        if (!groupIds.Any())
+            return new List<SharedQuizDto>();
+
+        // Get all shared quizzes for these groups in a single query
+        var sharedQuizzes = await _groupRepo.GetSharedQuizzesAsync(groupIds);
+
+        return sharedQuizzes
+            .OrderByDescending(gq => gq.SharedAt)
+            .Select(gq => new SharedQuizDto
+            {
+                QuizId = gq.QuizId,
+                QuizName = gq.Quiz.Name,
+                Image = gq.Quiz.Image,
+                Duration = gq.Quiz.Duration,
+                NumberOfQuestions = gq.Quiz.NumberOfQuestions,
+                SharedById = gq.SharedById,
+                SharedByName = $"{gq.SharedBy.FirstName} {gq.SharedBy.LastName}",
+                SharedAt = gq.SharedAt,
+                Status = gq.Quiz.Status,
+                // Add group information
+                GroupId = gq.GroupId,
+                GroupName = gq.Group.Name
+            })
+            .ToList();
+    }
 }

@@ -32,4 +32,5 @@ public interface IGroupService
     Task RemoveSharedQuizAsync(int groupId, int quizId);
     Task<ChatMessage> SaveChatMessage(ChatMessage message);
     Task<IEnumerable<ChatMessage>> GetGroupChatHistoryAsync(int groupId, int limit = 50);
+    Task<List<SharedQuizDto>> GetAllSharedQuizzesForUserAsync(int userId);
 }

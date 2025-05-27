@@ -42,6 +42,64 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
     }
 
 
+    // GET: api/v1/quiz/my-quizzes
+    [HttpGet("my-quizzes")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<IEnumerable<QuizzesDto>>>> GetMyQuizzes(
+        [FromQuery] string? kw,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "created_at")
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var data = await _quizzesService.GetQuizzesByUserAsync(userId, kw, limit, page, sort);
+
+        var quizzesDto = _mapper.Map<IEnumerable<QuizzesDto>>(data.Items);
+        var pagination = new PaginationMeta
+        {
+            TotalItems = data.TotalItems,
+            TotalPages = data.TotalPages,
+            Page = page,
+            Limit = limit
+        };
+
+        var response = new ApiResponse<IEnumerable<QuizzesDto>>(quizzesDto, "success", pagination);
+        return Ok(response);
+    }
+
+    // GET: api/v1/quiz/user/{userId}
+    [HttpGet("user/{userId}")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<IEnumerable<QuizzesDto>>>> GetQuizzesByUser(
+        int userId,
+        [FromQuery] string? kw,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "created_at")
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        // Check if user is trying to access their own quizzes or is admin
+        if (currentUserId != userId && !User.IsInRole("Admin"))
+        {
+            return Unauthorized("You can only access your own quizzes");
+        }
+
+        var data = await _quizzesService.GetQuizzesByUserAsync(userId, kw, limit, page, sort);
+
+        var quizzesDto = _mapper.Map<IEnumerable<QuizzesDto>>(data.Items);
+        var pagination = new PaginationMeta
+        {
+            TotalItems = data.TotalItems,
+            TotalPages = data.TotalPages,
+            Page = page,
+            Limit = limit
+        };
+
+        var response = new ApiResponse<IEnumerable<QuizzesDto>>(quizzesDto, "success", pagination);
+        return Ok(response);
+    }
+
     // GET: api/v1/quiz/{id}
     [HttpGet("{id}")]
     public async Task<ActionResult<QuizzesDto>> GetQuizById(int id)

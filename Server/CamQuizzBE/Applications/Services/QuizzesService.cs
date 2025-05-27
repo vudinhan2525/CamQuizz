@@ -22,6 +22,11 @@ public class QuizzesService : IQuizzesService
         return await _quizzesRepo.GetAllAsync(kw, limit, page, sort, genreId);
     }
 
+    public async Task<PagedResult<Quizzes>> GetQuizzesByUserAsync(int userId, string? kw, int limit, int page, string? sort)
+    {
+        return await _quizzesRepo.GetByUserIdAsync(userId, kw, limit, page, sort);
+    }
+
     public async Task<Quizzes?> GetQuizByIdAsync(int id)
     {
         return await _quizzesRepo.GetByIdAsync(id);

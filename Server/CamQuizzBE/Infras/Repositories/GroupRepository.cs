@@ -345,6 +345,19 @@ public class GroupRepository(DataContext context, ILogger<GroupRepository> logge
         return result.Where(gq => gq.Quiz != null && gq.SharedBy != null).ToList();
     }
 
+    public async Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(List<int> groupIds)
+    {
+        var result = await _context.GroupQuizzes
+            .Include(gq => gq.Quiz)
+            .Include(gq => gq.SharedBy)
+            .Include(gq => gq.Group)
+            .Where(gq => groupIds.Contains(gq.GroupId))
+            .OrderByDescending(gq => gq.SharedAt)
+            .ToListAsync();
+
+        return result.Where(gq => gq.Quiz != null && gq.SharedBy != null && gq.Group != null).ToList();
+    }
+
     public async Task AddSharedQuizAsync(GroupQuiz sharedQuiz)
     {
         await _context.GroupQuizzes.AddAsync(sharedQuiz);

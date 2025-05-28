@@ -10,7 +10,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const GroupScreen = ({ navigation, route }) => {
   const { group: routeGroup, isLeader: routeIsLeader } = route.params || {};
 
-  // State management
   const [group, setGroup] = useState(routeGroup || { name: 'Study Group', id: 1 });
   const [isLeader, setIsLeader] = useState(routeIsLeader || false);
   const [quizzes, setQuizzes] = useState([]);
@@ -22,7 +21,6 @@ const GroupScreen = ({ navigation, route }) => {
     status: null
   });
 
-  // Fetch user ID from AsyncStorage
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -56,7 +54,6 @@ const GroupScreen = ({ navigation, route }) => {
       setLoading(true);
       console.log(`Loading data for group ID: ${group.id}, user ID: ${userId}`);
 
-      // Kiểm tra member status của user
       console.log(`=== CHECKING MEMBER STATUS ===`);
       console.log(`Group ID: ${group.id}`);
       console.log(`User ID: ${userId}`);
@@ -84,19 +81,16 @@ const GroupScreen = ({ navigation, route }) => {
         setMemberStatus(finalMemberStatus);
       }
 
-      // Load shared quizzes nếu user là member (approved)
       if (finalMemberStatus.isMember) {
         console.log('User is a member, loading shared quizzes');
         await loadSharedQuizzes();
       } else {
-        // Nếu không phải member, set empty array và không báo lỗi
         setQuizzes([]);
         console.log('User is not a member, not loading shared quizzes');
       }
 
     } catch (error) {
       console.error('Error loading group data:', error);
-      // Chỉ báo lỗi nếu user là member
       if (memberStatus.isMember) {
         Alert.alert(
           'Lỗi',
@@ -116,7 +110,6 @@ const GroupScreen = ({ navigation, route }) => {
 
       console.log('Shared quizzes response:', response);
 
-      // Xử lý dữ liệu response
       let quizzesData = [];
       if (response && response.data) {
         quizzesData = Array.isArray(response.data) ? response.data : [response.data];
@@ -124,7 +117,6 @@ const GroupScreen = ({ navigation, route }) => {
         quizzesData = response;
       }
 
-      // Transform data để phù hợp với UI
       const transformedQuizzes = quizzesData.map((item, index) => ({
         id: item.quizId || item.id || index.toString(),
         title: item.quiz?.title || item.title || `Quiz ${index + 1}`,
@@ -143,12 +135,11 @@ const GroupScreen = ({ navigation, route }) => {
     } catch (error) {
       console.error('Error loading shared quizzes:', error);
 
-      // Nếu lỗi 404 hoặc không có quiz, set empty array
       if (error.message.includes('not found') || error.message.includes('no shared quizzes')) {
         setQuizzes([]);
         console.log('No shared quizzes found for this group');
       } else {
-        throw error; // Re-throw other errors
+        throw error; 
       }
     }
   };

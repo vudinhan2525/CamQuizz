@@ -31,6 +31,7 @@ const ProfileSection = () => {
         const userData = await checkAuthStatus();
 
         if (userData) {
+          // Backend trả về snake_case format
           setProfile({
             id: userData.id,
             name: `${userData.first_name} ${userData.last_name}`,
@@ -38,15 +39,11 @@ const ProfileSection = () => {
             first_name: userData.first_name,
             last_name: userData.last_name,
             gender: userData.gender || 'Other',
-            dateOfBirth: userData.dateOfBirth || userData.date_of_birth || '',
+            dateOfBirth: userData.date_of_birth || userData.dateOfBirth || '',
             roles: userData.roles || [],
           });
 
-          console.log('Profile data set:', {
-            gender: userData.gender,
-            dateOfBirth: userData.dateOfBirth,
-            date_of_birth: userData.date_of_birth
-          });
+
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -78,14 +75,6 @@ const ProfileSection = () => {
           return;
         }
 
-        // Update the profile state
-        setProfile(prev => ({
-          ...prev,
-          [field]: value,
-          first_name: firstName,
-          last_name: lastName
-        }));
-
         // Call API to update user profile
         if (profile.id) {
           const updateData = {
@@ -93,17 +82,41 @@ const ProfileSection = () => {
             LastName: lastName
           };
 
-          await updateUserProfile(profile.id, updateData);
+          try {
+            await updateUserProfile(profile.id, updateData);
 
-          Toast.show({
-            type: 'success',
-            text1: 'Cập nhật tên thành công'
-          });
+            // Refresh user data from server after successful update
+            const refreshedUserData = await checkAuthStatus();
+
+            if (refreshedUserData) {
+              // Backend trả về snake_case format
+              const newProfile = {
+                id: refreshedUserData.id,
+                email: refreshedUserData.email,
+                first_name: refreshedUserData.first_name,
+                last_name: refreshedUserData.last_name,
+                name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+                gender: refreshedUserData.gender || 'Other',
+                dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || '',
+                roles: refreshedUserData.roles || []
+              };
+
+              setProfile(newProfile);
+            }
+
+            Toast.show({
+              type: 'success',
+              text1: 'Cập nhật tên thành công'
+            });
+          } catch (error) {
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi cập nhật tên',
+              text2: error.message || 'Vui lòng thử lại'
+            });
+          }
         }
       } else if (field === 'gender') {
-        // Update gender
-        setProfile(prev => ({ ...prev, gender: value }));
-
         // Call API to update user profile
         if (profile.id) {
           const updateData = {
@@ -112,15 +125,28 @@ const ProfileSection = () => {
 
           await updateUserProfile(profile.id, updateData);
 
+          // Refresh user data from server after successful update
+          const refreshedUserData = await checkAuthStatus();
+          if (refreshedUserData) {
+            const updatedProfile = {
+              id: refreshedUserData.id,
+              email: refreshedUserData.email,
+              first_name: refreshedUserData.first_name,
+              last_name: refreshedUserData.last_name,
+              name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+              gender: refreshedUserData.gender || value,
+              dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || '',
+              roles: refreshedUserData.roles || []
+            };
+            setProfile(updatedProfile);
+          }
+
           Toast.show({
             type: 'success',
             text1: 'Cập nhật giới tính thành công'
           });
         }
       } else if (field === 'dateOfBirth') {
-        // Update date of birth
-        setProfile(prev => ({ ...prev, dateOfBirth: value }));
-
         // Call API to update user profile
         if (profile.id) {
           const updateData = {
@@ -128,6 +154,22 @@ const ProfileSection = () => {
           };
 
           await updateUserProfile(profile.id, updateData);
+
+          // Refresh user data from server after successful update
+          const refreshedUserData = await checkAuthStatus();
+          if (refreshedUserData) {
+            const updatedProfile = {
+              id: refreshedUserData.id,
+              email: refreshedUserData.email,
+              first_name: refreshedUserData.first_name,
+              last_name: refreshedUserData.last_name,
+              name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+              gender: refreshedUserData.gender || 'Other',
+              dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || value,
+              roles: refreshedUserData.roles || []
+            };
+            setProfile(updatedProfile);
+          }
 
           Toast.show({
             type: 'success',
@@ -155,8 +197,6 @@ const ProfileSection = () => {
 
   const handleChangePassword = async ({ currentPassword, newPassword }) => {
     try {
-      console.log('Starting password change process...');
-
       const result = await changePassword(currentPassword, newPassword);
 
       if (result.success) {
@@ -167,7 +207,6 @@ const ProfileSection = () => {
         });
       }
     } catch (error) {
-      console.error('Change password error:', error);
       Toast.show({
         type: 'error',
         text1: 'Lỗi đổi mật khẩu',
@@ -188,16 +227,12 @@ const ProfileSection = () => {
           try {
             await logout();
 
-            // Thêm log để kiểm tra
-            console.log('Navigating to Root after logout');
-
             // Đảm bảo reset toàn bộ stack điều hướng
             navigation.reset({
               index: 0,
               routes: [{ name: 'Root' }],
             });
           } catch (error) {
-            console.error('Error logging out:', error);
             Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
           }
         },
@@ -261,6 +296,8 @@ const ProfileSection = () => {
           icon={<Icon name="lock" size={16} color="#666" />}
         />
       </View>
+
+
 
 
       {/* Logout Button */}

@@ -64,6 +64,15 @@ logger.LogInformation("🚀 Application starting on {Addresses}", kestrelUrl);
 
 
 
+// Add request logging middleware
+app.Use(async (context, next) =>
+{
+    Console.WriteLine($"🌐 Request: {context.Request.Method} {context.Request.Path}");
+    Console.WriteLine($"🌐 Headers: {string.Join(", ", context.Request.Headers.Select(h => $"{h.Key}={h.Value}"))}");
+    await next();
+    Console.WriteLine($"🌐 Response: {context.Response.StatusCode}");
+});
+
 app.UseMiddleware<ExceptionMiddleware>();
 // app.UseCors(x => x.AllowAnyHeader().AllowAnyMethod()
 //     .WithOrigins("http://localhost:3000"));

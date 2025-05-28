@@ -115,12 +115,49 @@ public class UserRepository(
 
     public async Task<IdentityResult> UpdateUserAsync(AppUser user)
     {
-        // First save changes to context
-        context.Users.Update(user);
-        await context.SaveChangesAsync();
+        try
+        {
+            Console.WriteLine($"🚀 UserRepository.UpdateUserAsync called for user {user.Id}");
+            Console.WriteLine($"📝 User data before update: FirstName={user.FirstName}, LastName={user.LastName}, Gender={user.Gender}, DateOfBirth={user.DateOfBirth}");
 
-        // Then update in UserManager
-        return await userManager.UpdateAsync(user);
+            // Use UserManager to update user - it handles both context and identity updates
+            Console.WriteLine($"💾 Calling userManager.UpdateAsync...");
+            var result = await userManager.UpdateAsync(user);
+
+            Console.WriteLine($"📊 UserManager.UpdateAsync result: Succeeded={result.Succeeded}");
+            if (!result.Succeeded)
+            {
+                Console.WriteLine($"❌ UserManager errors: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+
+            // If UserManager update succeeded, ensure changes are saved to context
+            if (result.Succeeded)
+            {
+                Console.WriteLine($"💾 Calling context.SaveChangesAsync...");
+                var changesSaved = await context.SaveChangesAsync();
+                Console.WriteLine($"📊 SaveChanges result: {changesSaved} entities updated");
+
+                // Verify the update by fetching the user again
+                Console.WriteLine($"🔍 Verifying update by fetching user again...");
+                var verifyUser = await context.Users.FindAsync(user.Id);
+                if (verifyUser != null)
+                {
+                    Console.WriteLine($"✅ Verification - User in DB: FirstName={verifyUser.FirstName}, LastName={verifyUser.LastName}, Gender={verifyUser.Gender}, DateOfBirth={verifyUser.DateOfBirth}");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Verification failed - User not found in DB");
+                }
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"💥 Exception in UserRepository.UpdateUserAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            throw;
+        }
     }
 
     public async Task<IdentityResult> DeleteUserAsync(AppUser user)

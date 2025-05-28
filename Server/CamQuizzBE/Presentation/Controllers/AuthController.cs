@@ -132,19 +132,41 @@ public class AuthController(
     }
    [HttpPut("{id}")]
    [Authorize]
-   public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
+   public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto updateUserDto)
    {
-       var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-
-       // Check if user is trying to update their own account or is admin
-       if (currentUserId != id && !User.IsInRole("Admin"))
+       try
        {
-           return Unauthorized("You can only update your own account");
-       }
+           Console.WriteLine($"🚀 AuthController.UpdateUser called with id: {id}");
+           Console.WriteLine($"📝 UpdateUserDto: FirstName={updateUserDto.FirstName}, LastName={updateUserDto.LastName}, Gender={updateUserDto.Gender}, DateOfBirth={updateUserDto.DateOfBirth}");
 
-       var result = await userService.UpdateUserAsync(id, updateUserDto);
-       if (!result.Succeeded) return BadRequest(result.Errors);
-       return Ok("User updated successfully");
+           var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+           Console.WriteLine($"👤 Current user ID: {currentUserId}");
+
+           // Check if user is trying to update their own account or is admin
+           if (currentUserId != id && !User.IsInRole("Admin"))
+           {
+               Console.WriteLine($"❌ Unauthorized: User {currentUserId} trying to update user {id}");
+               return Unauthorized("You can only update your own account");
+           }
+
+           Console.WriteLine($"✅ Authorization passed, calling userService.UpdateUserAsync...");
+           var result = await userService.UpdateUserAsync(id, updateUserDto);
+
+           if (!result.Succeeded)
+           {
+               Console.WriteLine($"❌ Update failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+               return BadRequest(result.Errors);
+           }
+
+           Console.WriteLine($"✅ Update successful for user {id}");
+           return Ok("User updated successfully");
+       }
+       catch (Exception ex)
+       {
+           Console.WriteLine($"💥 Exception in AuthController.UpdateUser: {ex.Message}");
+           Console.WriteLine($"Stack trace: {ex.StackTrace}");
+           throw;
+       }
     }
 
     [HttpDelete("{id}")]
@@ -167,11 +189,28 @@ public class AuthController(
     [Authorize]
     public async Task<IActionResult> GetUserById(int id)
     {
+        Console.WriteLine($"🔍 AuthController.GetUserById called with id: {id}");
         var user = await userService.GetUserByIdAsync(id);
         if (user == null) return NotFound("User not found");
 
         var userDto = mapper.Map<UserDto>(user);
+        Console.WriteLine($"📤 Returning user data: FirstName={userDto.FirstName}, LastName={userDto.LastName}");
         return Ok(userDto);
+    }
+
+    [HttpGet("test-debug")]
+    public IActionResult TestDebug()
+    {
+        Console.WriteLine("🧪 TEST DEBUG ENDPOINT CALLED");
+        return Ok("Debug endpoint working");
+    }
+
+    [HttpPut("test-put/{id}")]
+    public IActionResult TestPut(int id, [FromBody] object data)
+    {
+        Console.WriteLine($"🧪 TEST PUT ENDPOINT CALLED with id: {id}");
+        Console.WriteLine($"🧪 Data received: {data}");
+        return Ok($"Test PUT successful for id: {id}");
     }
     [HttpGet]
     [Authorize(Roles = "Admin")]

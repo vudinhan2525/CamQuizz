@@ -49,44 +49,54 @@ public class UserService(
     {
         try
         {
-            logger.LogInformation("UpdateUserAsync called with id: {Id}, updateData: {@UpdateData}", id, updateUserDto);
+            logger.LogInformation("🚀 UpdateUserAsync called with id: {Id}, updateData: {@UpdateData}", id, updateUserDto);
 
             var user = await userRepository.GetUserByIdAsync(id);
             if (user == null)
             {
-                logger.LogWarning("User with id {Id} not found", id);
+                logger.LogWarning("❌ User with id {Id} not found", id);
                 return IdentityResult.Failed(new IdentityError { Description = "User not found" });
             }
 
-            logger.LogInformation("User found: {Email}, mapping update data", user.Email);
+            logger.LogInformation("✅ User found: {Email}, mapping update data", user.Email);
 
             // Log before mapping
-            logger.LogInformation("Before mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+            logger.LogInformation("📝 Before mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
                 user.FirstName, user.LastName, user.Gender, user.DateOfBirth);
+
+            // Log the DTO values being mapped
+            logger.LogInformation("📝 DTO values - FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                updateUserDto.FirstName, updateUserDto.LastName, updateUserDto.Gender, updateUserDto.DateOfBirth);
 
             mapper.Map(updateUserDto, user);
             user.UpdatedAt = DateTime.UtcNow;
 
             // Log after mapping
-            logger.LogInformation("After mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+            logger.LogInformation("📝 After mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
                 user.FirstName, user.LastName, user.Gender, user.DateOfBirth);
 
+            logger.LogInformation("💾 Calling userRepository.UpdateUserAsync...");
             var result = await userRepository.UpdateUserAsync(user);
 
             if (result.Succeeded)
             {
-                logger.LogInformation("User {Id} updated successfully", id);
+                logger.LogInformation("✅ User {Id} updated successfully in database", id);
+
+                // Verify the update by fetching the user again
+                var updatedUser = await userRepository.GetUserByIdAsync(id);
+                logger.LogInformation("🔍 Verification - Updated user: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                    updatedUser?.FirstName, updatedUser?.LastName, updatedUser?.Gender, updatedUser?.DateOfBirth);
             }
             else
             {
-                logger.LogError("Failed to update user {Id}. Errors: {Errors}", id, string.Join(", ", result.Errors.Select(e => e.Description)));
+                logger.LogError("❌ Failed to update user {Id}. Errors: {Errors}", id, string.Join(", ", result.Errors.Select(e => e.Description)));
             }
 
             return result;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Exception occurred while updating user {Id}", id);
+            logger.LogError(ex, "💥 Exception occurred while updating user {Id}", id);
             throw;
         }
     }

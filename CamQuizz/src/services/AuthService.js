@@ -378,6 +378,45 @@ export const checkAuthStatus = async () => {
         // Đảm bảo token được gán vào userData
         userData.token = token;
 
+        // Lấy thông tin user mới nhất từ server để đảm bảo dữ liệu được cập nhật
+        if (userData.id && !USE_MOCK_DATA) {
+          try {
+            console.log('Fetching latest user data from server during auth check...');
+            const userDetailResponse = await apiClient.get(`/auth/${userData.id}`);
+
+            if (userDetailResponse.data) {
+              console.log('Got latest user details during auth check:', userDetailResponse.data);
+
+              // Giữ lại token và roles từ dữ liệu hiện tại
+              const token = userData.token;
+              const roles = userData.roles;
+
+              // Backend trả về snake_case, cần mapping đúng
+              const serverData = userDetailResponse.data;
+
+              // Cập nhật dữ liệu từ máy chủ với mapping đúng format
+              userData.id = serverData.id;
+              userData.email = serverData.email;
+              userData.first_name = serverData.first_name;
+              userData.last_name = serverData.last_name;
+              userData.gender = serverData.gender;
+              userData.date_of_birth = serverData.date_of_birth;
+              userData.dateOfBirth = serverData.date_of_birth; // For compatibility
+
+              // Đảm bảo giữ lại token và roles
+              userData.token = token;
+              userData.roles = roles;
+
+              // Cập nhật lại AsyncStorage với dữ liệu mới nhất
+              await AsyncStorage.setItem('userData', JSON.stringify(userData));
+              console.log('Updated AsyncStorage with latest user data during auth check');
+            }
+          } catch (fetchError) {
+            console.error('Error fetching latest user data during auth check:', fetchError);
+            // Nếu không lấy được dữ liệu mới, vẫn sử dụng dữ liệu cũ
+          }
+        }
+
         // Xử lý trường roles nếu nó có định dạng đặc biệt
         if (userData.roles && userData.roles.$values) {
           // Nếu roles có dạng {"$id": "2", "$values": ["Admin"]}
@@ -571,6 +610,8 @@ export const logout = async () => {
 // Cập nhật thông tin người dùng
 export const updateUserProfile = async (userId, updateData) => {
   try {
+    console.log('🚀 updateUserProfile called with:', { userId, updateData, USE_MOCK_DATA });
+
     if (USE_MOCK_DATA) {
       console.log('🔄 Using mock data for user profile update due to server API issues');
       console.log('📝 Update data received:', updateData);
@@ -617,9 +658,6 @@ export const updateUserProfile = async (userId, updateData) => {
       };
     } else {
       // Gọi API cập nhật thông tin người dùng
-      console.log('Calling API to update user profile:', userId, updateData);
-
-      // Initialize response variable
       let apiResponse = null;
 
       try {
@@ -627,24 +665,22 @@ export const updateUserProfile = async (userId, updateData) => {
         const userDataString = await AsyncStorage.getItem('userData');
         const currentUserData = userDataString ? JSON.parse(userDataString) : {};
 
-        // Server API mong đợi PascalCase và có thể cần tất cả các field
+        // Server API mong đợi snake_case format (do JsonNamingPolicy.SnakeCaseLower)
         const apiUpdateData = {
-          FirstName: updateData.FirstName || updateData.firstName || currentUserData.first_name,
-          LastName: updateData.LastName || updateData.lastName || currentUserData.last_name,
-          Gender: updateData.Gender || updateData.gender || currentUserData.gender
+          first_name: updateData.FirstName || updateData.firstName || currentUserData.first_name,
+          last_name: updateData.LastName || updateData.lastName || currentUserData.last_name,
+          gender: updateData.Gender || updateData.gender || currentUserData.gender
         };
 
         // Xử lý DateOfBirth
         if (updateData.DateOfBirth || updateData.dateOfBirth) {
           const dateValue = updateData.DateOfBirth || updateData.dateOfBirth;
-          console.log('Processing date value:', dateValue, 'Type:', typeof dateValue);
 
           // Đảm bảo format ngày đúng cho DateOnly (.NET)
           if (typeof dateValue === 'string') {
             // Nếu đã là string format YYYY-MM-DD thì giữ nguyên
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-              apiUpdateData.DateOfBirth = dateValue;
-              console.log('Using date as-is:', dateValue);
+              apiUpdateData.date_of_birth = dateValue;
             } else {
               // Nếu là format khác, chuyển đổi
               const date = new Date(dateValue);
@@ -653,8 +689,7 @@ export const updateUserProfile = async (userId, updateData) => {
                 const year = date.getUTCFullYear();
                 const month = String(date.getUTCMonth() + 1).padStart(2, '0');
                 const day = String(date.getUTCDate()).padStart(2, '0');
-                apiUpdateData.DateOfBirth = `${year}-${month}-${day}`;
-                console.log('Converted date to:', apiUpdateData.DateOfBirth);
+                apiUpdateData.date_of_birth = `${year}-${month}-${day}`;
               }
             }
           } else if (dateValue instanceof Date) {
@@ -662,20 +697,15 @@ export const updateUserProfile = async (userId, updateData) => {
             const year = dateValue.getUTCFullYear();
             const month = String(dateValue.getUTCMonth() + 1).padStart(2, '0');
             const day = String(dateValue.getUTCDate()).padStart(2, '0');
-            apiUpdateData.DateOfBirth = `${year}-${month}-${day}`;
-            console.log('Converted Date object to:', apiUpdateData.DateOfBirth);
+            apiUpdateData.date_of_birth = `${year}-${month}-${day}`;
           }
         } else if (currentUserData.date_of_birth) {
           // Nếu không update DateOfBirth nhưng có giá trị hiện tại, giữ nguyên
-          apiUpdateData.DateOfBirth = currentUserData.date_of_birth;
+          apiUpdateData.date_of_birth = currentUserData.date_of_birth;
         }
-
-        console.log('API URL:', `${apiClient.defaults.baseURL}/auth/${userId}`);
-        console.log('Final API update data:', JSON.stringify(apiUpdateData, null, 2));
 
         // Kiểm tra nếu không có dữ liệu nào để cập nhật
         if (Object.keys(apiUpdateData).length === 0) {
-          console.log('No data to update, skipping API call');
           return {
             success: true,
             message: 'Không có thay đổi nào để cập nhật',
@@ -683,16 +713,12 @@ export const updateUserProfile = async (userId, updateData) => {
           };
         }
 
-        // Thử gửi với headers khác để debug
         const response = await apiClient.put(`/auth/${userId}`, apiUpdateData, {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           }
         });
-
-        console.log('API response status:', response.status);
-        console.log('API response data:', response.data);
 
         // Store response data for later use
         apiResponse = {
@@ -701,16 +727,6 @@ export const updateUserProfile = async (userId, updateData) => {
         };
       } catch (axiosError) {
         console.error('API update error:', axiosError);
-
-        // Continue with local storage update even if API fails
-        if (axiosError.response) {
-          console.log('Error response status:', axiosError.response.status);
-          console.log('Error response data:', axiosError.response.data);
-        } else if (axiosError.request) {
-          console.log('No response received:', axiosError.request);
-        } else {
-          console.log('Error setting up request:', axiosError.message);
-        }
       }
 
       // Cập nhật thông tin trong AsyncStorage
@@ -732,23 +748,30 @@ export const updateUserProfile = async (userId, updateData) => {
           updatedUserData.dateOfBirth = updateData.DateOfBirth;
         }
 
-        console.log('Updating AsyncStorage with:', updatedUserData);
+        // Lưu dữ liệu đã cập nhật vào AsyncStorage
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
 
         // Nếu API đã thành công, lấy thông tin mới nhất từ máy chủ
         if (apiResponse && apiResponse.status >= 200 && apiResponse.status < 300) {
           try {
-            console.log('Fetching latest user data after update...');
             const refreshResponse = await apiClient.get(`/auth/${userId}`);
 
             if (refreshResponse.data) {
-              console.log('Got latest user details after update:', refreshResponse.data);
-
               // Giữ lại token và roles từ dữ liệu hiện tại
               const token = updatedUserData.token;
               const roles = updatedUserData.roles;
 
-              // Cập nhật dữ liệu từ máy chủ
-              Object.assign(updatedUserData, refreshResponse.data);
+              // Backend trả về snake_case, cần mapping đúng
+              const serverData = refreshResponse.data;
+
+              // Cập nhật dữ liệu từ máy chủ với mapping đúng format
+              updatedUserData.id = serverData.id;
+              updatedUserData.email = serverData.email;
+              updatedUserData.first_name = serverData.first_name;
+              updatedUserData.last_name = serverData.last_name;
+              updatedUserData.gender = serverData.gender;
+              updatedUserData.date_of_birth = serverData.date_of_birth;
+              updatedUserData.dateOfBirth = serverData.date_of_birth; // For compatibility
 
               // Đảm bảo giữ lại token và roles
               updatedUserData.token = token;
@@ -756,16 +779,11 @@ export const updateUserProfile = async (userId, updateData) => {
             }
           } catch (refreshError) {
             console.error('Failed to fetch latest user data after update:', refreshError);
-            // Tiếp tục với dữ liệu đã cập nhật cục bộ
           }
         }
 
         // Save to AsyncStorage
         await AsyncStorage.setItem('userData', JSON.stringify(updatedUserData));
-
-        // Verify the data was saved correctly
-        const verifyData = await AsyncStorage.getItem('userData');
-        console.log('Verification - data in AsyncStorage after update:', verifyData);
       }
 
       return {
@@ -805,11 +823,49 @@ export const checkTokenFormat = async () => {
   }
 };
 
+// Hàm debug để kiểm tra dữ liệu trong AsyncStorage
+export const debugAsyncStorage = async () => {
+  try {
+    console.log('=== DEBUG ASYNC STORAGE ===');
+
+    const token = await AsyncStorage.getItem('userToken');
+    const userDataString = await AsyncStorage.getItem('userData');
+
+    console.log('Token exists:', !!token);
+    console.log('UserData exists:', !!userDataString);
+
+    if (token) {
+      console.log('Token length:', token.length);
+      console.log('Token preview:', token.substring(0, 20) + '...');
+    }
+
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        console.log('User data from AsyncStorage:', {
+          id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          gender: userData.gender,
+          dateOfBirth: userData.dateOfBirth,
+          date_of_birth: userData.date_of_birth,
+          roles: userData.roles
+        });
+      } catch (parseError) {
+        console.error('Error parsing user data:', parseError);
+      }
+    }
+
+    console.log('=== END DEBUG ===');
+  } catch (error) {
+    console.error('Error debugging AsyncStorage:', error);
+  }
+};
+
 // Đổi mật khẩu
 export const changePassword = async (currentPassword, newPassword) => {
   try {
-    console.log('Calling change password API...');
-
     // Validate input parameters
     if (!currentPassword || !newPassword) {
       throw new Error('Mật khẩu hiện tại và mật khẩu mới không được để trống');
@@ -830,16 +886,8 @@ export const changePassword = async (currentPassword, newPassword) => {
       new_password: newPassword
     };
 
-    console.log('Change password request data:', {
-      currentPassword: '***hidden***',
-      newPassword: '***hidden***'
-    });
-
     // Make API call to change password endpoint
     const response = await apiClient.post('/auth/change-password', changePasswordData);
-
-    console.log('Change password response status:', response.status);
-    console.log('Change password response data:', response.data);
 
     // Handle successful response
     if (response.status === 200) {
@@ -857,7 +905,6 @@ export const changePassword = async (currentPassword, newPassword) => {
     // Handle different types of errors
     if (error.response) {
       const responseData = error.response.data;
-      console.error('Change password API error response:', responseData);
 
       // Handle specific error status codes
       switch (error.response.status) {

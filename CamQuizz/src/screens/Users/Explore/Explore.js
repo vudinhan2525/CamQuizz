@@ -88,10 +88,8 @@ export const Explore = ({navigation}) => {
     setIsAll(false);
   };
 
-  // Thêm hàm xử lý tham gia trò chơi
   const handleJoinGame = () => {
     if (!joinCode.trim()) {
-      // Hiển thị thông báo nếu không nhập mã
       Alert.alert('Thông báo', 'Vui lòng nhập mã tham gia');
       return;
     }
@@ -99,7 +97,6 @@ export const Explore = ({navigation}) => {
     const roomFound = true;
 
     if (roomFound) {
-      // Điều hướng đến màn hình Lobby với vai trò người chơi (không phải host)
       navigation.navigate(SCREENS.LOBBY, {
         quizId: mockQuiz.id,
         isHost: false,

@@ -28,6 +28,18 @@ public class OldAttemptReportDto
     public int AttemptNumber { get; set; }
     public DateTime Timestamp { get; set; }
     public int Score { get; set; }
+    public TimeSpan? Duration { get; set; }
+    
+    // Quiz information
+    public int QuizId { get; set; }
+    public string QuizName { get; set; } = string.Empty;
+    public string QuizImage { get; set; } = string.Empty;
+    public int GenreId { get; set; }
+    public string GenreName { get; set; } = string.Empty;
+    public int TotalQuestions { get; set; }
+    public int TotalCorrect { get; set; }
+    public double AccuracyRate { get; set; }
+    
     public List<QuestionReviewDto> QuestionReviews { get; set; } = new();
 }
 
@@ -36,6 +48,7 @@ public class QuestionReviewDto
     public int QuestionId { get; set; }
     public string QuestionName { get; set; } = string.Empty;
     public List<SelectedAnswerDto> SelectedAnswers { get; set; } = new();
+    public List<SelectedAnswerDto> CorrectAnswers { get; set; } = new();
 }
 
 public class SelectedAnswerDto

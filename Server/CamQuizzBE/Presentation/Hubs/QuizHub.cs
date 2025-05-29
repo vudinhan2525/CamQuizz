@@ -392,7 +392,7 @@ public class QuizHub : Hub
             {
                 IsStarted = true,
                 CurrentQuestionIndex = 0,
-                QuestionStartTime = DateTime.Now,
+                QuestionStartTime = null,  // Will be set after questionStarted event
                 OriginalDuration = duration,
                 TimeRemaining = duration,
                 IsPaused = false,
@@ -403,23 +403,76 @@ public class QuizHub : Hub
 
             _games[request.RoomId] = gameState;
 
-            // Create quiz attempts for all players in the room
-            using (var dbScope = _scopeFactory.CreateScope()) // Renamed to dbScope
+            // Create or update quiz attempts and increment attendance count
+            using (var dbScope = _scopeFactory.CreateScope())
             {
                 var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
+
+                // Increment attendance count for the quiz
+                var quizEntity = await context.Quizzes.FindAsync(room.QuizId);
+                if (quizEntity != null)
+                {
+                    var previousAttendance = quizEntity.NumberOfAttended;
+                    quizEntity.IncrementAttendance(room.PlayerList.Count);
+                    context.Quizzes.Update(quizEntity);
+                    
+                    _logger.LogInformation(
+                        "Updated attendance count for quiz {QuizId} from {Previous} to {New}, last updated at {UpdatedAt}",
+                        quizEntity.Id, previousAttendance, quizEntity.NumberOfAttended, quizEntity.UpdatedAt);
+                }
+                else
+                {
+                    _logger.LogWarning("Quiz {QuizId} not found when updating attendance count", room.QuizId);
+                }
+
                 foreach (var player in room.PlayerList)
                 {
-                    var attempt = new QuizAttempts
+                    // Check for existing attempt
+                    var existingAttempt = await context.QuizAttempts
+                        .FirstOrDefaultAsync(a =>
+                            a.QuizId == room.QuizId &&
+                            a.UserId == player.Id &&
+                            a.RoomId == room.RoomId);
+
+                    if (existingAttempt != null)
                     {
-                        QuizId = room.QuizId,
-                        UserId = player.Id,
-                        RoomId = room.RoomId,
-                        Score = 0,
-                        StartTime = DateTime.UtcNow,
-                    };
-                    await context.QuizAttempts.AddAsync(attempt);
+                        _logger.LogInformation(
+                            "Found existing attempt {AttemptId} for user {UserId} in room {RoomId}, resetting score",
+                            existingAttempt.Id, player.Id, room.RoomId);
+                            
+                        existingAttempt.Score = 0;
+                        existingAttempt.StartTime = DateTime.UtcNow;
+                        existingAttempt.EndTime = null;
+                        context.QuizAttempts.Update(existingAttempt);
+                    }
+                    else
+                    {
+                        var attempt = new QuizAttempts
+                        {
+                            QuizId = room.QuizId,
+                            UserId = player.Id,
+                            RoomId = room.RoomId,
+                            Score = 0,
+                            StartTime = DateTime.UtcNow
+                        };
+                        await context.QuizAttempts.AddAsync(attempt);
+                        _logger.LogInformation(
+                            "Created new attempt for user {UserId} in room {RoomId}, quiz {QuizId}",
+                            player.Id, room.RoomId, room.QuizId);
+                    }
                 }
-                await context.SaveChangesAsync();
+
+                try
+                {
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation("Successfully saved/updated attempts for {Count} players in room {RoomId}",
+                        room.PlayerList.Count, room.RoomId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save quiz attempts for room {RoomId}", room.RoomId);
+                    throw;
+                }
             }
 
             _logger.LogInformation("Starting game for room {RoomId}, question {QuestionId}, duration: {Duration}s",
@@ -451,14 +504,20 @@ public class QuizHub : Hub
 
             // Game start sequence
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarting");
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            //await Task.Delay(TimeSpan.FromSeconds(2));
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarted", new { room.RoomId, firstQuestion });
             //await Task.Delay(TimeSpan.FromSeconds(2));
 
             // Start first question
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarting");
-            await Task.Delay(TimeSpan.FromSeconds(2));
+            //await Task.Delay(TimeSpan.FromSeconds(2));
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarted");
+
+            // Set question start time after announcing question started
+            gameState.QuestionStartTime = DateTime.UtcNow;
+            _logger.LogInformation(
+                "Started first question {QuestionId} at {StartTime} in room {RoomId}",
+                questions[0].Id, gameState.QuestionStartTime, request.RoomId);
 
             // Start timer using StartQuestionTimer
             gameState.TimerCancellation = new CancellationTokenSource();
@@ -510,7 +569,6 @@ public class QuizHub : Hub
                 throw new Exception("User not in room");
             }
 
-            // Validate question order
             if (request.QuestionId != gameState.CurrentQuestionIndex + 1)
             {
                 _logger.LogWarning("Invalid question order {QuestionId} for current index {Index} in room {RoomId}",
@@ -518,7 +576,6 @@ public class QuizHub : Hub
                 throw new Exception("Invalid question order");
             }
 
-            // Save the answer to database
             using (var scope = _scopeFactory.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<DataContext>();
@@ -531,10 +588,11 @@ public class QuizHub : Hub
 
                 if (attempt == null)
                 {
+                    _logger.LogWarning("Quiz attempt not found for user {UserId}, quiz {QuizId}, room {RoomId}",
+                        request.UserId, room.QuizId, request.RoomId);
                     throw new Exception("Quiz attempt not found");
                 }
 
-                // Get quiz questions to map order to actual question_id
                 var quiz = await context.Quizzes
                     .Include(q => q.Questions)
                         .ThenInclude(q => q.Answers)
@@ -551,16 +609,14 @@ public class QuizHub : Hub
                     throw new Exception("Invalid question index");
                 }
 
-                var question = questions[gameState.CurrentQuestionIndex]; // Map order to actual question
+                var question = questions[gameState.CurrentQuestionIndex];
 
-                // Verify the question belongs to the quiz
                 if (question.QuizId != room.QuizId)
                 {
                     _logger.LogError("Question {QuestionId} does not belong to quiz {QuizId}", question.Id, room.QuizId);
                     throw new Exception("Question does not belong to this quiz");
                 }
 
-                // Map the letter (A,B,C) to answer using index from ordered list
                 var answers = question.Answers.OrderBy(a => a.Id).ToList();
                 var letter = request.Answer.FirstOrDefault();
                 int? answerId = null;
@@ -580,30 +636,74 @@ public class QuizHub : Hub
                     }
                 }
 
-                // Calculate answer time
-                var answerTime = gameState.QuestionStartTime.HasValue
-                    ? DateTime.UtcNow.Subtract(gameState.QuestionStartTime.Value).TotalSeconds
-                    : 0.0;
-
-
-                // Create and save the user answer
-                var userAnswer = new UserAnswers
+                double answerTime = 0.0;
+                if (gameState.QuestionStartTime.HasValue)
                 {
-                    AttemptId = attempt.Id,
-                    QuestionId = question.Id, // Use actual question_id (13, 14)
-                    AnswerId = answerId,
-                    AnswerTime = answerTime
-                };
+                    answerTime = DateTime.UtcNow.Subtract(gameState.QuestionStartTime.Value).TotalSeconds;
+                    _logger.LogInformation(
+                        "Raw AnswerTime {AnswerTime}s for room {RoomId}, question {QuestionId}, QuestionStartTime={StartTime}",
+                        answerTime, request.RoomId, question.Id, gameState.QuestionStartTime.Value);
+                    if (answerTime < 0)
+                    {
+                        _logger.LogWarning("Negative AnswerTime {AnswerTime}s for room {RoomId}, question {QuestionId}. Setting to 0",
+                            answerTime, request.RoomId, question.Id);
+                        answerTime = 0.0;
+                    }
+                    else if (answerTime > question.Duration)
+                    {
+                        _logger.LogWarning("AnswerTime {AnswerTime}s exceeds duration {Duration}s for room {RoomId}, question {QuestionId}. Capping at duration",
+                            answerTime, question.Duration, request.RoomId, question.Id);
+                        answerTime = question.Duration;
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("QuestionStartTime is null for room {RoomId}, question {QuestionId}. Using AnswerTime=0",
+                        request.RoomId, question.Id);
+                }
 
-                await context.UserAnswers.AddAsync(userAnswer);
-                await context.SaveChangesAsync();
+                // Check for existing answer
+                var existingAnswer = await context.UserAnswers
+                    .FirstOrDefaultAsync(ua =>
+                        ua.AttemptId == attempt.Id &&
+                        ua.QuestionId == question.Id);
 
-                // _logger.LogInformation(
-                //     "Saved user answer for question {QuestionId}: AnswerId={AnswerId}, AttemptId={AttemptId}",
-                //     question.Id, answerId, attempt.Id);
+                if (existingAnswer != null)
+                {
+                    _logger.LogInformation(
+                        "Updating existing answer for attempt {AttemptId}, question {QuestionId}",
+                        attempt.Id, question.Id);
+                    existingAnswer.AnswerId = answerId;
+                    existingAnswer.AnswerTime = answerTime;
+                    context.UserAnswers.Update(existingAnswer);
+                }
+                else
+                {
+                    var userAnswer = new UserAnswers
+                    {
+                        AttemptId = attempt.Id,
+                        QuestionId = question.Id,
+                        AnswerId = answerId,
+                        AnswerTime = answerTime
+                    };
+                    await context.UserAnswers.AddAsync(userAnswer);
+                }
+
+                try
+                {
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation(
+                        "Saved user answer for question {QuestionId}: AnswerId={AnswerId}, AttemptId={AttemptId}, AnswerTime={AnswerTime}s",
+                        question.Id, answerId, attempt.Id, answerTime);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to save UserAnswers for attempt {AttemptId}, question {QuestionId}",
+                        attempt.Id, question.Id);
+                    throw;
+                }
             }
 
-            // Update game state
             string playerName;
             lock (gameState)
             {
@@ -611,14 +711,15 @@ public class QuizHub : Hub
                 playerName = room.PlayerList.First(p => p.Id == request.UserId).Name;
             }
             
-            // Tell other players that someone answered
             await Clients.GroupExcept(request.RoomId, Context.ConnectionId).SendAsync("playerAnswered", new
             {
                 PlayerId = request.UserId,
                 PlayerName = playerName
             });
 
-            gameState.LastAnswerTime = DateTime.Now;
+
+            gameState.LastAnswerTime = DateTime.UtcNow;
+
 
             bool allAnswered = room.PlayerList.All(p => gameState.PlayerAnswers.ContainsKey(p.Id) || p.ConnectionId == null);
             if (allAnswered)
@@ -715,7 +816,7 @@ public class QuizHub : Hub
                 throw new Exception("No active question timer found");
             }
 
-            var elapsed = (DateTime.Now - gameState.QuestionStartTime.Value).TotalSeconds;
+            var elapsed = (DateTime.UtcNow - gameState.QuestionStartTime.Value).TotalSeconds;
             gameState.TimeRemaining = Math.Max(0, gameState.OriginalDuration - elapsed);
             gameState.IsPaused = true;
 
@@ -781,7 +882,7 @@ public class QuizHub : Hub
                 return;
             }
 
-            gameState.QuestionStartTime = DateTime.Now;
+            gameState.QuestionStartTime = DateTime.UtcNow;
             gameState.IsPaused = false;
 
             gameState.TimerCancellation = new CancellationTokenSource();
@@ -817,7 +918,7 @@ public class QuizHub : Hub
                 throw new Exception($"Invalid duration {duration}");
             }
 
-            gameState.QuestionStartTime = DateTime.Now;
+            gameState.QuestionStartTime = DateTime.UtcNow;
             gameState.TimeRemaining = duration;
 
             for (int time = (int)Math.Ceiling(duration); time >= 0 && !gameState.TimerCancellation.Token.IsCancellationRequested; time--)
@@ -1018,6 +1119,7 @@ public class QuizHub : Hub
             gameState.PlayerAnswers.Clear();
             await Task.Delay(TimeSpan.FromMilliseconds(1000));
 
+
             var playerScores = room.PlayerList.Select(p => new PlayerScore
             {
                 UserId = p.Id,
@@ -1031,6 +1133,7 @@ public class QuizHub : Hub
             if(gameState.ShowRanking)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));
+
             }
 
             GameQuestionResponse nextQuestion = null;
@@ -1086,11 +1189,30 @@ public class QuizHub : Hub
             if (hasNextQuestion)
             {
                 await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
-                // await Task.Delay(TimeSpan.FromSeconds(2));
+
+                //await Task.Delay(TimeSpan.FromSeconds(2));
+
+                // Reset state for next question
+                gameState.QuestionStartTime = null; // Clear old time
+                gameState.PlayerAnswers.Clear();
+
+
                 await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
+
+                // Set new start time after announcing question start
+                gameState.QuestionStartTime = DateTime.UtcNow; // Already incremented CurrentQuestionIndex at line 1108
+                _logger.LogInformation(
+                    "Started question {QuestionId} at {StartTime} in room {RoomId}",
+                    nextQuestion.Id,
+                    gameState.QuestionStartTime,
+                    roomId);
 
                 gameState.TimerCancellation = new CancellationTokenSource();
                 _ = Task.Run(() => StartQuestionTimer(roomId, nextQuestion.TimeLimit, gameState), gameState.TimerCancellation.Token);
+
+                _logger.LogInformation(
+                    "Starting next question {QuestionId} at {StartTime} in room {RoomId}",
+                    nextQuestion.Id, gameState.QuestionStartTime, roomId);
             }
             else
             {
@@ -1101,14 +1223,33 @@ public class QuizHub : Hub
                     Ranking = playerScores
                 };
 
-                _logger.LogInformation("Sending doneQuiz event for room {RoomId}", roomId);
-                await hubContext.Clients.Group(roomId).SendAsync("doneQuiz", quizResult);
+                _logger.LogInformation("Quiz ending for room {RoomId}", roomId);
 
+                // Update EndTime for all attempts in this room
+                using (var dbScope = _scopeFactory.CreateScope())
+                {
+                    var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
+                    var attempts = await context.QuizAttempts
+                        .Where(a => a.RoomId == roomId)
+                        .ToListAsync();
+
+                    foreach (var attempt in attempts)
+                    {
+                        attempt.EndTime = DateTime.UtcNow;
+                        context.QuizAttempts.Update(attempt);
+                    }
+
+                    await context.SaveChangesAsync();
+                    _logger.LogInformation("Updated EndTime for {Count} attempts in room {RoomId}",
+                        attempts.Count, roomId);
+                }
+
+                await hubContext.Clients.Group(roomId).SendAsync("doneQuiz", quizResult);
                 gameState.IsEnded = true;
 
                 //await Task.Delay(TimeSpan.FromSeconds(5));
                 _games.Remove(roomId);
-                _logger.LogInformation("Game ended for room {RoomId}, all questions completed", roomId);
+                _logger.LogInformation("Game ended and attempts finalized for room {RoomId}", roomId);
             }
 
             await hubContext.Clients.Group(roomId).SendAsync("questionStarting");

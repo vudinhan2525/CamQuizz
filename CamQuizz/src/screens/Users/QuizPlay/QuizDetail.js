@@ -7,16 +7,20 @@ import * as signalR from '@microsoft/signalr';
 import { API_URL } from '@env';
 import QuizzService from '../../../services/QuizzService';
 import GenreService from '../../../services/GenreService';
+import { useHubConnection } from '../../../contexts/SignalRContext';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import Toast from 'react-native-toast-message';
 const QuizDetail = ({ navigation, route }) => {
     //const { quiz } = route.params;
+    const { hubConnection, setHubConnection } = useHubConnection();
     const { quizId } = route.params;
     const [quiz, setQuiz] = React.useState({});
     const [connectionId, setConnectionId] = React.useState(null);
-    const [hubConnection, setHubConnection] = React.useState(null);
     React.useEffect(() => {
         const fetchQuiz = async () => {
             try {
                 const quizData = await QuizzService.getQuizzById(quizId);
+                console.log('Quiz data:', quizData);
                 const quiz = {
                     id: quizData.id,
                     title: quizData.name,
@@ -63,6 +67,7 @@ const QuizDetail = ({ navigation, route }) => {
         }
     };
 
+
     const handleBegin = async () => {
         try {
             console.log(API_URL)
@@ -80,14 +85,35 @@ const QuizDetail = ({ navigation, route }) => {
 
             if (response.ok) {
                 // Connect to SignalR hub
-                await connectToHub(connectionId);
+                const hubConnection = await connectToHub(connectionId);
+                // await createRoom();
+                const userId = await AsyncStorageService.getUserId();
+                hubConnection.on('roomCreated', (room) => {
+                    console.log('Room created:', room);
+                    navigation.navigate(SCREENS.LOBBY, {
+                        roomCode: room.RoomId,
+                        isHost: true,
+                        playerList: room.PlayerList,
+                        quizId: room.QuizId,
+                        HostId: room.HostId,
+                    });
+                });
 
-                // Navigate to lobby with the connection data
-                // navigation.navigate(SCREENS.LOBBY, {
-                //     quizId: quiz.id,
-                //     connectionData: data,
-                //     hubConnection: hubConnection
-                // });
+                hubConnection.on('error', (error) => {
+                    console.error('Error creating room:', error);
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: error.message || 'Failed to create room',
+                        position: 'top',
+                        visibilityTime: 3000,
+                    });
+                });
+                // Call the CreateRoom method on the hub
+                await hubConnection.invoke('CreateRoom', {
+                    quizId: quiz.id,
+                    userId: userId
+                });
             } else {
                 console.error('Failed to negotiate connection:', data);
             }

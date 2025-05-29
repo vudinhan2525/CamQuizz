@@ -42,7 +42,7 @@ const EndQuiz = ({ navigation, route }) => {
                         <Text style={[
                             styles.score,
                             index < 3 && styles.topThreeText
-                        ]}>{user.score}</Text>
+                        ]}>{user.newScore}</Text>
                     </View>
                 ))}
             </ScrollView>

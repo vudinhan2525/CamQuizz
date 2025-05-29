@@ -42,23 +42,31 @@ const QuizDetail = ({ navigation, route }) => {
         fetchQuiz();
     }, [quizId]);
 
-    const connectToHub = async (connectionId) => {
-        try {
-            console.log("Connecting to SignalR hub with connection ID:", connectionId);
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl(`${API_URL}/quizHub?id=${connectionId}`, {
-                    skipNegotiation: true,
-                    transport: signalR.HttpTransportType.WebSockets
-                })
-                .configureLogging(signalR.LogLevel.Information)
-                .withAutomaticReconnect()
-                .build();
+const createRoom = async (connectionId) => {
+    try {
+        console.log("Connecting to SignalR hub with connection ID:", connectionId);
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl(`${API_URL}/quizHub?id=${connectionId}`, {
+                skipNegotiation: true,
+                transport: signalR.HttpTransportType.WebSockets
+            })
+            .configureLogging(signalR.LogLevel.Information)
+            .withAutomaticReconnect()
+            .build();
 
+        const roomCreatedPromise = new Promise((resolve, reject) => {
+            connection.on("roomcreated", (roomData) => {
+                console.log("Room created (from server):", roomData);
+                resolve(roomData); 
+            });
 
+            setTimeout(() => reject(new Error("Timeout waiting for roomcreated")), 10000);
+        });
 
-            await connection.start();
-            console.log("Connected to SignalR hub");
-            setHubConnection(connection);
+        await connection.start();
+        console.log("Connected to SignalR hub");
+        setHubConnection(connection);
+        await AsyncStorageService.saveConnectionId(connectionId);
 
             return connection;
         } catch (error) {
@@ -80,7 +88,6 @@ const QuizDetail = ({ navigation, route }) => {
             });
             const data = await response.json();
             const connectionId = data.connectionId;
-            setConnectionId(connectionId);
             console.log('Connection data:', data);
 
             if (response.ok) {

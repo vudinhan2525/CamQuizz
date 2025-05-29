@@ -157,15 +157,13 @@ const Lobby = ({ navigation, route }) => {
         }
     };
 
+
     const handleLeaveRoom = () => {
         Alert.alert(
             'Xác nhận',
             'Bạn có chắc muốn rời khỏi phòng chơi?',
             [
-                {
-                    text: 'Hủy',
-                    style: 'cancel'
-                },
+                { text: 'Hủy', style: 'cancel' },
                 {
                     text: 'Rời phòng',
                     onPress: async () => {
@@ -290,6 +288,7 @@ const Lobby = ({ navigation, route }) => {
                 )}
             </View>
 
+
             {/* Quiz Info */}
             {quiz && (
                 <View style={styles.quizInfoContainer}>
@@ -300,6 +299,7 @@ const Lobby = ({ navigation, route }) => {
                 </View>
 
             )}
+
 
             {/* Room Code */}
             <View style={styles.codeContainer}>
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
         minWidth: 100,
         maxWidth: '45%',
         alignItems: 'center',
-        flexDirection: 'row',
+        marginBottom: 16,
     },
     currentPlayerItem: {
         backgroundColor: COLORS.BLUE_LIGHT,
@@ -472,10 +472,20 @@ const styles = StyleSheet.create({
         borderColor: COLORS.BLUE,
     },
     playerAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        marginRight: 8,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        marginBottom: 8,
+    },
+    playerName: {
+        fontSize: 12,
+        textAlign: 'center',
+    },
+    morePlayersButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: COLORS.BLUE_LIGHT,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: COLORS.WHITE,
@@ -501,7 +511,7 @@ const styles = StyleSheet.create({
     playerButtonContainer: {
         padding: 16,
         borderTopWidth: 1,
-        borderTopColor: COLORS.GRAY_LIGHT,
+        borderTopColor: COLORS.GRAY_BG,
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',

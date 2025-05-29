@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250522134419_AddReportingTables")]
+    partial class AddReportingTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -615,7 +618,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AnswerId")
+                    b.Property<int>("AnswerId")
                         .HasColumnType("int")
                         .HasColumnName("answer_id");
 
@@ -965,7 +968,9 @@ namespace CamQuizzBE.Infras.Data.Migrations
                 {
                     b.HasOne("CamQuizzBE.Domain.Entities.Answers", "Answer")
                         .WithMany()
-                        .HasForeignKey("AnswerId");
+                        .HasForeignKey("AnswerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CamQuizzBE.Domain.Entities.QuizAttempts", "Attempt")
                         .WithMany("UserAnswers")

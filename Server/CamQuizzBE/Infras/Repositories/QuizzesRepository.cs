@@ -58,8 +58,8 @@ public class QuizzesRepository(DataContext context, ILogger<QuizzesRepository> l
     public async Task<Quizzes?> GetByIdAsync(int id)
     {
         return await _context.Quizzes
-            .Include(q => q.Questions)
-                .ThenInclude(q => q.Answers)
+            .Include(q => q.Questions.OrderBy(q => q.Id))
+                .ThenInclude(q => q.Answers.OrderBy(a => a.Id))
             .FirstOrDefaultAsync(q => q.Id == id);
     }
 

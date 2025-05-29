@@ -26,8 +26,9 @@ public class AutoMapperProfiles : Profile
                 r => r.MapFrom(x => x.FirstName.ToLower() + x.LastName.ToLower())
             );
         CreateMap<UpdateUserDto, AppUser>()
-            .ForMember(dest => dest.Id, opt => opt.Ignore()) 
-            .ForMember(dest => dest.UserRoles, opt => opt.Ignore());
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.UserRoles, opt => opt.Ignore())
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<Quizzes, QuizzesDto>()
             .ForMember(dest => dest.Questions, opt => opt.MapFrom(src => src.Questions))
             .ReverseMap();

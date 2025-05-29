@@ -134,39 +134,17 @@ public class AuthController(
    [Authorize]
    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto updateUserDto)
    {
-       try
+       var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+       
+       // Check if user is trying to update their own account or is admin
+       if (currentUserId != id && !User.IsInRole("Admin"))
        {
-           Console.WriteLine($"🚀 AuthController.UpdateUser called with id: {id}");
-           Console.WriteLine($"📝 UpdateUserDto: FirstName={updateUserDto.FirstName}, LastName={updateUserDto.LastName}, Gender={updateUserDto.Gender}, DateOfBirth={updateUserDto.DateOfBirth}");
-
-           var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-           Console.WriteLine($"👤 Current user ID: {currentUserId}");
-
-           // Check if user is trying to update their own account or is admin
-           if (currentUserId != id && !User.IsInRole("Admin"))
-           {
-               Console.WriteLine($"❌ Unauthorized: User {currentUserId} trying to update user {id}");
-               return Unauthorized("You can only update your own account");
-           }
-
-           Console.WriteLine($"✅ Authorization passed, calling userService.UpdateUserAsync...");
-           var result = await userService.UpdateUserAsync(id, updateUserDto);
-
-           if (!result.Succeeded)
-           {
-               Console.WriteLine($"❌ Update failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-               return BadRequest(result.Errors);
-           }
-
-           Console.WriteLine($"✅ Update successful for user {id}");
-           return Ok("User updated successfully");
+           return Unauthorized("You can only update your own account");
        }
-       catch (Exception ex)
-       {
-           Console.WriteLine($"💥 Exception in AuthController.UpdateUser: {ex.Message}");
-           Console.WriteLine($"Stack trace: {ex.StackTrace}");
-           throw;
-       }
+
+       var result = await userService.UpdateUserAsync(id, updateUserDto);
+       if (!result.Succeeded) return BadRequest(result.Errors);
+       return Ok("User updated successfully");
     }
 
     [HttpDelete("{id}")]

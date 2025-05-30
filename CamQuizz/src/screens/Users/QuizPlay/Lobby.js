@@ -40,6 +40,12 @@ const Lobby = ({ navigation, route }) => {
 
         const handlePlayerLeft = async (updatedRoom) => {
             console.log("Player left, updated room:", updatedRoom);
+            if (updatedRoom.HostId === userId) {
+                navigation.setParams({ isHost: true });
+            } else {
+                navigation.setParams({ isHost: false });
+            }
+            // Update player list with the new room data
             updatePlayerList(updatedRoom.PlayerList);
 
             // If current user is new host
@@ -87,6 +93,11 @@ const Lobby = ({ navigation, route }) => {
         };
         const handlePlayerJoined = (room) => {
             console.log("Player joined, updated room:", room);
+            if(room.HostId === userId) {
+                navigation.setParams({ isHost: true });
+            } else {
+                navigation.setParams({ isHost: false });
+            }
             updatePlayerList(room.PlayerList);
         };
         const handleError = (error) => {

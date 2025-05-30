@@ -78,7 +78,7 @@ export const Explore = ({ navigation }) => {
         quizId: room.QuizId,
         isHost: false,
         roomCode: room.RoomId,
-        hubConnection
+        playerList: room.Players 
       });
       setJoinCode('');
       setIsJoining(false);

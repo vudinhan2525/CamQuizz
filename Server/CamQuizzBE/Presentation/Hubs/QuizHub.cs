@@ -1129,7 +1129,11 @@ public class QuizHub : Hub
 
             //await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
             // await Task.Delay(TimeSpan.FromSeconds(1));
-            await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
+            await hubContext.Clients.Group(roomId).SendAsync("updateRanking", new {
+                playerScores,
+                showRanking = gameState.ShowRanking
+            });
+
             if(gameState.ShowRanking)
             {
                 await Task.Delay(TimeSpan.FromSeconds(1));

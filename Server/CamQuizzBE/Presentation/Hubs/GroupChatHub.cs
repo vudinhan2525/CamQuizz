@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Infras.Data;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -12,10 +15,12 @@ public class GroupChatHub : Hub
     private static readonly Dictionary<string, HashSet<string>> _groups = new();
     private static readonly Dictionary<string, string> _userIds = new(); // Maps ConnectionId to UserId
     private readonly ILogger<GroupChatHub> _logger;
+    private readonly DataContext _context;
 
-    public GroupChatHub(ILogger<GroupChatHub> logger)
+    public GroupChatHub(ILogger<GroupChatHub> logger, DataContext context)
     {
         _logger = logger;
+        _context = context;
     }
 
     public override async Task OnConnectedAsync()
@@ -55,6 +60,37 @@ public class GroupChatHub : Hub
         }
     }
 
+    private async Task LoadPreviousMessages(string groupId)
+    {
+        try
+        {
+            var messages = await _context.ChatMessages
+                .Where(m => m.GroupId.ToString() == groupId)
+                .OrderByDescending(m => m.SentAt)
+                .Take(50)  // Load last 50 messages
+                .Include(m => m.User)
+                .OrderBy(m => m.SentAt)
+                .Select(m => new
+                {
+                    FromUserId = m.UserId.ToString(),
+                    Message = m.Content,
+                    Timestamp = m.SentAt,
+                    UserName = m.User.FirstName + " " + m.User.LastName
+                })
+                .ToListAsync();
+
+            if (messages.Any())
+            {
+                await Clients.Caller.SendAsync("loadPreviousMessages", messages);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading previous messages for group {GroupId}", groupId);
+            throw;
+        }
+    }
+
     public async Task JoinGroup(JoinGroupRequest request)
     {
         try
@@ -81,6 +117,9 @@ public class GroupChatHub : Hub
                 ConnectionId = Context.ConnectionId,
                 UserId = request.UserId
             });
+
+            // Load previous messages for the user who just joined
+            await LoadPreviousMessages(request.GroupId);
 
             _logger.LogInformation("Client {ConnectionId} (UserId: {UserId}) joined group {GroupId}",
                 Context.ConnectionId, request.UserId, request.GroupId);
@@ -152,12 +191,31 @@ public class GroupChatHub : Hub
                 throw new HubException("You are not a member of this group");
             }
 
+            var timestamp = DateTime.UtcNow;
+
+            // Save message to database
+            var chatMessage = new ChatMessage
+            {
+                GroupId = int.Parse(request.GroupId),
+                UserId = int.Parse(request.UserId),
+                Content = request.Message,
+                SentAt = timestamp
+            };
+
+            _context.ChatMessages.Add(chatMessage);
+            await _context.SaveChangesAsync();
+
+            // Get user name
+            var user = await _context.Users.FindAsync(int.Parse(request.UserId));
+            var userName = user != null ? $"{user.FirstName} {user.LastName}" : "Unknown User";
+
             await Clients.Group(request.GroupId).SendAsync("receiveMessage", new
             {
                 FromConnectionId = Context.ConnectionId,
                 FromUserId = request.UserId,
                 Message = request.Message,
-                Timestamp = DateTime.UtcNow
+                Timestamp = timestamp,
+                UserName = userName
             });
 
             _logger.LogInformation("Message sent in group {GroupId} from {ConnectionId} (UserId: {UserId})",

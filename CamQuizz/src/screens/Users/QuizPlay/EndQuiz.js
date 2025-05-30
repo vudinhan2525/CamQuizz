@@ -25,7 +25,7 @@ const EndQuiz = ({ navigation, route }) => {
             <ScrollView style={styles.rankingList}>
                 {finalRanking.map((user, index) => (
                     <View
-                        key={user.id}
+                        key={index}
                         style={[
                             styles.rankingItem,
                             getRankingItemStyle(index),

@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250531134439_UpdateUserPackage")]
+    partial class UpdateUserPackage
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -716,7 +719,7 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("user_packages");
+                    b.ToTable("UserPackages");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>

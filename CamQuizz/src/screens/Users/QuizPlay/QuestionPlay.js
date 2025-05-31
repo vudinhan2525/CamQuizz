@@ -30,7 +30,7 @@ const QuestionPlay = ({ navigation, route }) => {
     const [showRanking, setShowRanking] = useState(false);
     const [selectedAnswers, setSelectedAnswers] = useState([]);
     const [currentQuestion, setCurrentQuestion] = useState(questionId);
-    const [players, setPlayers] = useState(playerList);
+    const [players, setPlayers] = useState();
     const [showRankObj, setShowRankObj] = useState(showRankObjj);
     const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
     const isHost = route.params.isHost;
@@ -114,29 +114,43 @@ const QuestionPlay = ({ navigation, route }) => {
 
     const handleUpdateRanking = (result) => {
         console.log('Update ranking:', result);
-        const updatedPlayers = result.playerScores.map(r => ({
-            id: r.UserId,
-            name: r.Name,
-            newScore: r.Score,
-            oldScore: players.find(p => p.id === r.UserId)?.Score || 0,
-            isCorrect: r.Score > (players.find(p => p.id === r.UserId)?.Score || 0),
-        }));
 
-        // Update players state
-        setPlayers(updatedPlayers);
-        setShowRankObj({
-            show: result.showRanking,
-            time: 1
-        });
-        if (result.showRanking) {
-            setShowRanking(true);
-            console.log('inside:');
-            // Auto hide after specified duration
-            setTimeout(() => {
-                setShowRanking(false);
-            }, showRankObj.time * 1000);
+        try {
+            // Map current scores to keep track of previous scores
+            const prevScores = {};
+            players?.forEach(p => {
+                prevScores[p.id] = p.newScore || 0;
+            });
+
+            // Create updated players array with score comparison
+            const updatedPlayers = result.playerScores.map(r => ({
+                id: r.UserId,
+                name: r.Name,
+                oldScore: prevScores[r.UserId] || 0,
+                newScore: r.Score,
+                isCorrect: r.Score > (prevScores[r.UserId] || 0)
+            }));
+
+            setPlayers(updatedPlayers);
+
+            if (result.showRanking) {
+                setShowRanking(true);
+
+                // Auto hide after timeout
+                setTimeout(() => {
+                    setShowRanking(false);
+                }, (showRankObj?.time || 1) * 1000);
+            }
+        } catch (error) {
+            console.error('Error in handleUpdateRanking:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to update ranking',
+                position: 'top',
+                visibilityTime: 3000,
+            });
         }
-
     };
 
     const handlePlayerAnswered = (data) => {
@@ -152,17 +166,23 @@ const QuestionPlay = ({ navigation, route }) => {
     };
 
     const handleDoneQuiz = (result) => {
-        const updatedPlayer = result.Ranking.map(r => ({
+       const prevScores = {};
+        players?.forEach(p => {
+            prevScores[p.id] = p.newScore || 0;
+        });
+
+        // Create updated players array with score comparison
+        const updatedPlayers = result.Ranking.map(r => ({
             id: r.UserId,
             name: r.Name,
+            oldScore: prevScores[r.UserId] || 0,
             newScore: r.Score,
-            oldScore: players.find(p => p.id === r.UserId)?.Score || 0,
-            isCorrect: r.Score > (players.find(p => p.id === r.UserId)?.Score || 0),
+            isCorrect: r.Score > (prevScores[r.UserId] || 0)
         }));
-        console.log('Updated player ranking:', updatedPlayer);
+        console.log('Updated player ranking:', updatedPlayers);
         navigation.replace(SCREENS.ENDQUIZ, {
             quizId: result.QuizId,
-            finalRanking: updatedPlayer,
+            finalRanking: updatedPlayers,
         });
     };
 
@@ -188,23 +208,19 @@ const QuestionPlay = ({ navigation, route }) => {
         });
     };
     const updateRanking = (result) => {
-        const oldUsers = players.map(player => ({
-            ...player,
-
-            oldScore: player.Score || 0, // Add fallback for undefined Score
-        }));
-        const sortedRanking = [...result.Ranking].sort((a, b) => b.Score - a.Score);
-        const updatedUsers = sortedRanking.map(r => {
-            const old = oldUsers.find(u => u.id === r.UserId) || { oldScore: 0 };
-            return {
-                id: r.UserId,
-                name: r.Name,
-                newScore: r.Score,
-                oldScore: old.oldScore,
-                // Fix the isCorrect check
-                isCorrect: r.Score > old.oldScore,
-            };
+        const prevScores = {};
+        players?.forEach(p => {
+            prevScores[p.id] = p.newScore || 0;
         });
+        const sortedRanking = [...result.Ranking].sort((a, b) => b.Score - a.Score);
+        const updatedUsers = sortedRanking.map(r => ({
+            id: r.UserId,
+            name: r.Name,
+            oldScore: prevScores[r.UserId] || 0,
+            newScore: r.Score,
+            isCorrect: r.Score > (prevScores[r.UserId] || 0)
+        }));
+
         const currentPlayer = updatedUsers.find(p => p.id === userId);
         const rank = updatedUsers.findIndex(p => p.id === userId) + 1;
 

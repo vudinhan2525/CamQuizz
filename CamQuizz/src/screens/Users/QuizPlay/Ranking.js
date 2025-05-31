@@ -30,7 +30,6 @@ const Ranking = ({ users }) => {
                     key={user.UserId}
                     user={user}
                     newScore={user.newScore}
-                    oldScore={user.oldScore}
                     isCorrect={user.isCorrect}
                     index={index}
                 />

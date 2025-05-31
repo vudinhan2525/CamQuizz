@@ -10,17 +10,18 @@ import SettingsModal from './SettingsModal';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 const Lobby = ({ navigation, route }) => {
-    const { quizId, isHost = false, roomCode, playerList } = route.params;
+    const { quizId, isHost , roomCode, playerList } = route.params;
     const { hubConnection } = useHubConnection();
-    const [players, setPlayers] = useState();
+    const [players, setPlayers] = useState(playerList);
     const [quiz, setQuiz] = useState(null);
     const [showRankObj, setShowRankObj] = useState({ show: true, time: 1 });
     const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
     const [userId, setUserId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [host, setHost] = useState();
     useEffect(() => {
         updatePlayerList(playerList);
-    }, [])
+    }, [playerList])
 
 
     const updatePlayerList = async (playerList) => {
@@ -41,10 +42,12 @@ const Lobby = ({ navigation, route }) => {
         const handlePlayerLeft = async (updatedRoom) => {
             console.log("Player left, updated room:", updatedRoom);
             if (updatedRoom.HostId === userId) {
+                
                 navigation.setParams({ isHost: true });
             } else {
                 navigation.setParams({ isHost: false });
             }
+            setHost(updatedRoom.HostId);
             // Update player list with the new room data
             updatePlayerList(updatedRoom.PlayerList);
 
@@ -72,7 +75,7 @@ const Lobby = ({ navigation, route }) => {
                         label: opt.Label,
                         image: opt.Image,
                     })),
-                    isHost,
+                    isHost: userId === host,
                     roomId: data.RoomId,
                     questionImage: data.firstQuestion.Image,
                     userId: userId,

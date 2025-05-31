@@ -41,6 +41,18 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
         return Ok(response);
     }
 
+    // GET: api/v1/quiz/top5
+    [HttpGet("top5")]
+    public async Task<ActionResult<ApiResponse<IEnumerable<QuizzesDto>>>> GetTop5Quizzes()
+    {
+        var data = await _quizzesService.GetTop5Quizzes();
+
+        var quizzesDto = _mapper.Map<IEnumerable<QuizzesDto>>(data);
+
+        var response = new ApiResponse<IEnumerable<QuizzesDto>>(quizzesDto, "success");
+        return Ok(response);
+    }
+
 
     // GET: api/v1/quiz/my-quizzes
     [HttpGet("my-quizzes")]
@@ -78,7 +90,7 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
         [FromQuery] string? sort = "created_at")
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         // Check if user is trying to access their own quizzes or is admin
         if (currentUserId != userId && !User.IsInRole("Admin"))
         {
@@ -126,8 +138,6 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
     [HttpPost]
     public async Task<ActionResult> CreateQuiz([FromBody] CreateQuizDto createQuizDto)
     {
-        _logger.LogInformation("✅ Questions count: {Count}", createQuizDto.Questions.Count);
-        _logger.LogInformation("Raw DTO: {@CreateQuizDto}", createQuizDto);
         var quizEntity = new CreateQuizBody
         {
             Name = createQuizDto.Name,

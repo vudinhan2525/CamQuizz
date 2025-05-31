@@ -55,7 +55,15 @@ public class QuizzesRepository(DataContext context, ILogger<QuizzesRepository> l
 
         return new PagedResult<Quizzes>(items, totalItems, page, limit);
     }
+    public async Task<List<Quizzes>> GetTop5()
+    {
+        var top5Quizzes = await _context.Quizzes
+            .OrderByDescending(q => q.NumberOfAttended)
+            .Take(5)
+            .ToListAsync();
 
+        return top5Quizzes;
+    }
     public async Task<PagedResult<Quizzes>> GetByUserIdAsync(int userId, string? kw, int limit, int page, string? sort)
     {
         var query = _context.Quizzes

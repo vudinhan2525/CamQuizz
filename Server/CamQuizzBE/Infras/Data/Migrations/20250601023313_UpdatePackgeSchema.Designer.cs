@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250601023313_UpdatePackgeSchema")]
+    partial class UpdatePackgeSchema
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -838,48 +841,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("RevenueRecords", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(65,30)")
-                        .HasColumnName("amount");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("PackageId")
-                        .HasColumnType("int")
-                        .HasColumnName("package_id");
-
-                    b.Property<DateTime>("PaidAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("date");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("updated_at");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PackageId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("revenue_records");
-                });
-
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Answers", b =>
                 {
                     b.HasOne("CamQuizzBE.Domain.Entities.Questions", "Question")
@@ -1191,25 +1152,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RevenueRecords", b =>
-                {
-                    b.HasOne("CamQuizzBE.Domain.Entities.Packages", "Package")
-                        .WithMany()
-                        .HasForeignKey("PackageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
-                        .WithMany("RevenueRecords")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Package");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.AppRole", b =>
                 {
                     b.Navigation("UserRoles");
@@ -1220,8 +1162,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Navigation("Members");
 
                     b.Navigation("Quizzes");
-
-                    b.Navigation("RevenueRecords");
 
                     b.Navigation("StudySets");
 

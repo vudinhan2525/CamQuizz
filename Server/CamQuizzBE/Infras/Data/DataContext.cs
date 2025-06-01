@@ -16,6 +16,7 @@ IdentityDbContext<
 {
     public DbSet<Quizzes> Quizzes { get; set; }
     public DbSet<Genres> Genres { get; set; }
+    public DbSet<RevenueRecords> RevenueRecords { get; set; }
     public DbSet<Answers> Answers { get; set; }
     public DbSet<Questions> Questions { get; set; }
     public DbSet<Packages> Packages { get; set; }
@@ -234,6 +235,22 @@ IdentityDbContext<
             .HasOne(up => up.User)
             .WithMany(u => u.UserPackages)
             .HasForeignKey(up => up.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
+
+        #region RevenueRecords-User Relationship
+        modelBuilder.Entity<RevenueRecords>()
+            .HasOne(r => r.User)
+            .WithMany(u => u.RevenueRecords)
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
+
+        #region RevenueRecords-Package Relationship
+        modelBuilder.Entity<RevenueRecords>()
+            .HasOne(r => r.Package)
+            .WithMany()
+            .HasForeignKey(r => r.PackageId)
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
     }

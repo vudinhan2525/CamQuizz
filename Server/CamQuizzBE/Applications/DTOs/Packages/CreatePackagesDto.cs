@@ -9,6 +9,12 @@ public class CreatePackageDto
     public int Price { get; set; }
 
     [Required]
+    public int MaxNumberOfQuizz { get; set; }
+
+    [Required]
+    public int MaxNumberOfAttended { get; set; }
+
+    [Required]
     public DateTime StartDate { get; set; }
 
     [Required]

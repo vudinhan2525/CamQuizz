@@ -23,6 +23,8 @@ namespace CamQuizzBE.Infras.Repositories
                     Name = p.Name,
                     Price = p.Price,
                     StartDate = p.StartDate,
+                    MaxNumberOfAttended = p.MaxNumberOfAttended,
+                    MaxNumberOfQuizz = p.MaxNumberOfQuizz,
                     EndDate = p.EndDate,
                     CreatedAt = p.CreatedAt,
                     UpdatedAt = p.UpdatedAt
@@ -80,18 +82,61 @@ namespace CamQuizzBE.Infras.Repositories
             }
         }
 
-        public async Task<IEnumerable<UserPackages>> GetAllUserPackagesAsync()
+        public async Task<IEnumerable<UserPackages>> GetAllUserPackagesAsync(int userId)
         {
             return await _context.UserPackages
+                .Where(up => up.UserId == userId)
                 .Include(up => up.Package)
                 .Include(up => up.User)
                 .ToListAsync();
         }
 
-        public async Task AddAsync(UserPackages userPackage)
+        public async Task<UserPackages> AddUserPackageAsync(UserPackages userPackage)
         {
             _context.UserPackages.Add(userPackage);
             await _context.SaveChangesAsync();
+            return userPackage;
+        }
+        public async Task<RevenueRecords> AddRevenueRecordAsync(RevenueRecords revenueRecord)
+        {
+            _context.RevenueRecords.Add(revenueRecord);
+            await _context.SaveChangesAsync();
+            return revenueRecord;
+        }
+        public async Task<RevenueStatsDto> GetRevenueStatisticsAsync(int year)
+        {
+
+            var allRecords = await _context.RevenueRecords
+                .Include(r => r.Package)
+                .Where(r => r.Date.Year == year)
+                .ToListAsync();
+
+            var monthlyRevenue = Enumerable.Range(1, 12)
+                .Select(month => new MonthlyRevenueDto
+                {
+                    Month = month,
+                    Revenue = allRecords
+                        .Where(r => r.Date.Month == month)
+                        .Sum(r => r.Amount)
+                }).ToList();
+
+
+            var groupedByPackage = allRecords
+                .GroupBy(r => new { r.PackageId, r.Package.Name })
+                .Select(g => new PackageSalesDto
+                {
+                    PackageId = g.Key.PackageId,
+                    PackageName = g.Key.Name,
+                    SoldCount = g.Count()
+                }).ToList();
+
+            return new RevenueStatsDto
+            {
+                MonthlyRevenue = monthlyRevenue,
+                TotalRevenue = allRecords.Sum(r => r.Amount),
+                TotalSoldPackages = allRecords.Count,
+                PackageSales = groupedByPackage
+            };
         }
     }
 }

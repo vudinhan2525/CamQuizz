@@ -12,6 +12,14 @@ public class Packages
     [Required]
     public string Name { get; set; } = string.Empty;
 
+    [Column("max_number_of_quizz")]
+    [Required]
+    public int MaxNumberOfQuizz { get; set; }
+
+    [Column("max_number_of_attended")]
+    [Required]
+    public int MaxNumberOfAttended { get; set; }
+
     [Column("price")]
     [Required]
     public int Price { get; set; }

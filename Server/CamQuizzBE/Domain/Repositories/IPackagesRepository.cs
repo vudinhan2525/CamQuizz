@@ -10,7 +10,10 @@ namespace CamQuizzBE.Domain.Interfaces
         Task<Packages> AddAsync(Packages package);
         Task UpdateAsync(Packages package);
         Task DeleteAsync(int id);
-        Task<IEnumerable<UserPackages>> GetAllUserPackagesAsync();
-        Task AddAsync(UserPackages userPackage);
+        Task<IEnumerable<UserPackages>> GetAllUserPackagesAsync(int userId);
+        Task<UserPackages> AddUserPackageAsync(UserPackages userPackage);
+
+        Task<RevenueStatsDto> GetRevenueStatisticsAsync(int year);
+        Task<RevenueRecords> AddRevenueRecordAsync(RevenueRecords revenueRecord);
     }
 }

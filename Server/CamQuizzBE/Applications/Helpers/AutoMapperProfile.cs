@@ -1,6 +1,5 @@
 using CamQuizzBE.Applications.DTOs.Users;
 using CamQuizzBE.Domain.Entities;
-using CamQuizzBE.Applications.DTOs.Files;
 using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Applications.DTOs.Groups;
 using CamQuizzBE.Applications.DTOs.Answers;
@@ -40,6 +39,7 @@ public class AutoMapperProfiles : Profile
         CreateMap<StudySet, StudySetDto>().ReverseMap();
         CreateMap<FlashCard, FlashCardDto>().ReverseMap();
         CreateMap<Packages, PackageDto>().ReverseMap();
+        CreateMap<UserPackages, UserPackagesDto>().ReverseMap();
 
         CreateMap<Member, MemberDto>();
     }

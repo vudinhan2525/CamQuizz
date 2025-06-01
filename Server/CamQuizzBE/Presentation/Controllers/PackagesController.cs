@@ -1,8 +1,10 @@
 using CamQuizzBE.Applications.DTOs.Packages;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Presentation.Utils;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace CamQuizzBE.Presentation.Controllers
 {
@@ -18,7 +20,7 @@ namespace CamQuizzBE.Presentation.Controllers
 
         [HttpPost("get-qr")]
         [Authorize]
-        public async Task<IActionResult> CreatePackage([FromBody] GenQRDto genQRDto)
+        public async Task<IActionResult> GetQR([FromBody] GenQRDto genQRDto)
         {
             var package = await _packagesRepository.GetByIdAsync(genQRDto.PackageId);
             if (package == null)
@@ -74,7 +76,7 @@ namespace CamQuizzBE.Presentation.Controllers
         }
 
         [HttpPost("successMomo")]
-        public IActionResult ReceiveMomoWebhook([FromBody] JsonElement momoData)
+        public async Task<IActionResult> ReceiveMomoWebhook([FromBody] JsonElement momoData)
         {
             _logger.LogInformation("MoMo IPN Received:");
             _logger.LogInformation(JsonSerializer.Serialize(momoData, new JsonSerializerOptions { WriteIndented = true }));
@@ -130,7 +132,30 @@ namespace CamQuizzBE.Presentation.Controllers
             if (resultCode == 0)
             {
                 _logger.LogInformation($"✅ Payment success for Order ID: {orderId}, Transaction ID: {transId}");
-                // TODO: update DB, confirm booking, etc.
+                var package = await _packagesRepository.GetByIdAsync(extraData.PackageId);
+
+                if (package == null)
+                {
+                    throw new NotFoundException("Package not found");
+                }
+                await _packagesRepository.AddUserPackageAsync(new UserPackages
+                {
+                    UserId = extraData.UserId,
+                    PackageId = package.Id,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                });
+
+
+                await _packagesRepository.AddRevenueRecordAsync(new RevenueRecords
+                {
+                    Amount = package.Price,
+                    PackageId = package.Id,
+                    UserId = extraData.UserId,
+                    Date = DateTime.Now,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                });
             }
             else
             {
@@ -140,6 +165,12 @@ namespace CamQuizzBE.Presentation.Controllers
             return Ok(new { message = "Received and verified MoMo IPN" });
         }
 
+        [HttpGet("stats/{year}")]
+        public async Task<IActionResult> GetRevenueStats(int year)
+        {
+            var stats = await _packagesRepository.GetRevenueStatisticsAsync(year);
+            return Ok(stats);
+        }
 
         [HttpGet]
         public async Task<ActionResult<ApiResponse<IEnumerable<PackageDto>>>> GetAllPackages()
@@ -148,16 +179,28 @@ namespace CamQuizzBE.Presentation.Controllers
             return Ok(new ApiResponse<IEnumerable<PackageDto>>(packages));
         }
 
+        [HttpGet("user/{id}")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<UserPackagesDto>>>> GetAllUserPackages(int id)
+        {
+            var packages = await _packagesRepository.GetAllUserPackagesAsync(id);
+            return Ok(new ApiResponse<IEnumerable<UserPackagesDto>>(_mapper.Map<IEnumerable<UserPackagesDto>>(packages)));
+        }
+
         [HttpPost]
         [Authorize]
         public async Task<IActionResult> CreatePackage([FromBody] CreatePackageDto packageDto)
         {
+            _logger.LogInformation("----------");
+            _logger.LogInformation(packageDto.MaxNumberOfAttended.ToString());
+            _logger.LogInformation(packageDto.MaxNumberOfQuizz.ToString());
             var package = await _packagesRepository.AddAsync(new Packages
             {
                 Name = packageDto.Name,
                 Price = packageDto.Price,
                 EndDate = packageDto.EndDate,
                 StartDate = packageDto.StartDate,
+                MaxNumberOfAttended = packageDto.MaxNumberOfAttended,
+                MaxNumberOfQuizz = packageDto.MaxNumberOfQuizz,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
             });
@@ -191,6 +234,8 @@ namespace CamQuizzBE.Presentation.Controllers
                 Price = updatePackageDto.Price ?? existing.Price,
                 StartDate = updatePackageDto.StartDate ?? existing.StartDate,
                 EndDate = updatePackageDto.EndDate ?? existing.EndDate,
+                MaxNumberOfAttended = updatePackageDto.MaxNumberOfAttended ?? existing.MaxNumberOfAttended,
+                MaxNumberOfQuizz = updatePackageDto.MaxNumberOfQuizz ?? existing.MaxNumberOfQuizz,
                 CreatedAt = existing.CreatedAt
             };
 

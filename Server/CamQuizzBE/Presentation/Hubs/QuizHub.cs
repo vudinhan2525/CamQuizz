@@ -16,8 +16,8 @@ namespace CamQuizzBE.Presentation.Hubs;
 public record CreateRoomRequest(int QuizId, int UserId);
 public record JoinRoomRequest(string RoomId, int UserId);
 public record LeaveRoomRequest(string RoomId, int UserId);
-public record StartGameRequest(string RoomId);
-public record SubmitAnswerRequest(string RoomId, int UserId, int? QuestionId, List<string> Answer);
+public record StartGameRequest(string RoomId, bool ShowRanking);
+public record SubmitAnswerRequest(string RoomId, int UserId, int? QuestionId, List<string> Answer, int QuizId);
 public record RejoinGameRequest(int UserId);
 public record NextQuestionRequest(string RoomId, int UserId);
 public record PauseTimerRequest(string RoomId, int UserId, bool ShowRanking = false);
@@ -381,7 +381,7 @@ public class QuizHub : Hub
             var questions = quiz.Questions.ToList();
 
             var duration = questions[0].Duration;
-            if (duration <= 0 || duration > 300)
+            if (duration < 0 || duration > 300)
             {
                 _logger.LogError("Invalid duration {Duration} for question {QuestionId}", duration, questions[0].Id);
                 throw new Exception($"Invalid duration {duration} for question {questions[0].Id}");
@@ -396,7 +396,7 @@ public class QuizHub : Hub
                 OriginalDuration = duration,
                 TimeRemaining = duration,
                 IsPaused = false,
-                ShowRanking = false,
+                ShowRanking = request.ShowRanking,
                 IsEnded = false,
                 LastAnswerTime = null
             };
@@ -480,7 +480,6 @@ public class QuizHub : Hub
 
             // Get answers in consistent order for first question
             var orderedAnswers = questions[0].Answers.OrderBy(a => a.Id).ToList();
-
             var firstQuestion = new GameQuestionResponse
             {
                 Id = questions[0].Id,
@@ -492,7 +491,7 @@ public class QuizHub : Hub
                     Label = ((char)('A' + index)).ToString(),
                     Content = a.Answer
                 }).ToList(),
-                RoomId = room.RoomId
+                RoomId = room.RoomId,
             };
 
             _logger.LogInformation(
@@ -718,8 +717,9 @@ public class QuizHub : Hub
                 PlayerName = playerName
             });
 
+
             gameState.LastAnswerTime = DateTime.UtcNow;
-            gameState.ShowRanking = true;
+
 
             bool allAnswered = room.PlayerList.All(p => gameState.PlayerAnswers.ContainsKey(p.Id) || p.ConnectionId == null);
             if (allAnswered)
@@ -836,9 +836,9 @@ public class QuizHub : Hub
                     Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
                 }).OrderByDescending(p => p.Score).ToList();
 
-                await Clients.Group(request.RoomId).SendAsync("showingRanking");
-                await Task.Delay(TimeSpan.FromSeconds(1));
-                await Clients.Group(request.RoomId).SendAsync("updateRanking", playerScores);
+                //await Clients.Group(request.RoomId).SendAsync("showingRanking");
+                //await Task.Delay(TimeSpan.FromSeconds(1));
+                //await Clients.Group(request.RoomId).SendAsync("updateRanking", playerScores);
             }
 
             await Clients.Group(request.RoomId).SendAsync("timerPaused", new
@@ -912,7 +912,7 @@ public class QuizHub : Hub
             var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 
             _logger.LogInformation("Starting timer for room {RoomId}, duration: {Duration}s", roomId, duration);
-            if (duration <= 0 || duration > 300)
+            if (duration < 0 || duration > 300)
             {
                 _logger.LogError("Invalid duration {Duration} in StartQuestionTimer for room {RoomId}", duration, roomId);
                 throw new Exception($"Invalid duration {duration}");
@@ -969,7 +969,43 @@ public class QuizHub : Hub
             }
         }
     }
+    public async Task UpdateShowRanking(string roomId, int userId, bool showRanking)
+    {
+        try
+        {
+            _logger.LogInformation("Host {UserId} updating ShowRanking state for room {RoomId} to {ShowRanking}", userId, roomId, showRanking);
 
+            if (!_rooms.ContainsKey(roomId) || !_games.ContainsKey(roomId))
+            {
+                throw new Exception("Room or game not found");
+            }
+
+            var room = _rooms[roomId];
+            var gameState = _games[roomId];
+
+            if (room.HostId != userId)
+            {
+                throw new Exception("Only the host can update the ShowRanking state");
+            }
+
+            gameState.ShowRanking = showRanking;
+
+            _logger.LogInformation("ShowRanking state updated for room {RoomId} to {ShowRanking}", roomId, showRanking);
+
+            // Notify all clients in the room about the updated ShowRanking state
+            await Clients.Group(roomId).SendAsync("showRankingUpdated", new
+            {
+                RoomId = roomId,
+                ShowRanking = showRanking
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating ShowRanking state for room {RoomId}", roomId);
+            await Clients.Group(roomId).SendAsync("error", new { Message = "Error updating ShowRanking state", Error = ex.Message });
+            throw;
+        }
+    }
     private async Task ProcessQuestionEnd(string roomId, IHubContext<QuizHub> hubContext, IQuizzesService quizService, bool isTimeUp = false, int? triggeredByUserId = null)
     {
         try
@@ -1076,11 +1112,13 @@ public class QuizHub : Hub
                 QuestionId = currentQuestion.Id,
                 TrueAnswer = correctAnswers,
                 YourAnswer = playerAnswers,
-                Duration = 500
+                Duration = 1000,
+                Explanation = currentQuestion.Description,
             });
 
             gameState.PlayerAnswers.Clear();
-            //await Task.Delay(TimeSpan.FromMilliseconds(500));
+            await Task.Delay(TimeSpan.FromMilliseconds(1000));
+
 
             var playerScores = room.PlayerList.Select(p => new PlayerScore
             {
@@ -1089,12 +1127,13 @@ public class QuizHub : Hub
                 Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
             }).ToList();
 
-            if (gameState.ShowRanking)
+            //await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
+            // await Task.Delay(TimeSpan.FromSeconds(1));
+            await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
+            if(gameState.ShowRanking)
             {
-                await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
-                //await Task.Delay(TimeSpan.FromSeconds(1));
-                await hubContext.Clients.Group(roomId).SendAsync("updateRanking", playerScores);
-                // await Task.Delay(TimeSpan.FromSeconds(5));
+                await Task.Delay(TimeSpan.FromSeconds(1));
+
             }
 
             GameQuestionResponse nextQuestion = null;
@@ -1130,7 +1169,6 @@ public class QuizHub : Hub
                 gameState.OriginalDuration = nextDuration;
                 gameState.TimeRemaining = nextDuration;
                 gameState.IsPaused = false;
-                gameState.ShowRanking = false;
             }
 
             var result = new QuestionResultResponse
@@ -1151,11 +1189,13 @@ public class QuizHub : Hub
             if (hasNextQuestion)
             {
                 await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
+
                 //await Task.Delay(TimeSpan.FromSeconds(2));
 
                 // Reset state for next question
                 gameState.QuestionStartTime = null; // Clear old time
                 gameState.PlayerAnswers.Clear();
+
 
                 await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
 
@@ -1207,10 +1247,17 @@ public class QuizHub : Hub
                 await hubContext.Clients.Group(roomId).SendAsync("doneQuiz", quizResult);
                 gameState.IsEnded = true;
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                //await Task.Delay(TimeSpan.FromSeconds(5));
                 _games.Remove(roomId);
                 _logger.LogInformation("Game ended and attempts finalized for room {RoomId}", roomId);
             }
+
+            await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
+            //await Task.Delay(TimeSpan.FromSeconds(2));
+            await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
+
+            gameState.TimerCancellation = new CancellationTokenSource();
+            _ = Task.Run(() => StartQuestionTimer(roomId, gameState.TimeRemaining, gameState), gameState.TimerCancellation.Token);
         }
         catch (Exception ex)
         {
@@ -1219,4 +1266,5 @@ public class QuizHub : Hub
             throw;
         }
     }
+    
 }

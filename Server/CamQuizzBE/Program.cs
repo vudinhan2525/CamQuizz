@@ -107,6 +107,7 @@ app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
     endpoints.MapHub<QuizHub>("/quizHub");
+    endpoints.MapHub<GroupChatHub>("/groupChat"); 
     endpoints.MapHub<TmpHub>("/tmpHub");
 });
 

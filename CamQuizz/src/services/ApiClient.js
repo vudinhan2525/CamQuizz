@@ -3,56 +3,31 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_URL}  from '@env';
 
 // API base URL - using ngrok for remote access
-// const API_BASE_URL = `${API_URL}/api/v1`;
+const API_BASE_URL = `${API_URL}/api/v1`;
 
-const API_BASE_URL = 'https://a204-14-169-73-215.ngrok-free.app/api/v1';
-
-console.log('API_BASE_URL:', API_BASE_URL);
-
-
+// Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'ngrok-skip-browser-warning': 'true',
+    'ngrok-skip-browser-warning': 'true', 
   },
-  timeout: 10000,
-  validateStatus: status => status >= 200 && status < 500,
+  timeout: 10000, 
+  validateStatus: status => status >= 200 && status < 500, 
 });
 
 // Add request interceptor to add auth token to requests
 apiClient.interceptors.request.use(
   async (config) => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
 
-      if (token) {
-        console.log('Token for API request:', token.substring(0, 15) + '...');
-        console.log('Token length:', token.length);
+    const token = await AsyncStorage.getItem('userToken');
 
-        // Đảm bảo token không có khoảng trắng
-        const cleanToken = token.trim();
-
-        // Thêm token vào header
-        config.headers.Authorization = `Bearer ${cleanToken}`;
-
-        // Log đầy đủ header để debug
-        console.log('Request headers:', JSON.stringify(config.headers));
-      } else {
-        console.warn('No token available for request');
-      }
-
-      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
-      if (config.data) {
-        console.log('Request data:', config.data);
-      }
-
-      return config;
-    } catch (error) {
-      console.error('Error in request interceptor:', error);
-      return config;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+
+    return config;
   },
   (error) => {
     return Promise.reject(error);
@@ -61,11 +36,6 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    // Log successful responses for debugging
-    console.log(`API Response [${response.status}] for ${response.config.method.toUpperCase()} ${response.config.url}`);
-    if (response.data) {
-      console.log('Response data:', response.data);
-    }
     return response;
   },
   (error) => {
@@ -77,8 +47,8 @@ apiClient.interceptors.response.use(
       // Handle specific status codes
       switch (error.response.status) {
         case 401:
-          console.log('Unauthorized access, token may be invalid or expired');
-          // Không xóa token ở đây, chỉ thông báo lỗi
+          console.log('Unauthorized access, please login again');
+          // Có thể thêm logic để đăng xuất người dùng ở đây
           break;
         case 403:
           console.log('Forbidden access, you do not have permission');

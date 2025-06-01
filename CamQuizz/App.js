@@ -8,6 +8,8 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { enableScreens } from 'react-native-screens';
 import { checkAuthStatus } from './src/services/AuthService';
 import { useFocusEffect } from '@react-navigation/native';
+import { HubConnectionProvider } from "./src/contexts/SignalRContext";
+import Toast from 'react-native-toast-message';
 
 enableScreens();
 SplashScreen.preventAutoHideAsync();
@@ -69,23 +71,25 @@ const App = () => {
       useCallback(() => {
         console.log('Root navigator focused, checking login status');
         checkLoginStatus();
-        return () => {};
+        return () => { };
       }, [])
     );
 
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {userToken == null ? (
-          // Không có token, hiển thị màn hình đăng nhập
-          <Stack.Screen name="AuthStack" component={AuthStackNavigator} />
-        ) : userRole === 'Admin' ? (
-          // Có token và là Admin
-          <Stack.Screen name="AdminStack" component={AdminStackNavigation} />
-        ) : (
-          // Có token và là User
-          <Stack.Screen name="UserStack" component={UsersStackNavigation} />
-        )}
-      </Stack.Navigator>
+      <HubConnectionProvider>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {userToken == null ? (
+            // Không có token, hiển thị màn hình đăng nhập
+            <Stack.Screen name="AuthStack" component={AuthStackNavigator} />
+          ) : userRole === 'Admin' ? (
+            // Có token và là Admin
+            <Stack.Screen name="AdminStack" component={AdminStackNavigation} />
+          ) : (
+            // Có token và là User
+            <Stack.Screen name="UserStack" component={UsersStackNavigation} />
+          )}
+        </Stack.Navigator>
+      </HubConnectionProvider>
     );
   };
 
@@ -108,6 +112,7 @@ const App = () => {
           <Stack.Screen name="Root" component={RootNavigator} />
         </Stack.Navigator>
       </SafeAreaView>
+      <Toast />
     </NavigationContainer>
   );
 };

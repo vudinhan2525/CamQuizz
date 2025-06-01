@@ -13,6 +13,7 @@ public class UserRepository(
     IMapper mapper
 ) : IUserRepository
 {
+
     public async Task<IdentityResult> ChangePasswordAsync(
         AppUser user,
         ChangePasswordDto changePasswordDto
@@ -117,7 +118,7 @@ public class UserRepository(
         // First save changes to context
         context.Users.Update(user);
         await context.SaveChangesAsync();
-        
+
         // Then update in UserManager
         return await userManager.UpdateAsync(user);
     }
@@ -125,6 +126,40 @@ public class UserRepository(
     public async Task<IdentityResult> DeleteUserAsync(AppUser user)
     {
         return await userManager.DeleteAsync(user);
+    }
+    public async Task<(bool, string)> CheckUserRule(int userId)
+    {
+        var now = DateTime.UtcNow;
+
+        var userPackages = await context.UserPackages
+            .Include(up => up.Package)
+            .Where(up => up.UserId == userId &&
+                         up.Package.StartDate <= now &&
+                         up.Package.EndDate >= now)
+            .ToListAsync();
+
+        int totalNumberPossibleQuiz;
+
+        if (userPackages.Count == 0)
+        {
+            totalNumberPossibleQuiz = 20;
+        }
+        else
+        {
+            totalNumberPossibleQuiz = userPackages
+                .Where(up => up.Package != null)
+                .Sum(up => up.Package.MaxNumberOfQuizz);
+        }
+
+        var userQuizzCount = await context.Quizzes
+            .CountAsync(q => q.UserId == userId);
+
+        if (userQuizzCount >= totalNumberPossibleQuiz)
+        {
+            return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({totalNumberPossibleQuiz}) cho phép.");
+        }
+
+        return (true, "Cho phép tạo quiz.");
     }
 
 }

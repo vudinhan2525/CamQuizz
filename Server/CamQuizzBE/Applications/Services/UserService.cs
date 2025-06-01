@@ -89,11 +89,15 @@ public class UserService(
 
         return result;
     }
+    public async Task<(bool, string)> CheckUserRule(int userId)
+    {
+        return await userRepository.CheckUserRule(userId);
+    }
 
     // public async Task<UserDto?> HandleExternalLoginAsync(GoogleUserInfo userInfo)
     // {
     //     var user = await userManager.FindByEmailAsync(userInfo.Email);
-        
+
     //     if (user == null)
     //     {
     //         // Create new user with required fields
@@ -125,7 +129,7 @@ public class UserService(
     //         user.FirstName = userInfo.GivenName;
     //         user.LastName = userInfo.FamilyName;
     //         user.UpdatedAt = DateTime.UtcNow;
-            
+
     //         await userManager.UpdateAsync(user);
 
     //         // Update Google login info if needed

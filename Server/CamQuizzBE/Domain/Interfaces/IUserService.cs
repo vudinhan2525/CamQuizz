@@ -17,5 +17,7 @@ public interface IUserService
     Task<IdentityResult> DeleteUserAsync(int id);
     Task<IdentityResult> BanUserAsync(int id, bool isBanned);
     Task<IdentityResult> ChangePasswordAsync(int id, string currentPassword, string newPassword);
+
+    Task<(bool, string)> CheckUserRule(int userId);
     // Task<UserDto?> HandleExternalLoginAsync(GoogleUserInfo userInfo);
 }

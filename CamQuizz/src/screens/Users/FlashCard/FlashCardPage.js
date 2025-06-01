@@ -7,6 +7,7 @@ import PropTypes from 'prop-types';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
 import StudySetService from '../../../services/StudySetService';
+import FlashCardService from '../../../services/FlashCardService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkAuthStatus, validateToken } from '../../../services/AuthService';
 
@@ -32,7 +33,49 @@ const FlashCardPage = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
 
-  // Thêm hàm này để kiểm tra token
+  // Debug function để xem tất cả dữ liệu AsyncStorage
+  const debugAsyncStorage = async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      console.log('All AsyncStorage keys:', keys);
+
+      const cardStudyKeys = keys.filter(key => key.startsWith('cardStudy_'));
+      console.log('Card study keys:', cardStudyKeys);
+
+      for (const key of cardStudyKeys) {
+        const data = await AsyncStorage.getItem(key);
+        console.log(`${key}:`, JSON.parse(data));
+      }
+
+      const reviewCountKeys = keys.filter(key => key.startsWith('reviewCount_'));
+      console.log('Review count keys:', reviewCountKeys);
+
+      for (const key of reviewCountKeys) {
+        const data = await AsyncStorage.getItem(key);
+        console.log(`${key}:`, data);
+      }
+    } catch (error) {
+      console.error('Error debugging AsyncStorage:', error);
+    }
+  };
+
+
+
+  // Hàm lấy số lượt ôn tập của một study set
+  const getSetReviewCount = async (setId) => {
+    try {
+      const savedCount = await AsyncStorage.getItem(`reviewCount_${setId}`);
+      return savedCount ? parseInt(savedCount) : 0;
+    } catch (error) {
+      console.error('Error loading set review count:', error);
+      return 0;
+    }
+  };
+
+
+
+
+
   const checkToken = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -78,6 +121,7 @@ const FlashCardPage = () => {
   // Lấy userId và kiểm tra token khi component mount
   useEffect(() => {
     checkToken();
+    debugAsyncStorage(); // Debug AsyncStorage
     const getUserData = async () => {
       try {
         setLoading(true);
@@ -128,7 +172,6 @@ const FlashCardPage = () => {
 
           if (tokenUserId && tokenUserId !== userId.toString()) {
             console.warn('User ID mismatch between token and request');
-            // Sử dụng userId từ token thay vì từ state
             userId = parseInt(tokenUserId);
             setUserId(userId);
           }
@@ -146,14 +189,69 @@ const FlashCardPage = () => {
 
       // Handle different response formats: PagedResult with items, direct data, or array
       const studySets = response.items || response.data || response;
-      const formattedSets = studySets.map(set => ({
-        id: set.id.toString(),
-        title: set.name,
-        totalCards: set.flashcardNumber || set.flashcard_number || 0,
-        newCards: 0,
-        learningCards: 0,
-        reviewCards: 0,
-        flashCards: set.flashCards || set.flash_cards || []
+
+      // Tính toán stats cho từng study set
+      const formattedSets = await Promise.all(studySets.map(async (set) => {
+        let flashCards = set.flashCards || set.flash_cards || [];
+
+        // Nếu không có flashcards trong response, thử lấy từ API riêng
+        if (flashCards.length === 0 && (set.flashcardNumber || set.flashcard_number) > 0) {
+          try {
+            const flashcardsResponse = await FlashCardService.getFlashCardsByStudySetId(set.id);
+            flashCards = flashcardsResponse.data || flashcardsResponse || [];
+          } catch (error) {
+            console.error(`Error fetching flashcards for set ${set.id}:`, error);
+            flashCards = [];
+          }
+        }
+
+        // Tính stats dựa trên review count và số lượng flashcards
+        const totalCards = flashCards.length;
+        let stats;
+
+        console.log(`Set ${set.id}: totalCards=${totalCards}`);
+
+        if (totalCards === 0) {
+          stats = { newCards: 0, learningCards: 0, reviewCards: 0 };
+        } else {
+          // Lấy review count cho set này
+          const reviewCount = await getSetReviewCount(set.id);
+          console.log(`Set ${set.id}: reviewCount=${reviewCount}`);
+
+          if (reviewCount === 0) {
+            // Chưa học lần nào - tất cả là thẻ mới
+            stats = { newCards: totalCards, learningCards: 0, reviewCards: 0 };
+          } else if (reviewCount <= 2) {
+            // Giai đoạn đầu - chủ yếu đang học
+            const learningCards = Math.min(totalCards, Math.ceil(totalCards * 0.8));
+            const newCards = Math.max(0, totalCards - learningCards);
+            stats = { newCards, learningCards, reviewCards: 0 };
+          } else if (reviewCount <= 5) {
+            // Giai đoạn trung gian - một phần đang học, một phần ôn tập
+            const learningCards = Math.min(totalCards, Math.ceil(totalCards * 0.6));
+            const reviewCards = Math.min(totalCards - learningCards, Math.ceil(totalCards * 0.3));
+            const newCards = Math.max(0, totalCards - learningCards - reviewCards);
+            stats = { newCards, learningCards, reviewCards };
+          } else {
+            // Giai đoạn nâng cao - chủ yếu ôn tập
+            const reviewCards = Math.min(totalCards, Math.ceil(totalCards * 0.7));
+            const learningCards = Math.min(totalCards - reviewCards, Math.ceil(totalCards * 0.2));
+            const newCards = Math.max(0, totalCards - reviewCards - learningCards);
+            stats = { newCards, learningCards, reviewCards };
+          }
+        }
+
+        console.log(`Set ${set.id} final stats:`, stats);
+
+        return {
+          id: set.id.toString(),
+          title: set.name,
+          totalCards: set.flashcardNumber || set.flashcard_number || 0,
+          newCards: stats.newCards,
+          learningCards: stats.learningCards,
+          reviewCards: stats.reviewCards,
+          flashCards: flashCards
+        };
       }));
 
       setFlashcardSets(formattedSets);

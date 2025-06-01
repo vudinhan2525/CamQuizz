@@ -2,8 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import { ArrowLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import COLORS from '../../../constant/colors';
-import SCREENS from '../..';
+import SCREENS from '../../../screens/index';
+import ReportService from '../../../services/ReportService';
+import { validateToken } from '../../../services/AuthService';
+
+// Helper function for handling auth errors
+const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
+  Toast.show({
+    type: 'error',
+    text1: 'Lỗi xác thực',
+    text2: message
+  });
+  navigation.getParent()?.reset({
+    index: 0,
+    routes: [{ name: 'AuthStack' }],
+  });
+};
 
 const SelectQuizForFlashcard = () => {
   const navigation = useNavigation();
@@ -11,16 +27,57 @@ const SelectQuizForFlashcard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Giả lập tải dữ liệu bài kiểm tra từ API
-    setTimeout(() => {
-      setQuizzes([
-        { id: '1', title: 'Kiểm tra toán học', questionsCount: 10, date: '10/05/2023' },
-        { id: '2', title: 'Kiểm tra tiếng Anh', questionsCount: 15, date: '15/05/2023' },
-        { id: '3', title: 'Kiểm tra vật lý', questionsCount: 8, date: '20/05/2023' },
-      ]);
-      setLoading(false);
-    }, 1000);
+    fetchQuizHistory();
   }, []);
+
+  const fetchQuizHistory = async () => {
+    try {
+      if (!await validateToken()) {
+        handleAuthError(navigation);
+        return;
+      }
+
+      setLoading(true);
+      const response = await ReportService.getMyQuizHistory(50, 1); // Lấy 50 quiz gần nhất
+
+      if (response && response.data) {
+        // Format dữ liệu để hiển thị
+        const formattedQuizzes = response.data.map(quiz => {
+          console.log('Processing quiz:', quiz); // Debug log
+          return {
+            id: quiz.quiz_id ? quiz.quiz_id.toString() : 'unknown',
+            title: quiz.quiz_name || 'Tên quiz không xác định',
+            questionsCount: 'N/A', // QuizHistoryDto không có TotalQuestions
+            attemptCount: quiz.attempt_count || 0,
+            bestScore: quiz.best_score || 0,
+            lastAttemptDate: quiz.last_attempt_date ? new Date(quiz.last_attempt_date).toLocaleDateString('vi-VN') : 'N/A',
+            image: quiz.quiz_image || '',
+            genreName: quiz.genre_name || 'Không xác định'
+          };
+        });
+
+        console.log('Formatted quizzes:', formattedQuizzes); // Debug log
+        setQuizzes(formattedQuizzes);
+      } else {
+        console.log('No data in response:', response); // Debug log
+        setQuizzes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching quiz history:', error);
+
+      if (error.message === 'Unauthorized - Please log in again' || error.response?.status === 401) {
+        handleAuthError(navigation);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: 'Không thể tải danh sách quiz đã tham gia. Vui lòng thử lại sau.'
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectQuiz = (quiz) => {
     navigation.navigate(SCREENS.SELECT_QUESTIONS_FOR_FLASHCARD, { 
@@ -45,26 +102,33 @@ const SelectQuizForFlashcard = () => {
           <ActivityIndicator size="large" color={COLORS.BLUE} />
           <Text style={styles.loadingText}>Đang tải bài kiểm tra...</Text>
         </View>
-      ) : (
+      ) : quizzes.length > 0 ? (
         <>
-          <Text style={styles.instruction}>Chọn một bài kiểm tra để tạo bộ thẻ học bài:</Text>
-          
+          <Text style={styles.instruction}>Chọn một bài kiểm tra đã tham gia để tạo bộ thẻ học bài:</Text>
+
           <FlatList
             data={quizzes}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.quizItem}
                 onPress={() => handleSelectQuiz(item)}
               >
                 <Text style={styles.quizTitle}>{item.title}</Text>
-                <Text style={styles.quizInfo}>Số câu hỏi: {item.questionsCount}</Text>
-                <Text style={styles.quizInfo}>Ngày làm: {item.date}</Text>
+                <Text style={styles.quizGenre}>Thể loại: {item.genreName}</Text>
+                <Text style={styles.quizInfo}>Số lần làm: {item.attemptCount}</Text>
+                <Text style={styles.quizInfo}>Điểm cao nhất: {item.bestScore}</Text>
+                <Text style={styles.quizInfo}>Lần làm cuối: {item.lastAttemptDate}</Text>
               </TouchableOpacity>
             )}
             contentContainerStyle={styles.listContent}
           />
         </>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Bạn chưa tham gia quiz nào.</Text>
+          <Text style={styles.emptySubText}>Hãy tham gia một số quiz trước khi tạo flashcard từ kết quả.</Text>
+        </View>
       )}
     </View>
   );
@@ -121,6 +185,28 @@ const styles = StyleSheet.create({
   quizInfo: {
     color: '#666',
     marginBottom: 4,
+  },
+  quizGenre: {
+    color: COLORS.BLUE,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptySubText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 

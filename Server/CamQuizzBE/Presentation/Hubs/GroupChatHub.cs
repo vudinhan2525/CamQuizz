@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using System;
 using System.Collections.Generic;
@@ -60,21 +61,26 @@ public class GroupChatHub : Hub
         }
     }
 
-    private async Task LoadPreviousMessages(string groupId, DateTime? before = null, int pageSize = 20)
+    public async Task LoadMessageHistory(LoadMessageHistoryRequest request)
     {
         try
         {
-            var query = _context.ChatMessages
-                .Where(m => m.GroupId.ToString() == groupId);
-
-            if (before.HasValue)
+            if (string.IsNullOrEmpty(request.GroupId))
             {
-                query = query.Where(m => m.SentAt < before.Value);
+                throw new HubException("GroupId cannot be empty");
             }
 
+            var query = _context.ChatMessages
+                .Where(m => m.GroupId.ToString() == request.GroupId);
+
+            // Get total count for pagination info
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination
             var messages = await query
                 .OrderByDescending(m => m.SentAt)
-                .Take(pageSize)
+                .Skip((request.Page - 1) * request.Limit)
+                .Take(request.Limit)
                 .Include(m => m.User)
                 .OrderBy(m => m.SentAt)
                 .Select(m => new
@@ -88,18 +94,19 @@ public class GroupChatHub : Hub
                 })
                 .ToListAsync();
 
-            if (messages.Any())
+            var result = new
             {
-                await Clients.Caller.SendAsync("loadPreviousMessages", new
-                {
-                    Messages = messages,
-                    HasMore = messages.Count == pageSize
-                });
-            }
+                Messages = messages,
+                Page = request.Page,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)request.Limit),
+                TotalCount = totalCount
+            };
+
+            await Clients.Caller.SendAsync("loadMessageHistory", result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading previous messages for group {GroupId}", groupId);
+            _logger.LogError(ex, "Error loading previous messages for group {GroupId}", request.GroupId);
             throw;
         }
     }
@@ -131,8 +138,12 @@ public class GroupChatHub : Hub
                 UserId = request.UserId
             });
 
-            // Load previous messages for the user who just joined
-            await LoadPreviousMessages(request.GroupId);
+            // Automatically load messages when joining
+            await LoadMessageHistory(new LoadMessageHistoryRequest(
+                request.GroupId,
+                1,  // First page
+                20  // Default page size
+            ));
 
             _logger.LogInformation("Client {ConnectionId} (UserId: {UserId}) joined group {GroupId}",
                 Context.ConnectionId, request.UserId, request.GroupId);
@@ -285,25 +296,45 @@ public class GroupChatHub : Hub
         }
     }
 
-    public async Task GetUnreadMessageCount(string groupId, string userId)
+    public async Task GetUnreadMessageCounts(string userId)
     {
         try
         {
-            var unreadCount = await _context.ChatMessages
-                .Where(m => m.GroupId.ToString() == groupId &&
-                           m.UserId.ToString() != userId &&
-                           !m.MessageReads.Any(r => r.UserId.ToString() == userId))
-                .CountAsync();
+            // Get all groups the user is in
+            var userGroups = await _context.Members
+                .Where(m => m.UserId.ToString() == userId && m.Status == MemberStatus.Approved)
+                .Select(m => m.GroupId)
+                .ToListAsync();
 
-            await Clients.Caller.SendAsync("unreadMessageCount", new {
-                GroupId = groupId,
-                Count = unreadCount
-            });
+            var unreadCounts = new List<object>();
+            foreach (var groupId in userGroups)
+            {
+                var unreadCount = await _context.ChatMessages
+                    .Where(m => m.GroupId == groupId &&
+                               m.UserId.ToString() != userId &&
+                               !m.MessageReads.Any(r => r.UserId.ToString() == userId))
+                    .CountAsync();
+
+                if (unreadCount > 0)
+                {
+                    unreadCounts.Add(new
+                    {
+                        GroupId = groupId.ToString(),
+                        UnreadCount = unreadCount,
+                        LastMessageTime = await _context.ChatMessages
+                            .Where(m => m.GroupId == groupId)
+                            .OrderByDescending(m => m.SentAt)
+                            .Select(m => m.SentAt)
+                            .FirstOrDefaultAsync()
+                    });
+                }
+            }
+
+            await Clients.Caller.SendAsync("unreadMessageCounts", unreadCounts);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting unread message count for group {GroupId} and user {UserId}",
-                groupId, userId);
+            _logger.LogError(ex, "Error getting unread message counts for user {UserId}", userId);
             throw;
         }
     }
@@ -312,3 +343,7 @@ public class GroupChatHub : Hub
 public record JoinGroupRequest(string GroupId, string UserId);
 public record LeaveGroupRequest(string GroupId, string? UserId);
 public record SendMessageRequest(string GroupId, string UserId, string Message);
+public record LoadMessageHistoryRequest(
+    string GroupId,
+    int Page = 1,
+    int Limit = 20);

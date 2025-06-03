@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using CamQuizzBE.Domain.Enums;
+
 namespace CamQuizzBE.Applications.DTOs.Quizzes;
 
 public class QuizzesDto
@@ -11,6 +14,9 @@ public class QuizzesDto
     public string Description { get; set; } = string.Empty;
     public int GenreId { get; set; }
     public int UserId { get; set; }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public QuizStatus Status { get; set; } = QuizStatus.Public;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

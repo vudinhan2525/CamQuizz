@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace CamQuizzBE.Applications.DTOs.Groups;
 
@@ -12,5 +13,6 @@ public class ShareQuizDto
     /// </summary>
     [Required(ErrorMessage = "Quiz ID is required")]
     [Range(1, int.MaxValue, ErrorMessage = "Quiz ID must be greater than 0")]
+    [JsonPropertyName("quizId")]
     public int QuizId { get; set; }
 }

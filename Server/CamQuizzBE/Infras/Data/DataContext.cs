@@ -28,6 +28,7 @@ IdentityDbContext<
     public DbSet<FlashCard> FlashCards { get; set; }
     public DbSet<GroupQuiz> GroupQuizzes { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }
+    public DbSet<MessageRead> MessageReads { get; set; }
     public DbSet<GroupShared> GroupShared { get; set; }
     public DbSet<QuizAttempts> QuizAttempts { get; set; }
     public DbSet<UserAnswers> UserAnswers { get; set; }
@@ -192,6 +193,19 @@ IdentityDbContext<
             .HasOne(m => m.User)
             .WithMany()
             .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        // MessageRead relationships
+        modelBuilder.Entity<MessageRead>()
+            .HasOne(mr => mr.Message)
+            .WithMany(m => m.MessageReads)
+            .HasForeignKey(mr => mr.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<MessageRead>()
+            .HasOne(mr => mr.User)
+            .WithMany()
+            .HasForeignKey(mr => mr.UserId)
             .OnDelete(DeleteBehavior.NoAction);
 
         // GroupQuiz relationships

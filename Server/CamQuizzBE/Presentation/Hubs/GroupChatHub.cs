@@ -60,28 +60,41 @@ public class GroupChatHub : Hub
         }
     }
 
-    private async Task LoadPreviousMessages(string groupId)
+    private async Task LoadPreviousMessages(string groupId, DateTime? before = null, int pageSize = 20)
     {
         try
         {
-            var messages = await _context.ChatMessages
-                .Where(m => m.GroupId.ToString() == groupId)
+            var query = _context.ChatMessages
+                .Where(m => m.GroupId.ToString() == groupId);
+
+            if (before.HasValue)
+            {
+                query = query.Where(m => m.SentAt < before.Value);
+            }
+
+            var messages = await query
                 .OrderByDescending(m => m.SentAt)
-                .Take(50)  // Load last 50 messages
+                .Take(pageSize)
                 .Include(m => m.User)
                 .OrderBy(m => m.SentAt)
                 .Select(m => new
                 {
+                    MessageId = m.Id,
                     FromUserId = m.UserId.ToString(),
                     Message = m.Content,
                     Timestamp = m.SentAt,
-                    UserName = m.User.FirstName + " " + m.User.LastName
+                    UserName = m.User.FirstName + " " + m.User.LastName,
+                    IsRead = m.MessageReads.Any(r => r.UserId.ToString() == Context.UserIdentifier)
                 })
                 .ToListAsync();
 
             if (messages.Any())
             {
-                await Clients.Caller.SendAsync("loadPreviousMessages", messages);
+                await Clients.Caller.SendAsync("loadPreviousMessages", new
+                {
+                    Messages = messages,
+                    HasMore = messages.Count == pageSize
+                });
             }
         }
         catch (Exception ex)
@@ -173,59 +186,124 @@ public class GroupChatHub : Hub
     {
         try
         {
-            if (string.IsNullOrEmpty(request.GroupId))
-            {
-                throw new HubException("GroupId cannot be empty");
-            }
-            if (string.IsNullOrEmpty(request.UserId))
-            {
-                throw new HubException("UserId cannot be empty");
-            }
-            if (string.IsNullOrEmpty(request.Message))
-            {
-                throw new HubException("Message cannot be empty");
-            }
-
-            if (!_groups.TryGetValue(request.GroupId, out var connections) || !connections.Contains(Context.ConnectionId))
-            {
-                throw new HubException("You are not a member of this group");
-            }
-
-            var timestamp = DateTime.UtcNow;
-
-            // Save message to database
-            var chatMessage = new ChatMessage
-            {
-                GroupId = int.Parse(request.GroupId),
-                UserId = int.Parse(request.UserId),
-                Content = request.Message,
-                SentAt = timestamp
-            };
-
-            _context.ChatMessages.Add(chatMessage);
-            await _context.SaveChangesAsync();
-
-            // Get user name
-            var user = await _context.Users.FindAsync(int.Parse(request.UserId));
-            var userName = user != null ? $"{user.FirstName} {user.LastName}" : "Unknown User";
-
-            await Clients.Group(request.GroupId).SendAsync("receiveMessage", new
-            {
-                FromConnectionId = Context.ConnectionId,
-                FromUserId = request.UserId,
-                Message = request.Message,
-                Timestamp = timestamp,
-                UserName = userName
-            });
-
-            _logger.LogInformation("Message sent in group {GroupId} from {ConnectionId} (UserId: {UserId})",
-                request.GroupId, Context.ConnectionId, request.UserId);
+            await ValidateMessageRequest(request);
+            var chatMessage = await SaveMessage(request);
+            await NotifyNewMessage(request, chatMessage);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending message in group {GroupId} from {ConnectionId} (UserId: {UserId})",
                 request.GroupId, Context.ConnectionId, request.UserId);
             await Clients.Caller.SendAsync("error", new { Message = "Error sending message", Error = ex.Message });
+            throw;
+        }
+    }
+
+    private async Task ValidateMessageRequest(SendMessageRequest request)
+    {
+        if (string.IsNullOrEmpty(request.GroupId))
+        {
+            throw new HubException("GroupId cannot be empty");
+        }
+        if (string.IsNullOrEmpty(request.UserId))
+        {
+            throw new HubException("UserId cannot be empty");
+        }
+        if (string.IsNullOrEmpty(request.Message))
+        {
+            throw new HubException("Message cannot be empty");
+        }
+
+        if (!_groups.TryGetValue(request.GroupId, out var connections) || !connections.Contains(Context.ConnectionId))
+        {
+            throw new HubException("You are not a member of this group");
+        }
+    }
+
+    private async Task<ChatMessage> SaveMessage(SendMessageRequest request)
+    {
+        var timestamp = DateTime.UtcNow;
+        var chatMessage = new ChatMessage
+        {
+            GroupId = int.Parse(request.GroupId),
+            UserId = int.Parse(request.UserId),
+            Content = request.Message,
+            SentAt = timestamp
+        };
+
+        _context.ChatMessages.Add(chatMessage);
+        await _context.SaveChangesAsync();
+        return chatMessage;
+    }
+
+    private async Task NotifyNewMessage(SendMessageRequest request, ChatMessage chatMessage)
+    {
+        var user = await _context.Users.FindAsync(int.Parse(request.UserId));
+        var userName = user != null ? $"{user.FirstName} {user.LastName}" : "Unknown User";
+
+        await Clients.Group(request.GroupId).SendAsync("receiveMessage", new
+        {
+            MessageId = chatMessage.Id,
+            FromConnectionId = Context.ConnectionId,
+            FromUserId = request.UserId,
+            Message = request.Message,
+            Timestamp = chatMessage.SentAt,
+            UserName = userName
+        });
+
+        _logger.LogInformation("Message sent in group {GroupId} from {ConnectionId} (UserId: {UserId})",
+            request.GroupId, Context.ConnectionId, request.UserId);
+    }
+
+    public async Task MarkMessagesAsRead(string groupId, string userId)
+    {
+        try
+        {
+            var unreadMessages = await _context.ChatMessages
+                .Where(m => m.GroupId.ToString() == groupId && m.UserId.ToString() != userId &&
+                           !m.MessageReads.Any(r => r.UserId.ToString() == userId))
+                .ToListAsync();
+
+            foreach (var message in unreadMessages)
+            {
+                _context.MessageReads.Add(new MessageRead
+                {
+                    MessageId = message.Id,
+                    UserId = int.Parse(userId),
+                    ReadAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            await Clients.Group(groupId).SendAsync("messagesRead", new { UserId = userId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error marking messages as read in group {GroupId} for user {UserId}",
+                groupId, userId);
+            throw;
+        }
+    }
+
+    public async Task GetUnreadMessageCount(string groupId, string userId)
+    {
+        try
+        {
+            var unreadCount = await _context.ChatMessages
+                .Where(m => m.GroupId.ToString() == groupId &&
+                           m.UserId.ToString() != userId &&
+                           !m.MessageReads.Any(r => r.UserId.ToString() == userId))
+                .CountAsync();
+
+            await Clients.Caller.SendAsync("unreadMessageCount", new {
+                GroupId = groupId,
+                Count = unreadCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting unread message count for group {GroupId} and user {UserId}",
+                groupId, userId);
             throw;
         }
     }

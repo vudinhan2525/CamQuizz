@@ -3,6 +3,7 @@ using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Applications.DTOs.Questions;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -96,12 +97,67 @@ public class GameState
     public bool IsEnded { get; set; }
     public DateTime? LastAnswerTime { get; set; }
 }
-
 public class QuizHub : Hub
 {
     private static readonly Dictionary<string, RoomDto> _rooms = new();
     private static readonly Dictionary<string, GameState> _games = new();
     private static readonly Random _random = new();
+
+    private async Task CheckQuizAccessPermissions(int quizId, int userId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+
+        var quiz = await context.Quizzes
+            .FirstOrDefaultAsync(q => q.Id == quizId);
+
+        if (quiz == null)
+        {
+            throw new Exception("Quiz not found");
+        }
+
+        switch (quiz.Status)
+        {
+            case QuizStatus.Public:
+                // Everyone can access public quizzes
+                _logger.LogInformation("Public quiz {QuizId} accessed by user {UserId}",
+                    quizId, userId);
+                break;
+
+            case QuizStatus.Private:
+                // Check if user is quiz owner
+                bool isOwner = quiz.UserId == userId;
+
+                if (!isOwner)
+                {
+                    // Check if quiz is shared with any group where user is an approved member
+                    var hasAccess = await context.GroupQuizzes
+                        .Where(gs => gs.QuizId == quizId)
+                        .Join(context.Members.Where(m => m.Status == MemberStatus.Approved),
+                            gs => gs.GroupId,
+                            m => m.GroupId,
+                            (gs, m) => new { gs, m })
+                        .AnyAsync(x => x.m.UserId == userId);
+
+                    if (!hasAccess)
+                    {
+                        _logger.LogWarning("User {UserId} attempted to access private quiz {QuizId} without permission",
+                            userId, quizId);
+                        throw new Exception("You don't have permission to access this quiz");
+                    }
+                }
+                
+                _logger.LogInformation("Access granted for private quiz {QuizId} to user {UserId}",
+                    quizId, userId);
+                break;
+
+            default:
+                _logger.LogWarning("Unknown quiz status {Status} for quiz {QuizId}",
+                    quiz.Status, quizId);
+                throw new Exception("Invalid quiz status");
+        }
+    }
+
 
     private static string GenerateRoomId()
     {
@@ -249,6 +305,8 @@ public class QuizHub : Hub
                 throw new Exception("Quiz or user not found");
             }
 
+            await CheckQuizAccessPermissions(request.QuizId, request.UserId);
+
             var roomId = GenerateRoomId();
             var room = new RoomDto
             {
@@ -298,6 +356,8 @@ public class QuizHub : Hub
             }
 
             var room = _rooms[request.RoomId];
+            
+            await CheckQuizAccessPermissions(room.QuizId, request.UserId);
 
             if (!room.PlayerList.Any(p => p.Id == request.UserId))
             {
@@ -834,7 +894,8 @@ public class QuizHub : Hub
                     UserId = p.Id,
                     Name = p.Name,
                     Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
-                }).OrderByDescending(p => p.Score).ToList();
+                }).OrderByDescending(p => p.Score)
+                  .ToList();
 
                 //await Clients.Group(request.RoomId).SendAsync("showingRanking");
                 //await Task.Delay(TimeSpan.FromSeconds(1));
@@ -1125,7 +1186,7 @@ public class QuizHub : Hub
                 UserId = p.Id,
                 Name = p.Name,
                 Score = gameState.PlayerScores.GetValueOrDefault(p.Id, 0)
-            }).ToList();
+            }).OrderByDescending(p => p.Score).ToList();
 
             //await hubContext.Clients.Group(roomId).SendAsync("showingRanking");
             // await Task.Delay(TimeSpan.FromSeconds(1));

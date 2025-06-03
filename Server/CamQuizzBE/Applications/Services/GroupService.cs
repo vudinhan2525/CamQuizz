@@ -57,25 +57,6 @@ public class GroupService : IGroupService
         return await _groupRepo.GetMemberAsync(groupId, userId);
     }
 
-    public async Task UpdateMemberStatusAsync(int groupId, int userId, UpdateMemberStatusDto updateMemberStatusDto)
-    {
-        if (groupId <= 0 || userId <= 0)
-            throw new ValidatorException("Invalid group ID or user ID");
-
-        if (updateMemberStatusDto == null)
-            throw new ArgumentNullException(nameof(updateMemberStatusDto));
-
-        var group = await _groupRepo.GetGroupByIdAsync(groupId);
-        if (group == null)
-            throw new NotFoundException("Group not found");
-
-        var member = await _groupRepo.GetMemberAsync(groupId, userId);
-        if (member == null)
-            throw new NotFoundException("Member not found in group");
-
-        member.Status = updateMemberStatusDto.Status;
-        await _groupRepo.SaveChangesAsync();
-    }
     public async Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId)
     {
         if (userId <= 0)
@@ -249,7 +230,7 @@ public class GroupService : IGroupService
         return await _groupRepo.GetPendingMembersAsync(groupId);
     }
 
-    public async Task UpdateMemberStatusAsync(int groupId, int userId, MemberStatus newStatus)
+    public async Task<MemberDto> UpdateMemberStatusAsync(int groupId, int userId, MemberStatus newStatus)
     {
         if (groupId <= 0 || userId <= 0)
             throw new ValidatorException("Invalid group ID or user ID");
@@ -262,8 +243,27 @@ public class GroupService : IGroupService
         if (member == null)
             throw new NotFoundException("Member not found in group");
 
+        // Only allow status changes from Pending to Approved/Rejected
+        if (member.Status != MemberStatus.Pending)
+            throw new ValidatorException("Can only update status for pending memberships");
+
         member.Status = newStatus;
         await _groupRepo.SaveChangesAsync();
+
+        // Return updated member info
+        var user = await _userRepo.GetUserByIdAsync(userId);
+        if (user == null)
+            throw new NotFoundException("User not found");
+
+        return new MemberDto
+        {
+            UserId = userId,
+            GroupId = groupId,
+            Status = newStatus,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email
+        };
     }
 
     public async Task AddMemberAsync(int groupId, int userId)
@@ -435,30 +435,29 @@ public class GroupService : IGroupService
     {
         // Get all groups where user is a member
         var memberGroups = await _groupRepo.GetMyGroupsAsync(userId);
-        var groupIds = memberGroups.Select(g => g.Id).ToList();
-
-        if (!groupIds.Any())
+        if (!memberGroups.Any())
             return new List<SharedQuizDto>();
 
-        // Get all shared quizzes for these groups in a single query
-        var sharedQuizzes = await _groupRepo.GetSharedQuizzesAsync(groupIds);
+        // Execute the query and materialize it
+        var sharedQuizzes = (await _groupRepo.GetSharedQuizzesAsync(
+            memberGroups.Select(g => g.Id).ToList())).ToList();
 
         return sharedQuizzes
             .OrderByDescending(gq => gq.SharedAt)
             .Select(gq => new SharedQuizDto
             {
                 QuizId = gq.QuizId,
-                QuizName = gq.Quiz.Name,
-                Image = gq.Quiz.Image,
-                Duration = gq.Quiz.Duration,
-                NumberOfQuestions = gq.Quiz.NumberOfQuestions,
+                QuizName = gq.Quiz?.Name ?? "",
+                Image = gq.Quiz?.Image ?? string.Empty,
+                Duration = gq.Quiz?.Duration ?? 0,
+                NumberOfQuestions = gq.Quiz?.NumberOfQuestions ?? 0,
                 SharedById = gq.SharedById,
-                SharedByName = $"{gq.SharedBy.FirstName} {gq.SharedBy.LastName}",
+                SharedByName = gq.SharedBy != null ?
+                    $"{gq.SharedBy.FirstName} {gq.SharedBy.LastName}".Trim() : "",
                 SharedAt = gq.SharedAt,
-                Status = gq.Quiz.Status,
-                // Add group information
+                Status = gq.Quiz?.Status ?? QuizStatus.Public,
                 GroupId = gq.GroupId,
-                GroupName = gq.Group.Name
+                GroupName = gq.Group?.Name ?? ""
             })
             .ToList();
     }

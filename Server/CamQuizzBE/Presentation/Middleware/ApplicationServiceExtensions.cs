@@ -36,6 +36,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IQuizReportService, QuizReportService>();
         // Repos
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IQuizzesRepository, QuizzesRepository>();

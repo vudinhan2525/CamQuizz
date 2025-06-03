@@ -15,6 +15,7 @@ IdentityDbContext<
 >(options)
 {
     public DbSet<Quizzes> Quizzes { get; set; }
+    public DbSet<QuizReport> QuizReports { get; set; }
     public DbSet<Genres> Genres { get; set; }
     public DbSet<RevenueRecords> RevenueRecords { get; set; }
     public DbSet<Answers> Answers { get; set; }
@@ -267,7 +268,33 @@ IdentityDbContext<
             .HasForeignKey(r => r.PackageId)
             .OnDelete(DeleteBehavior.Cascade);
         #endregion
+        #region QuizReport Relationships
+        modelBuilder.Entity<QuizReport>()
+            .HasOne(r => r.Quiz)
+            .WithMany()
+            .HasForeignKey(r => r.QuizId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<QuizReport>()
+            .HasOne(r => r.Reporter)
+            .WithMany()
+            .HasForeignKey(r => r.ReporterId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<QuizReport>()
+            .HasOne(r => r.ResolvedBy)
+            .WithMany()
+            .HasForeignKey(r => r.ResolvedById)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        modelBuilder.Entity<QuizReport>()
+            .Property(r => r.Status)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<QuizReport>()
+            .Property(r => r.Action)
+            .HasConversion<string>();
+        #endregion
     }
 }
-
 

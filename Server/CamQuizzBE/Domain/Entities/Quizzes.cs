@@ -31,6 +31,9 @@ public class Quizzes
     [Column("question_nums")]
     public int NumberOfQuestions { get; set; } = 0;
 
+    [Column("is_deleted")]
+    public bool IsDeleted { get; set; } = false;
+
     public void IncrementAttendance(int count)
     {
         NumberOfAttended += count;

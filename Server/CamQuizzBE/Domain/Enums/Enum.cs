@@ -18,4 +18,18 @@ namespace CamQuizzBE.Domain.Enums
         Approved,
         Rejected
     }
+
+    public enum ReportStatus
+    {
+        Pending,
+        Resolved,
+        Dismissed
+    }
+
+    public enum QuizReportAction
+    {
+        Keep,           // No action needed
+        SoftDelete,     // Mark as deleted
+        HardDelete     // Permanent delete
+    }
 }

@@ -40,6 +40,10 @@ const SCREENS = {
     ADMIN_STACK: 'AdminStack',
     SELECT_QUIZ_FOR_FLASHCARD: 'SelectQuizForFlashcard',
     SELECT_QUESTIONS_FOR_FLASHCARD: 'SelectQuestionsForFlashcard',
+    REPORT_HISTORY: 'Lịch sử báo cáo',
+    USER_PACKAGE: 'Gói',
+    REVENUE: 'Doanh thu',
+    CREATE_PACKAGE: 'Tạo gói',
 };
   
   export default SCREENS;

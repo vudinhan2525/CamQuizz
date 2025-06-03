@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,96 +12,54 @@ import {
   Modal,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ToachableOpacity
 } from 'react-native';
-import COLORS from '../../constant/colors';
+import COLORS from '../../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
+import SCREENS from '../../index'
+import PackageService from '../../../services/PackageService';
+const defaultPackage = {
+  id: -1,
+  name: 'Mặc định',
+  max_number_of_quizz: 2,
+  max_number_of_attended: 10,
+  price: 0,
+  isActive: true
+};
 
-export const Package = () => {
-  const [packages, setPackages] = useState([]);
+export const Package = ({ navigation }) => {
+  const [packages, setPackages] = useState([defaultPackage]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [editedPackage, setEditedPackage] = useState({
     name: '',
+    max_number_of_quizz: 0,
+    max_number_of_attended: 0,
     price: 0,
     duration: 30,
-    features: []
   });
-  const [newFeature, setNewFeature] = useState('');
-
-  // Mock data for development
-  const mockPackages = [
-    {
-      id: 1,
-      name: 'Gói Cơ Bản',
-      price: 0,
-      duration: 30, // days
-      features: ['Tạo 5 bài kiểm tra', 'Tham gia không giới hạn', 'Xem báo cáo cơ bản'],
-      isActive: true,
-      isFeatured: false
-    },
-    {
-      id: 2,
-      name: 'Gói Nâng Cao',
-      price: 99000,
-      duration: 30,
-      features: ['Tạo không giới hạn bài kiểm tra', 'Tham gia không giới hạn', 'Xem báo cáo chi tiết', 'Tạo nhóm học tập'],
-      isActive: true,
-      isFeatured: true
-    },
-    {
-      id: 3,
-      name: 'Gói Premium',
-      price: 199000,
-      duration: 30,
-      features: ['Tất cả tính năng của gói Nâng Cao', 'Ưu tiên hỗ trợ', 'Xuất báo cáo PDF', 'Tùy chỉnh giao diện'],
-      isActive: true,
-      isFeatured: true
-    },
-    {
-      id: 4,
-      name: 'Gói Doanh Nghiệp',
-      price: 499000,
-      duration: 30,
-      features: ['Tất cả tính năng của gói Premium', 'Quản lý nhóm', 'API tích hợp', 'Hỗ trợ 24/7'],
-      isActive: false,
-      isFeatured: false
-    }
-  ];
-
-  useEffect(() => {
-    fetchPackages();
-  }, [searchQuery]);
-
-  const fetchPackages = async () => {
-    setLoading(true);
-    try {
-      // Mock API response
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Filter mock data based on search query
-      let filteredPackages = [...mockPackages];
-
-      if (searchQuery) {
-        filteredPackages = filteredPackages.filter(pkg =>
-          pkg.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+  React.useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        // Simulate fetching packages from an API
+        const packagesData = await PackageService.getAllPackages();
+        console.log('Fetched packages:', packagesData);
+        setPackages([defaultPackage, ...packagesData]);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching packages:', error);
+        setLoading(false);
+        Alert.alert('Error', 'Không thể tải gói dịch vụ. Vui lòng thử lại sau.');
       }
-
-      setPackages(filteredPackages);
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-      Alert.alert('Error', 'Failed to load packages. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSearch = () => {
+    };
     fetchPackages();
-  };
+  }, []);
+
+
+
+
 
   const togglePackageStatus = (id) => {
     setPackages(prevPackages =>
@@ -132,68 +90,68 @@ export const Package = () => {
   const handleEditPackage = (pkg) => {
     setSelectedPackage(pkg);
     setEditedPackage({
-      name: pkg.name,
-      price: pkg.price,
-      duration: pkg.duration,
-      features: [...pkg.features]
+      name: pkg.name || '',
+      price: pkg.price || 0,
+      max_number_of_quizz: pkg.max_number_of_quizz || 0,
+      max_number_of_attended: pkg.max_number_of_attended || 0,
     });
     setEditModalVisible(true);
   };
 
-  const handleSavePackage = () => {
-    if (!editedPackage.name.trim()) {
-      Alert.alert('Lỗi', 'Tên gói không được để trống');
-      return;
+  const handleSavePackage = async () => {
+    try {
+      if (!editedPackage.name.trim()) {
+        Alert.alert('Lỗi', 'Tên gói không được để trống');
+        return;
+      }
+
+      if (editedPackage.price < 0) {
+        Alert.alert('Lỗi', 'Giá gói không được âm');
+        return;
+      }
+
+      if (editedPackage.max_number_of_quizz <= 0) {
+        Alert.alert('Lỗi', 'Số quiz tối đa phải lớn hơn 0');
+        return;
+      }
+
+      if (editedPackage.max_number_of_attended <= 0) {
+        Alert.alert('Lỗi', 'Số người tham gia tối đa phải lớn hơn 0');
+        return;
+      }
+
+      // Call API to update package
+      const updatePkt = await PackageService.updatePackage(selectedPackage.id, {
+        id: selectedPackage.id,
+        name: editedPackage.name,
+        price: editedPackage.price,
+        max_number_of_quizz: editedPackage.max_number_of_quizz,
+        max_number_of_attended: editedPackage.max_number_of_attended,
+      });
+      console.log('Updated package:', updatePkt);
+      // Update local state
+      setPackages(prevPackages =>
+        prevPackages.map(pkg =>
+          pkg.id === selectedPackage.id ? {
+            updatePkt
+          } : pkg
+        )
+      );
+
+      Alert.alert('Thành công', `Gói ${editedPackage.name} đã được cập nhật`);
+      setEditModalVisible(false);
+
+      // Refresh package list
+      const updatedPackages = await PackageService.getAllPackages();
+      setPackages([defaultPackage, ...updatedPackages]);
+
+    } catch (error) {
+      console.error('Error updating package:', error);
+      Alert.alert('Lỗi', 'Không thể cập nhật gói dịch vụ. Vui lòng thử lại sau.');
     }
-
-    if (editedPackage.price < 0) {
-      Alert.alert('Lỗi', 'Giá gói không được âm');
-      return;
-    }
-
-    if (editedPackage.duration <= 0) {
-      Alert.alert('Lỗi', 'Thời hạn gói phải lớn hơn 0');
-      return;
-    }
-
-    if (editedPackage.features.length === 0) {
-      Alert.alert('Lỗi', 'Gói phải có ít nhất một tính năng');
-      return;
-    }
-
-    setPackages(prevPackages =>
-      prevPackages.map(pkg =>
-        pkg.id === selectedPackage.id ? {
-          ...pkg,
-          name: editedPackage.name,
-          price: editedPackage.price,
-          duration: editedPackage.duration,
-          features: editedPackage.features
-        } : pkg
-      )
-    );
-
-    Alert.alert('Thành công', `Gói ${editedPackage.name} đã được cập nhật`);
-    setEditModalVisible(false);
   };
 
-  const handleAddFeature = () => {
-    if (!newFeature.trim()) return;
 
-    setEditedPackage(prev => ({
-      ...prev,
-      features: [...prev.features, newFeature.trim()]
-    }));
-
-    setNewFeature('');
-  };
-
-  const handleRemoveFeature = (index) => {
-    setEditedPackage(prev => ({
-      ...prev,
-      features: prev.features.filter((_, i) => i !== index)
-    }));
-  };
 
   const renderPackageItem = ({ item }) => (
     <View style={styles.packageCard}>
@@ -201,65 +159,37 @@ export const Package = () => {
         <View>
           <Text style={styles.packageName}>{item.name}</Text>
           <Text style={styles.packagePrice}>
-            {item.price === 0 ? 'Miễn phí' : `${item.price.toLocaleString('vi-VN')} VNĐ`}
+            {item.price === 0 ? 'Miễn phí' : `${item.price?.toLocaleString('vi-VN')} VNĐ`}
           </Text>
         </View>
-        <View style={styles.packageBadges}>
-          {item.isFeatured && (
-            <View style={styles.featuredBadge}>
-              <Text style={styles.featuredText}>Nổi bật</Text>
-            </View>
-          )}
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: item.isActive ? COLORS.GREEN : COLORS.ORANGE }
-          ]}>
-            <Text style={styles.statusText}>
-              {item.isActive ? 'Hoạt động' : 'Vô hiệu'}
-            </Text>
-          </View>
-        </View>
-      </View>
+        <View style={{ flexDirection: 'column', alignItems: 'flex-end' }}>
+          {item.price !== 0 && (
+            <TouchableOpacity
+              style={styles.editIconButton}
+              onPress={() => handleDeletePackage(item.id, item.name)}
 
-      <View style={styles.packageDetails}>
-        <View style={styles.durationRow}>
-          <Text style={styles.packageDuration}>Thời hạn: {item.duration} ngày</Text>
+            >
+              <Ionicons name="close" size={24} color={COLORS.RED} />
+            </TouchableOpacity>)}
           <TouchableOpacity
             style={styles.editIconButton}
             onPress={() => handleEditPackage(item)}
           >
             <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
           </TouchableOpacity>
+
         </View>
-        <Text style={styles.featuresTitle}>Tính năng:</Text>
-        {item.features.map((feature, index) => (
-          <View key={index} style={styles.featureItem}>
-            <Ionicons name="checkmark-circle" size={16} color={COLORS.BLUE} />
-            <Text style={styles.featureText}>{feature}</Text>
-          </View>
-        ))}
       </View>
 
-      <View style={styles.packageActions}>
-        <View style={styles.actionRow}>
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Trạng thái:</Text>
-            <Switch
-              value={item.isActive}
-              onValueChange={() => togglePackageStatus(item.id)}
-              trackColor={{ false: COLORS.GRAY_LIGHT, true: COLORS.GREEN }}
-              thumbColor={COLORS.WHITE}
-            />
+      <View style={styles.packageDetails}>
+        <View style={styles.limitsContainer}>
+          <View style={styles.limitItem}>
+            <Text style={styles.limitLabel}>Số quiz tối đa:</Text>
+            <Text style={styles.limitValue}>{item.max_number_of_quizz}</Text>
           </View>
-
-          <View style={styles.toggleContainer}>
-            <Text style={styles.toggleLabel}>Nổi bật:</Text>
-            <Switch
-              value={item.isFeatured}
-              onValueChange={() => toggleFeatured(item.id)}
-              trackColor={{ false: COLORS.GRAY_LIGHT, true: COLORS.BLUE }}
-              thumbColor={COLORS.WHITE}
-            />
+          <View style={styles.limitItem}>
+            <Text style={styles.limitLabel}>Số người tham gia tối đa:</Text>
+            <Text style={styles.limitValue}>{item.max_number_of_attended}</Text>
           </View>
         </View>
       </View>
@@ -286,7 +216,7 @@ export const Package = () => {
           </View>
 
           <ScrollView style={styles.modalBody}>
-            <View style={styles.inputGroup}>
+            {editedPackage?.name !== 'Mặc định' ? (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Tên gói:</Text>
               <TextInput
                 style={styles.input}
@@ -294,13 +224,24 @@ export const Package = () => {
                 onChangeText={(text) => setEditedPackage(prev => ({ ...prev, name: text }))}
                 placeholder="Nhập tên gói"
               />
-            </View>
+            </View>) :
+              (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Tên gói:</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={'Mặc định'}
+                    placeholder="Nhập tên gói"
+                    editable={false}
+                  />
+                </View>
+              )}
 
-            <View style={styles.inputGroup}>
+            {editedPackage?.name !== 'Mặc định' && <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Giá (VNĐ):</Text>
               <TextInput
                 style={styles.input}
-                value={editedPackage.price.toString()}
+                value={editedPackage.price?.toString()}
                 onChangeText={(text) => {
                   const numValue = text === '' ? 0 : parseInt(text.replace(/[^0-9]/g, ''), 10);
                   setEditedPackage(prev => ({ ...prev, price: isNaN(numValue) ? 0 : numValue }));
@@ -308,47 +249,36 @@ export const Package = () => {
                 keyboardType="numeric"
                 placeholder="Nhập giá gói"
               />
-            </View>
+            </View>}
+
+
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Thời hạn (ngày):</Text>
+              <Text style={styles.inputLabel}>Số quiz tối đa:</Text>
               <TextInput
                 style={styles.input}
-                value={editedPackage.duration.toString()}
+                value={editedPackage.max_number_of_quizz?.toString()}
                 onChangeText={(text) => {
                   const numValue = text === '' ? 0 : parseInt(text.replace(/[^0-9]/g, ''), 10);
-                  setEditedPackage(prev => ({ ...prev, duration: isNaN(numValue) ? 0 : numValue }));
+                  setEditedPackage(prev => ({ ...prev, max_number_of_quizz: isNaN(numValue) ? 0 : numValue }));
                 }}
                 keyboardType="numeric"
-                placeholder="Nhập thời hạn gói"
+                placeholder="Nhập số quiz tối đa"
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Tính năng:</Text>
-              {editedPackage.features.map((feature, index) => (
-                <View key={index} style={styles.featureEditItem}>
-                  <Text style={styles.featureEditText}>{feature}</Text>
-                  <TouchableOpacity onPress={() => handleRemoveFeature(index)}>
-                    <Ionicons name="close-circle" size={20} color={COLORS.RED} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              <View style={styles.addFeatureContainer}>
-                <TextInput
-                  style={styles.featureInput}
-                  value={newFeature}
-                  onChangeText={setNewFeature}
-                  placeholder="Thêm tính năng mới"
-                />
-                <TouchableOpacity
-                  style={styles.addFeatureButton}
-                  onPress={handleAddFeature}
-                >
-                  <Ionicons name="add" size={20} color={COLORS.WHITE} />
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.inputLabel}>Số người tham gia tối đa:</Text>
+              <TextInput
+                style={styles.input}
+                value={editedPackage.max_number_of_attended?.toString()}
+                onChangeText={(text) => {
+                  const numValue = text === '' ? 0 : parseInt(text.replace(/[^0-9]/g, ''), 10);
+                  setEditedPackage(prev => ({ ...prev, max_number_of_attended: isNaN(numValue) ? 0 : numValue }));
+                }}
+                keyboardType="numeric"
+                placeholder="Nhập số người tham gia tối đa"
+              />
             </View>
           </ScrollView>
 
@@ -363,61 +293,85 @@ export const Package = () => {
     </Modal>
   );
 
+  const handleCreatePackage = useCallback(() => {
+    navigation.navigate(SCREENS.CREATE_PACKAGE);
+  }, [navigation]);
+
+  const handleViewRevenue = useCallback(() => {
+    navigation.navigate(SCREENS.REVENUE);
+  }, [navigation]);
+
+  const handleDeletePackage = async (packageId, packageName) => {
+    try {
+      Alert.alert(
+        'Xác nhận xóa',
+        `Bạn có chắc chắn muốn xóa gói "${packageName}"?`,
+        [
+          {
+            text: 'Hủy',
+            style: 'cancel',
+          },
+          {
+            text: 'Xóa',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await PackageService.deletePackage(packageId);
+
+                // Update local state
+                setPackages(prevPackages =>
+                  prevPackages.filter(pkg => pkg.id !== packageId)
+                );
+
+                Alert.alert('Thành công', `Đã xóa gói ${packageName}`);
+              } catch (error) {
+                console.error('Error deleting package:', error);
+                Alert.alert('Lỗi', 'Không thể xóa gói dịch vụ. Vui lòng thử lại sau.');
+              }
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      console.error('Error handling delete:', error);
+      Alert.alert('Lỗi', 'Đã xảy ra lỗi. Vui lòng thử lại sau.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        {/* <Text style={styles.title}>Quản lý gói dịch vụ</Text> */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm gói..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-          />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Ionicons name="search" size={20} color={COLORS.WHITE} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{packages.length}</Text>
-          <Text style={styles.statLabel}>Tổng số gói</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {packages.filter(pkg => pkg.isActive).length}
-          </Text>
-          <Text style={styles.statLabel}>Gói đang hoạt động</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {packages.filter(pkg => pkg.isFeatured).length}
-          </Text>
-          <Text style={styles.statLabel}>Gói nổi bật</Text>
-        </View>
-      </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.BLUE} />
-        </View>
-      ) : (
-        <FlatList
-          data={packages}
-          renderItem={renderPackageItem}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cube" size={60} color={COLORS.GRAY_LIGHT} />
-              <Text style={styles.emptyText}>Không tìm thấy gói dịch vụ</Text>
-            </View>
-          }
-        />
-      )}
+      <View style={[styles.statsContainer, { flexDirection: 'row', justifyContent: 'space-between' }]}>
+        <TouchableOpacity
+          style={{ backgroundColor: COLORS.BLUE, padding: 8, borderRadius: 8, flex: 1, marginHorizontal: 4 }}
+          onPress={handleCreatePackage}
+        >
+          <Text style={{ color: COLORS.WHITE, textAlign: 'center' }}>Tạo gói</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{ backgroundColor: COLORS.BLUE, padding: 8, borderRadius: 8, flex: 1, marginHorizontal: 4 }}
+          onPress={handleViewRevenue}
+        >
+          <Text style={{ color: COLORS.WHITE, textAlign: 'center' }}>Xem báo cáo</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={{ color: COLORS.BLUE, textAlign: 'left', marginLeft: 20 }}>{packages.length} <Text style={{ color: COLORS.BLACK }}>gói</Text></Text>
+
+
+
+      <FlatList
+        data={packages}
+        renderItem={renderPackageItem}
+        keyExtractor={item => item.id?.toString()}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cube" size={60} color={COLORS.GRAY_LIGHT} />
+            <Text style={styles.emptyText}>Không tìm thấy gói dịch vụ</Text>
+          </View>
+        }
+      />
 
       {renderEditModal()}
     </View>
@@ -465,7 +419,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     backgroundColor: COLORS.WHITE,
-    marginBottom: 8,
   },
   statCard: {
     flex: 1,
@@ -501,8 +454,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: COLORS.BLUE,
     shadowOffset: {
-        width: 0,
-        height: 2,
+      width: 0,
+      height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -725,5 +678,24 @@ const styles = StyleSheet.create({
     color: COLORS.WHITE,
     fontSize: 16,
     fontWeight: '500',
-  }
+  },
+  limitsContainer: {
+    marginTop: 12,
+  },
+  limitItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  limitLabel: {
+    fontSize: 14,
+    color: COLORS.GRAY,
+  },
+  limitValue: {
+    fontSize: 14,
+    color: COLORS.BLACK,
+    fontWeight: '500',
+  },
 });
+export default Package;

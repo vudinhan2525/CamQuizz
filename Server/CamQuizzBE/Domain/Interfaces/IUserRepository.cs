@@ -16,4 +16,6 @@ public interface IUserRepository
     Task<IdentityResult> UpdateUserAsync(AppUser user);
     Task<IdentityResult> DeleteUserAsync(AppUser user);
 
+    Task<(bool, string)> CheckUserRule(int userId);
+
 }

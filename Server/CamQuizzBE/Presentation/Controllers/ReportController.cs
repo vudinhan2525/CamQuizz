@@ -177,4 +177,31 @@ public class ReportController : ControllerBase
             throw;
         }
     }
+
+    // GET: api/v1/reports/game/{gameId}
+    [HttpGet("game/{gameId}")]
+    public async Task<ActionResult<ApiResponse<QuizPlayReportDto>>> GetQuizPlayReport(string gameId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(gameId))
+            {
+                throw new ValidatorException("Game ID is required.");
+            }
+
+            var report = await _reportService.GenerateQuizPlayReportAsync(gameId);
+            if (report == null)
+            {
+                throw new KeyNotFoundException("Report not found.");
+            }
+
+            var response = new ApiResponse<QuizPlayReportDto>(report, "Quiz play report generated successfully.");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating quiz play report for game {GameId}", gameId);
+            throw;
+        }
+    }
 }

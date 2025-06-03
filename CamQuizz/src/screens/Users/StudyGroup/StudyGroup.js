@@ -159,7 +159,13 @@ export const StudyGroup = ({ navigation, route }) => {
         }
       } catch (error) {
         console.error('Error fetching groups:', error);
-        setError('Không thể tải danh sách nhóm học tập');
+
+        // Handle 401 errors specifically
+        if (error.message && error.message.includes('Unauthorized')) {
+          setError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        } else {
+          setError('Không thể tải danh sách nhóm học tập');
+        }
       } finally {
         setLoading(false);
       }

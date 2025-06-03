@@ -40,7 +40,17 @@ export const Report = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      Alert.alert('Lỗi', 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+
+      // Handle 401 errors specifically
+      if (error.message && error.message.includes('Unauthorized')) {
+        Alert.alert(
+          'Phiên đăng nhập hết hạn',
+          'Vui lòng đăng nhập lại để tiếp tục.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Lỗi', 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -49,7 +59,14 @@ export const Report = ({ navigation }) => {
   const loadAuthorData = async () => {
     try {
       const response = await ReportService.getMyQuizzesForReport(50, 1);
-      console.log('Author quizzes loaded:', response.data);
+      console.log('Author quizzes loaded:', response);
+
+      // Check if response and response.data exist and is an array
+      if (!response || !response.data || !Array.isArray(response.data)) {
+        console.log('No quiz data found or invalid response format');
+        setAuthorQuizzes([]);
+        return;
+      }
 
       const formattedQuizzes = response.data.map(quiz => ({
         id: quiz.id,
@@ -57,7 +74,7 @@ export const Report = ({ navigation }) => {
         image: quiz.image,
         attempts: quiz.numberOfAttended || 0,
         questions: quiz.numberOfQuestions || 0,
-        passRate: 0, 
+        passRate: 0,
         createdAt: quiz.createdAt,
         description: quiz.description,
         duration: quiz.duration,
@@ -68,6 +85,7 @@ export const Report = ({ navigation }) => {
       setAuthorQuizzes(formattedQuizzes);
     } catch (error) {
       console.error('Error loading author data:', error);
+      setAuthorQuizzes([]); // Set empty array on error
       throw error;
     }
   };
@@ -75,7 +93,14 @@ export const Report = ({ navigation }) => {
   const loadCandidateData = async () => {
     try {
       const historyResponse = await ReportService.getMyQuizHistory(50, 1);
-      console.log('Quiz history loaded:', historyResponse.data);
+      console.log('Quiz history loaded:', historyResponse);
+
+      // Check if response and response.data exist and is an array
+      if (!historyResponse || !historyResponse.data || !Array.isArray(historyResponse.data)) {
+        console.log('No quiz history data found or invalid response format');
+        setQuizHistory([]);
+        return;
+      }
 
       const formattedHistory = await Promise.all(
         historyResponse.data.map(async (item) => {
@@ -108,6 +133,7 @@ export const Report = ({ navigation }) => {
       setQuizHistory(formattedHistory);
     } catch (error) {
       console.error('Error loading candidate data:', error);
+      setQuizHistory([]); // Set empty array on error
       throw error;
     }
   };

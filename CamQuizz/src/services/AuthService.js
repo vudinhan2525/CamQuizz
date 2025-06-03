@@ -350,6 +350,7 @@ export const validateToken = async () => {
   }
 };
 
+
 // Kiểm tra trạng thái đăng nhập
 export const checkAuthStatus = async () => {
   try {

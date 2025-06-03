@@ -1,6 +1,7 @@
 using CamQuizzBE.Applications.DTOs.Groups;
 using CamQuizzBE.Applications.Helpers;
 using CamQuizzBE.Domain.Entities;
+using CamQuizzBE.Domain.Enums;
 
 namespace CamQuizzBE.Domain.Interfaces;
 
@@ -23,7 +24,7 @@ public interface IGroupService
     Task<bool> IsOwner(int groupId, int userId);
     Task<Member> JoinGroupAsync(int groupId, int userId);
     Task LeaveGroupAsync(int groupId, int userId);
-    Task UpdateMemberStatusAsync(int groupId, int userId, UpdateMemberStatusDto updateMemberStatusDto); // Update this
+    Task<MemberDto> UpdateMemberStatusAsync(int groupId, int userId, MemberStatus newStatus);
 
     Task<Member> InviteMemberByEmailAsync(int groupId, int inviterId, string email);
 

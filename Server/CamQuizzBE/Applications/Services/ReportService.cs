@@ -368,4 +368,87 @@ public class ReportService : IReportService
 
         return reports;
     }
+
+    public async Task<QuizPlayReportDto> GenerateQuizPlayReportAsync(string gameId)
+    {
+        var attempts = await _context.QuizAttempts
+            .Include(a => a.Quiz)
+                .ThenInclude(q => q.Questions)
+                    .ThenInclude(q => q.Answers)
+            .Include(a => a.UserAnswers)
+                .ThenInclude(ua => ua.Question)
+            .Include(a => a.UserAnswers)
+                .ThenInclude(ua => ua.Answer)
+            .Where(a => a.RoomId == gameId)
+            .ToListAsync();
+
+        if (!attempts.Any())
+        {
+            throw new NotFoundException($"No attempts found for game {gameId}");
+        }
+
+        var report = new QuizPlayReportDto
+        {
+            TotalPlayers = attempts.Count(),
+            AverageScore = attempts.Average(a => a.Score)
+        };
+
+        // Get score distribution
+        var scores = attempts
+            .GroupBy(a => a.Score)
+            .ToDictionary(g => g.Key.ToString(), g => g.Count());
+        report.ScoreDistribution = scores;
+
+        // Process each question
+        var quiz = attempts.First().Quiz;
+        foreach (var question in quiz.Questions)
+        {
+            var questionStats = new QuizPlayQuestionStatsDto
+            {
+                QuestionId = question.Id,
+                QuestionName = question.Name
+            };
+
+            var userAnswers = attempts
+                .SelectMany(a => a.UserAnswers)
+                .Where(ua => ua.QuestionId == question.Id)
+                .ToList();
+
+            var validAnswers = userAnswers.Where(a =>
+                a.AnswerId.HasValue &&
+                a.AnswerTime.HasValue &&
+                a.AnswerTime.Value >= 0 &&
+                a.AnswerTime.Value <= question.Duration);
+
+            questionStats.AverageAnswerTime = validAnswers.Any()
+                ? validAnswers.Average(a => a.AnswerTime.Value)
+                : 0;
+
+            questionStats.TotalAnswers = userAnswers.Count(a => a.AnswerId.HasValue);
+            questionStats.CorrectAnswers = userAnswers.Count(a => a.Answer?.IsCorrect == true);
+            questionStats.CorrectRate = questionStats.TotalAnswers > 0
+                ? (double)questionStats.CorrectAnswers / questionStats.TotalAnswers * 100
+                : 0;
+
+            // Calculate selection rate for each option
+            foreach (var option in question.Answers)
+            {
+                var selections = userAnswers.Count(a => a.AnswerId == option.Id);
+                var rate = questionStats.TotalAnswers > 0
+                    ? (selections * 100.0) / questionStats.TotalAnswers
+                    : 0;
+
+                questionStats.OptionStats.Add(new QuizPlayOptionStatsDto
+                {
+                    AnswerId = option.Id,
+                    AnswerText = option.Answer,
+                    SelectionRate = rate
+                });
+            }
+
+            report.QuestionStats.Add(questionStats);
+        }
+
+        return report;
+    }
 }

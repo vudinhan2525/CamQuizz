@@ -14,6 +14,7 @@ public class UserRepository(
     ILogger<UserRepository> logger
 ) : IUserRepository
 {
+
     public async Task<IdentityResult> ChangePasswordAsync(
         AppUser user,
         ChangePasswordDto changePasswordDto
@@ -117,36 +118,36 @@ public class UserRepository(
     {
         try
         {
-            Console.WriteLine($"🚀 UserRepository.UpdateUserAsync called for user {user.Id}");
-            Console.WriteLine($"📝 User data before update: FirstName={user.FirstName}, LastName={user.LastName}, Gender={user.Gender}, DateOfBirth={user.DateOfBirth}");
+            Console.WriteLine($"UserRepository.UpdateUserAsync called for user {user.Id}");
+            Console.WriteLine($"User data before update: FirstName={user.FirstName}, LastName={user.LastName}, Gender={user.Gender}, DateOfBirth={user.DateOfBirth}");
 
             // Use UserManager to update user - it handles both context and identity updates
-            Console.WriteLine($"💾 Calling userManager.UpdateAsync...");
+            Console.WriteLine($"Calling userManager.UpdateAsync...");
             var result = await userManager.UpdateAsync(user);
 
-            Console.WriteLine($"📊 UserManager.UpdateAsync result: Succeeded={result.Succeeded}");
+            Console.WriteLine($"UserManager.UpdateAsync result: Succeeded={result.Succeeded}");
             if (!result.Succeeded)
             {
-                Console.WriteLine($"❌ UserManager errors: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                Console.WriteLine($"UserManager errors: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
 
             // If UserManager update succeeded, ensure changes are saved to context
             if (result.Succeeded)
             {
-                Console.WriteLine($"💾 Calling context.SaveChangesAsync...");
+                Console.WriteLine($"Calling context.SaveChangesAsync...");
                 var changesSaved = await context.SaveChangesAsync();
-                Console.WriteLine($"📊 SaveChanges result: {changesSaved} entities updated");
+                Console.WriteLine($"SaveChanges result: {changesSaved} entities updated");
 
                 // Verify the update by fetching the user again
-                Console.WriteLine($"🔍 Verifying update by fetching user again...");
+                Console.WriteLine($"Verifying update by fetching user again...");
                 var verifyUser = await context.Users.FindAsync(user.Id);
                 if (verifyUser != null)
                 {
-                    Console.WriteLine($"✅ Verification - User in DB: FirstName={verifyUser.FirstName}, LastName={verifyUser.LastName}, Gender={verifyUser.Gender}, DateOfBirth={verifyUser.DateOfBirth}");
+                    Console.WriteLine($"Verification - User in DB: FirstName={verifyUser.FirstName}, LastName={verifyUser.LastName}, Gender={verifyUser.Gender}, DateOfBirth={verifyUser.DateOfBirth}");
                 }
                 else
                 {
-                    Console.WriteLine($"❌ Verification failed - User not found in DB");
+                    Console.WriteLine($"Verification failed - User not found in DB");
                 }
             }
 
@@ -154,7 +155,7 @@ public class UserRepository(
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"💥 Exception in UserRepository.UpdateUserAsync: {ex.Message}");
+            Console.WriteLine($"Exception in UserRepository.UpdateUserAsync: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             throw;
         }
@@ -163,6 +164,40 @@ public class UserRepository(
     public async Task<IdentityResult> DeleteUserAsync(AppUser user)
     {
         return await userManager.DeleteAsync(user);
+    }
+    public async Task<(bool, string)> CheckUserRule(int userId)
+    {
+        var now = DateTime.UtcNow;
+
+        var userPackages = await context.UserPackages
+            .Include(up => up.Package)
+            .Where(up => up.UserId == userId &&
+                         up.Package.StartDate <= now &&
+                         up.Package.EndDate >= now)
+            .ToListAsync();
+
+        int totalNumberPossibleQuiz;
+
+        if (userPackages.Count == 0)
+        {
+            totalNumberPossibleQuiz = 20;
+        }
+        else
+        {
+            totalNumberPossibleQuiz = userPackages
+                .Where(up => up.Package != null)
+                .Sum(up => up.Package.MaxNumberOfQuizz);
+        }
+
+        var userQuizzCount = await context.Quizzes
+            .CountAsync(q => q.UserId == userId);
+
+        if (userQuizzCount >= totalNumberPossibleQuiz)
+        {
+            return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({totalNumberPossibleQuiz}) cho phép.");
+        }
+
+        return (true, "Cho phép tạo quiz.");
     }
 
 }

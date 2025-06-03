@@ -135,6 +135,10 @@ public class UserService(
 
         return result;
     }
+    public async Task<(bool, string)> CheckUserRule(int userId)
+    {
+        return await userRepository.CheckUserRule(userId);
+    }
 
     // public async Task<UserDto?> HandleExternalLoginAsync(GoogleUserInfo userInfo)
     // {

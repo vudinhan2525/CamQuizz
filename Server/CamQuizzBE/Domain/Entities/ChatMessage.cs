@@ -29,4 +29,6 @@ public class ChatMessage
 
     [Column("sent_at")]
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<MessageRead> MessageReads { get; set; } = new List<MessageRead>();
 }

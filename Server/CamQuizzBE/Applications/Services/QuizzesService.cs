@@ -10,17 +10,25 @@ public class QuizzesService : IQuizzesService
 {
     private readonly IConfiguration _config;
     private readonly IQuizzesRepository _quizzesRepo;
+    private readonly IUserService _userService;
 
-    public QuizzesService(IConfiguration config, IQuizzesRepository quizzesRepo)
+    public QuizzesService(IConfiguration config, IQuizzesRepository quizzesRepo, IUserService userService)
     {
         _config = config;
         _quizzesRepo = quizzesRepo;
+        _userService = userService;
     }
 
     public async Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId)
     {
         return await _quizzesRepo.GetAllAsync(kw, limit, page, sort, genreId);
     }
+
+    public async Task<List<Quizzes>> GetTop5Quizzes()
+    {
+        return await _quizzesRepo.GetTop5();
+    }
+
 
     public async Task<PagedResult<Quizzes>> GetQuizzesByUserAsync(int userId, string? kw, int limit, int page, string? sort)
     {
@@ -34,6 +42,13 @@ public class QuizzesService : IQuizzesService
 
     public async Task<Quizzes?> CreateQuizAsync(CreateQuizBody body)
     {
+        var (isAllowed, message) = await _userService.CheckUserRule(body.UserId);
+
+        if (!isAllowed)
+        {
+            throw new UnauthorizedAccessException(message);
+        }
+
         return await _quizzesRepo.AddAsync(body);
     }
 

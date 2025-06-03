@@ -411,6 +411,81 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.ToTable("members");
                 });
 
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.MessageRead", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MessageId")
+                        .HasColumnType("int")
+                        .HasColumnName("message_id");
+
+                    b.Property<DateTime>("ReadAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("read_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MessageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("message_reads");
+                });
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.Packages", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
+                    b.Property<int>("MaxNumberOfAttended")
+                        .HasColumnType("int")
+                        .HasColumnName("max_number_of_attended");
+
+                    b.Property<int>("MaxNumberOfQuizz")
+                        .HasColumnType("int")
+                        .HasColumnName("max_number_of_quizz");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("longtext")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("int")
+                        .HasColumnName("price");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("packages");
+                });
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Questions", b =>
                 {
                     b.Property<int>("Id")
@@ -646,6 +721,40 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.ToTable("user_answers");
                 });
 
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserPackages", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("PackageId")
+                        .HasColumnType("int")
+                        .HasColumnName("package_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("user_packages");
+                });
+
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>
                 {
                     b.Property<int>("QuizId")
@@ -755,6 +864,48 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("RevenueRecords", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(65,30)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("PackageId")
+                        .HasColumnType("int")
+                        .HasColumnName("package_id");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("date");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("revenue_records");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Answers", b =>
@@ -901,6 +1052,25 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.MessageRead", b =>
+                {
+                    b.HasOne("CamQuizzBE.Domain.Entities.ChatMessage", "Message")
+                        .WithMany("MessageReads")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Questions", b =>
                 {
                     b.HasOne("CamQuizzBE.Domain.Entities.Quizzes", "Quiz")
@@ -986,6 +1156,25 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Navigation("Question");
                 });
 
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserPackages", b =>
+                {
+                    b.HasOne("CamQuizzBE.Domain.Entities.Packages", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
+                        .WithMany("UserPackages")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>
                 {
                     b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "Owner")
@@ -1049,6 +1238,25 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("RevenueRecords", b =>
+                {
+                    b.HasOne("CamQuizzBE.Domain.Entities.Packages", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
+                        .WithMany("RevenueRecords")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.AppRole", b =>
                 {
                     b.Navigation("UserRoles");
@@ -1060,9 +1268,18 @@ namespace CamQuizzBE.Infras.Data.Migrations
 
                     b.Navigation("Quizzes");
 
+                    b.Navigation("RevenueRecords");
+
                     b.Navigation("StudySets");
 
+                    b.Navigation("UserPackages");
+
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("CamQuizzBE.Domain.Entities.ChatMessage", b =>
+                {
+                    b.Navigation("MessageReads");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.Group", b =>

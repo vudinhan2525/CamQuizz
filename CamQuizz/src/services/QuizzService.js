@@ -15,7 +15,7 @@ class QuizzService {
             const response = await apiClient.get('/quiz', { params });
             return {
                 data: response.data.data,
-                paginationn: response.data.pagination,
+                pagination: response.data.pagination,
             };
 
         } catch (error) {
@@ -38,9 +38,9 @@ class QuizzService {
             return response.data;
         } catch (error) {
             if (error.response) {
-                console.error('❌ API error response:', error.response.data);
+                console.error('API error response:', error.response.data);
             } else {
-                console.error('❌ Network or other error:', error.message);
+                console.error('Network or other error:', error.message);
             }
             throw error;
         }
@@ -63,15 +63,7 @@ class QuizzService {
             throw error;
         }
     }
-    static async getQuizzById(id) {
-        try {
-            const response = await apiClient.get(`/quiz/${id}`);
-            return response.data.data;
-        } catch (error) {
-            console.error(`Error fetching quiz with ID ${id}:`, error);
-            throw error;
-        }
-    }
+
 
     // Lấy danh sách quiz của user hiện tại
     static async getMyQuizzes(keyword = null, page = 1, limit = 10, sort = 'created_at') {
@@ -106,6 +98,16 @@ class QuizzService {
                 throw new Error('Unauthorized - Please log in again');
             }
 
+            throw error;
+        }
+    }
+
+    static async getTop5Quizzes() {
+        try {
+            const response = await apiClient.get('/quiz/top5');
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching top 5 quizzes:', error);
             throw error;
         }
     }

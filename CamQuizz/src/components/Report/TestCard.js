@@ -11,39 +11,91 @@ const TestCard = ({
   showBadges = false,
   customLabels = {}
 }) => {
-  const totalAttempts = test.attempts || 0;
-  const totalResults = test.results?.length || 0;
-  const totalQuestions = test.questions?.length || 0;
+  console.log('TestCard - reportType:', reportType);
+  console.log('TestCard - test data:', test);
 
-  const averageScore =
-    totalResults > 0
-      ? Math.round(
-          test.results.reduce(
-            (sum, result) =>
-              sum + (result.score / result.totalQuestions) * 100,
-            0
-          ) / totalResults
-        )
-      : 0;
+  // Xử lý dữ liệu dựa trên reportType
+  const getTestData = () => {
+    switch (reportType) {
+      case 'candidate':
+        const rawScore = test.bestScore || test.best_score || 0;
+        const totalQuestions = test.questions || test.total_questions || 0;
 
-  const passCount = test.results?.filter(
-    (result) => (result.score / result.totalQuestions) * 100 >= 70
-  ).length || 0;
+        let scorePercentage = 0;
+        if (test.accuracy_rate) {
+          scorePercentage = test.accuracy_rate;
+        } else if (totalQuestions > 0) {
+          scorePercentage = Math.round((rawScore / totalQuestions) * 100);
+        }
 
-  const passRate =
-    totalResults > 0 ? Math.round((passCount / totalResults) * 100) : 0;
+        const candidateData = {
+          totalAttempts: test.attempts || test.attempt_count || 0,
+          totalResults: test.attempts || test.attempt_count || 0,
+          totalQuestions: totalQuestions,
+          averageScore: scorePercentage,
+          passRate: scorePercentage >= 70 ? 100 : 0,
+          latestScore: scorePercentage,
+          lastAttemptDate: test.lastAttempt || test.last_attempt_date
+        };
 
-  // Các nhãn mặc định
-  const labels = {
-    attempts: 'Số lượt làm bài',
-    averageScore: 'Điểm trung bình',
-    questions: 'Số câu hỏi',
-    passRate: 'Tỉ lệ vượt qua',
-    viewReport: 'Xem báo cáo',
-    ...customLabels
+        console.log('TestCard candidate calculation:');
+        console.log('- Raw score:', rawScore);
+        console.log('- Total questions:', totalQuestions);
+        console.log('- Calculated percentage:', scorePercentage);
+        console.log('- Final candidate data:', candidateData);
+
+        return candidateData;
+
+      case 'author':
+        return {
+          totalAttempts: test.attempts || 0,
+          totalResults: test.results?.length || 0,
+          totalQuestions: test.questions || 0,
+          averageScore: test.results?.length > 0
+            ? Math.round(
+                test.results.reduce(
+                  (sum, result) =>
+                    sum + (result.score / result.totalQuestions) * 100,
+                  0
+                ) / test.results.length
+              )
+            : 0,
+          passRate: test.results?.length > 0
+            ? Math.round(
+                (test.results.filter(
+                  (result) => (result.score / result.totalQuestions) * 100 >= 70
+                ).length / test.results.length) * 100
+              )
+            : 0
+        };
+
+      default:
+        return {
+          totalAttempts: test.attempts || 0,
+          totalResults: test.results?.length || 0,
+          totalQuestions: test.questions?.length || 0,
+          averageScore: 0,
+          passRate: 0
+        };
+    }
   };
 
-  // Hiển thị các thông tin khác nhau dựa trên loại báo cáo
+  const { totalAttempts, totalResults, totalQuestions, averageScore, passRate, latestScore, lastAttemptDate } = getTestData();
+
+  const getLabels = () => {
+    const baseLabels = {
+      attempts: reportType === 'candidate' ? 'Số lần làm bài' : 'Số lượt làm bài',
+      averageScore: reportType === 'candidate' ? 'Điểm cao nhất' : 'Điểm trung bình',
+      questions: 'Số câu hỏi',
+      passRate: reportType === 'candidate' ? 'Trạng thái' : 'Tỉ lệ vượt qua',
+      viewReport: 'Xem báo cáo',
+      ...customLabels
+    };
+    return baseLabels;
+  };
+
+  const labels = getLabels();
+
   const renderReportTypeSpecificInfo = () => {
     switch (reportType) {
       case 'author':
@@ -93,35 +145,31 @@ const TestCard = ({
         );
         
       case 'candidate':
-        const latestResult = test.results && test.results.length > 0 ? test.results[0] : null;
-        const latestScore = latestResult ? 
-          Math.round((latestResult.score / latestResult.totalQuestions) * 100) : 0;
-        
         return (
           <>
             <View style={styles.statRow}>
               <View style={styles.statLabel}>
                 <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.BLUE} />
-                <Text style={styles.statLabelText}>Điểm gần nhất</Text>
+                <Text style={styles.statLabelText}>Điểm cao nhất</Text>
               </View>
               <Text style={[styles.statValue, { color: latestScore >= 70 ? '#10B981' : '#EF4444' }]}>
                 {latestScore}%
               </Text>
             </View>
-            
+
             <View style={styles.statRow}>
               <View style={styles.statLabel}>
                 <Ionicons name="time-outline" size={16} color={COLORS.BLUE} />
                 <Text style={styles.statLabelText}>Ngày làm gần nhất</Text>
               </View>
               <Text style={styles.statValue}>
-                {latestResult?.completedAt ? new Date(latestResult.completedAt).toLocaleDateString() : 'N/A'}
+                {lastAttemptDate ? new Date(lastAttemptDate).toLocaleDateString() : 'N/A'}
               </Text>
             </View>
           </>
         );
         
-      default: // general
+      default: 
         return null;
     }
   };
@@ -133,10 +181,12 @@ const TestCard = ({
         <View style={styles.titleContainer}>
           <Ionicons name="documents-outline" size={20} color={COLORS.BLUE} />
           <Text style={styles.title}>
-            {test.title}
+            {test.title || test.name || 'Bài kiểm tra'}
           </Text>
         </View>
-        <Text style={styles.description}>{test.description}</Text>
+        <Text style={styles.description}>
+          {test.description || `${totalQuestions} câu hỏi • ${totalAttempts} lượt làm`}
+        </Text>
       </View>
 
       {/* Nội dung thống kê */}
@@ -170,12 +220,27 @@ const TestCard = ({
             <Text style={styles.statLabelText}>{labels.passRate}</Text>
           </View>
           <View style={styles.passRateContainer}>
-            {passRate >= 70 ? (
-              <MaterialCommunityIcons name="check-circle-outline" size={16} color={COLORS.BLUE} />
+            {reportType === 'candidate' ? (
+              <>
+                {latestScore >= 70 ? (
+                  <MaterialCommunityIcons name="check-circle-outline" size={16} color="#10B981" />
+                ) : (
+                  <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
+                )}
+                <Text style={[styles.passRateText, { color: latestScore >= 70 ? '#10B981' : '#ef4444' }]}>
+                  {latestScore >= 70 ? 'Đạt' : 'Chưa đạt'}
+                </Text>
+              </>
             ) : (
-              <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
+              <>
+                {passRate >= 70 ? (
+                  <MaterialCommunityIcons name="check-circle-outline" size={16} color={COLORS.BLUE} />
+                ) : (
+                  <Ionicons name="close-circle-outline" size={16} color="#ef4444" />
+                )}
+                <Text style={styles.passRateText}>{passRate}%</Text>
+              </>
             )}
-            <Text style={styles.passRateText}>{passRate}%</Text>
           </View>
         </View>
 

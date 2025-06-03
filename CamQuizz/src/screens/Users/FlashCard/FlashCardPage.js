@@ -11,7 +11,6 @@ import FlashCardService from '../../../services/FlashCardService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkAuthStatus, validateToken } from '../../../services/AuthService';
 
-// Helper function for handling auth errors
 const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
   Toast.show({
     type: 'error',
@@ -33,7 +32,6 @@ const FlashCardPage = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
 
-  // Debug function để xem tất cả dữ liệu AsyncStorage
   const debugAsyncStorage = async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
@@ -61,7 +59,6 @@ const FlashCardPage = () => {
 
 
 
-  // Hàm lấy số lượt ôn tập của một study set
   const getSetReviewCount = async (setId) => {
     try {
       const savedCount = await AsyncStorage.getItem(`reviewCount_${setId}`);
@@ -84,19 +81,16 @@ const FlashCardPage = () => {
         return;
       }
 
-      // Kiểm tra định dạng token
       const parts = token.split('.');
       if (parts.length !== 3) {
         console.log('Invalid token format - not a JWT');
         return;
       }
 
-      // Giải mã phần payload
       try {
         const payload = JSON.parse(atob(parts[1]));
         console.log('Token payload:', payload);
 
-        // Kiểm tra thời hạn
         const now = Math.floor(Date.now() / 1000);
         if (payload.exp && payload.exp < now) {
           console.log('Token has expired');
@@ -104,7 +98,6 @@ const FlashCardPage = () => {
           console.log('Token is still valid');
         }
 
-        // Kiểm tra roles
         if (payload.role) {
           console.log('Roles in token:', payload.role);
         } else {
@@ -118,10 +111,9 @@ const FlashCardPage = () => {
     }
   };
 
-  // Lấy userId và kiểm tra token khi component mount
   useEffect(() => {
     checkToken();
-    debugAsyncStorage(); // Debug AsyncStorage
+    debugAsyncStorage(); 
     const getUserData = async () => {
       try {
         setLoading(true);
@@ -160,7 +152,6 @@ const FlashCardPage = () => {
         return;
       }
 
-      // Kiểm tra xem userId có khớp với token không
       const parts = token.split('.');
       if (parts.length === 3) {
         try {
@@ -187,14 +178,11 @@ const FlashCardPage = () => {
         throw new Error('Invalid response format from server');
       }
 
-      // Handle different response formats: PagedResult with items, direct data, or array
       const studySets = response.items || response.data || response;
 
-      // Tính toán stats cho từng study set
       const formattedSets = await Promise.all(studySets.map(async (set) => {
         let flashCards = set.flashCards || set.flash_cards || [];
 
-        // Nếu không có flashcards trong response, thử lấy từ API riêng
         if (flashCards.length === 0 && (set.flashcardNumber || set.flashcard_number) > 0) {
           try {
             const flashcardsResponse = await FlashCardService.getFlashCardsByStudySetId(set.id);
@@ -205,7 +193,6 @@ const FlashCardPage = () => {
           }
         }
 
-        // Tính stats dựa trên review count và số lượng flashcards
         const totalCards = flashCards.length;
         let stats;
 
@@ -214,26 +201,21 @@ const FlashCardPage = () => {
         if (totalCards === 0) {
           stats = { newCards: 0, learningCards: 0, reviewCards: 0 };
         } else {
-          // Lấy review count cho set này
           const reviewCount = await getSetReviewCount(set.id);
           console.log(`Set ${set.id}: reviewCount=${reviewCount}`);
 
           if (reviewCount === 0) {
-            // Chưa học lần nào - tất cả là thẻ mới
             stats = { newCards: totalCards, learningCards: 0, reviewCards: 0 };
           } else if (reviewCount <= 2) {
-            // Giai đoạn đầu - chủ yếu đang học
             const learningCards = Math.min(totalCards, Math.ceil(totalCards * 0.8));
             const newCards = Math.max(0, totalCards - learningCards);
             stats = { newCards, learningCards, reviewCards: 0 };
           } else if (reviewCount <= 5) {
-            // Giai đoạn trung gian - một phần đang học, một phần ôn tập
             const learningCards = Math.min(totalCards, Math.ceil(totalCards * 0.6));
             const reviewCards = Math.min(totalCards - learningCards, Math.ceil(totalCards * 0.3));
             const newCards = Math.max(0, totalCards - learningCards - reviewCards);
             stats = { newCards, learningCards, reviewCards };
           } else {
-            // Giai đoạn nâng cao - chủ yếu ôn tập
             const reviewCards = Math.min(totalCards, Math.ceil(totalCards * 0.7));
             const learningCards = Math.min(totalCards - reviewCards, Math.ceil(totalCards * 0.2));
             const newCards = Math.max(0, totalCards - reviewCards - learningCards);
@@ -272,7 +254,6 @@ const FlashCardPage = () => {
     }
   };
 
-  // Cập nhật danh sách khi quay lại màn hình
   useFocusEffect(
     React.useCallback(() => {
       if (userId) {

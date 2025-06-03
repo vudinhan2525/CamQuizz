@@ -36,15 +36,13 @@ export const FlashcardSetDetail = () => {
     );
   };
 
-  // Lọc flashcard theo tab hiện tại
   const getFilteredFlashcards = () => {
     if (activeTab === "today") {
       return flashcards.filter(card => isCreatedToday(card.createdAt));
     }
-    return flashcards; // Tab "record" hiển thị tất cả
+    return flashcards; 
   };
 
-  // Load số lượt ôn tập từ AsyncStorage
   const loadReviewCount = async () => {
     try {
       const savedCount = await AsyncStorage.getItem(`reviewCount_${id}`);
@@ -56,7 +54,6 @@ export const FlashcardSetDetail = () => {
     }
   };
 
-  // Save số lượt ôn tập vào AsyncStorage
   const saveReviewCount = async (count) => {
     try {
       await AsyncStorage.setItem(`reviewCount_${id}`, count.toString());
@@ -65,42 +62,36 @@ export const FlashcardSetDetail = () => {
     }
   };
 
-  // Lấy thông tin study set và flashcards từ API
   useEffect(() => {
     const fetchStudySetDetails = async () => {
       try {
         setLoading(true);
         console.log('Fetching study set with ID:', id);
-
-        // Load review count
         await loadReviewCount();
 
-        // Lấy thông tin study set
         const response = await StudySetService.getStudySetById(id);
-        console.log('Study set response:', response); // Log để kiểm tra cấu trúc dữ liệu
+        console.log('Study set response:', response); 
 
         if (response) {
           setStudySet(response);
           setSetTitle(response.name || 'Bộ thẻ học bài');
 
           try {
-            // Lấy danh sách flashcards
             console.log('Fetching flashcards for study set ID:', id);
             const flashcardsResponse = await FlashCardService.getFlashCardsByStudySetId(id);
-            console.log('Flashcards response:', flashcardsResponse); // Log để kiểm tra cấu trúc dữ liệu
+            console.log('Flashcards response:', flashcardsResponse); 
 
-            // Kiểm tra cấu trúc dữ liệu trả về
             let flashcardsData = [];
             if (flashcardsResponse && Array.isArray(flashcardsResponse)) {
               flashcardsData = flashcardsResponse;
             } else if (flashcardsResponse && Array.isArray(flashcardsResponse.data)) {
               flashcardsData = flashcardsResponse.data;
             } else if (response.flashCards && Array.isArray(response.flashCards)) {
-              // Nếu flashcards đã được bao gồm trong response của study set (camelCase)
+             
               flashcardsData = response.flashCards;
               console.log('Using flashcards from study set response (camelCase)');
             } else if (response.flash_cards && Array.isArray(response.flash_cards)) {
-              // Nếu flashcards đã được bao gồm trong response của study set (snake_case)
+             
               flashcardsData = response.flash_cards;
               console.log('Using flashcards from study set response (snake_case)');
             } else {
@@ -108,7 +99,6 @@ export const FlashcardSetDetail = () => {
               flashcardsData = [];
             }
 
-            // Chuyển đổi dữ liệu từ API sang định dạng hiển thị
             const formattedFlashcards = flashcardsData.map(card => ({
               id: card.id,
               front: card.question,
@@ -119,7 +109,6 @@ export const FlashcardSetDetail = () => {
             setFlashcards(formattedFlashcards);
           } catch (flashcardError) {
             console.error('Lỗi khi lấy danh sách flashcards:', flashcardError);
-            // Nếu không thể lấy flashcards riêng, kiểm tra xem study set có chứa flashcards không
             if (response.flashCards && Array.isArray(response.flashCards)) {
               const formattedFlashcards = response.flashCards.map(card => ({
                 id: card.id,
@@ -166,15 +155,12 @@ export const FlashcardSetDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    // Listen for when the screen comes into focus
     const unsubscribe = navigation.addListener('focus', async () => {
-      // Check if we have a reviewCompleted param from the study screen
       if (route.params?.reviewCompleted) {
         const newCount = reviewCount + 1;
         setReviewCount(newCount);
         await saveReviewCount(newCount);
 
-        // Cập nhật trạng thái học tập cho tất cả flashcards đã học
         const cardsToStudy = getFilteredFlashcards();
         for (const card of cardsToStudy) {
           const cardId = card.id || card.Id;
@@ -188,8 +174,6 @@ export const FlashcardSetDetail = () => {
           text1: 'Hoàn thành!',
           text2: `Bạn đã hoàn thành lượt ôn tập thứ ${newCount}`
         });
-
-        // Clear the parameter to prevent multiple increments
         navigation.setParams({ reviewCompleted: undefined });
       }
     });
@@ -208,7 +192,6 @@ export const FlashcardSetDetail = () => {
     }
 
     try {
-      // Tạo flashcard mới thông qua API
       const flashcardData = {
         study_set_id: parseInt(id),
         question: frontText,
@@ -219,11 +202,9 @@ export const FlashcardSetDetail = () => {
       const response = await FlashCardService.createFlashCard(flashcardData);
       console.log('Create flashcard response:', response);
 
-      // Kiểm tra cấu trúc dữ liệu trả về
       if (response) {
-        // Thêm flashcard mới vào danh sách
         const newFlashcard = {
-          id: response.id || Date.now(), // Fallback to timestamp if no ID
+          id: response.id || Date.now(), 
           front: response.question || frontText,
           back: response.answer || backText,
           createdAt: response.createdAt || response.created_at || new Date().toISOString()
@@ -232,7 +213,6 @@ export const FlashcardSetDetail = () => {
         setFlashcards([...flashcards, newFlashcard]);
         setShowAddCard(false);
 
-        // Chuyển sang tab "Hôm nay" để hiển thị thẻ vừa tạo
         setActiveTab("today");
 
         Toast.show({
@@ -253,7 +233,6 @@ export const FlashcardSetDetail = () => {
     }
   };
 
-  // Hàm cập nhật trạng thái học tập cho từng thẻ
   const updateCardStudyStatus = async (cardId) => {
     try {
       const studyData = await AsyncStorage.getItem(`cardStudy_${cardId}`);
@@ -274,7 +253,6 @@ export const FlashcardSetDetail = () => {
     setReviewCount(newCount);
     await saveReviewCount(newCount);
 
-    // Cập nhật trạng thái học tập cho tất cả flashcards đã học
     const cardsToStudy = getFilteredFlashcards();
     for (const card of cardsToStudy) {
       const cardId = card.id || card.Id;
@@ -371,7 +349,7 @@ export const FlashcardSetDetail = () => {
                 navigation.navigate(SCREENS.FLASHCARD_STUDY, {
                   setId: id,
                   flashcards: cardsToStudy,
-                  onStudyComplete: handleStudyComplete  // Pass the callback function
+                  onStudyComplete: handleStudyComplete  
                 });
               }}
             >
@@ -410,13 +388,7 @@ export const FlashcardSetDetail = () => {
                 Bản ghi
               </Text>
             </TouchableOpacity>
-
             <View style={styles.tabSpacer} />
-
-            {/* <View style={styles.allButton}>
-              <Text style={styles.allText}>Tất cả</Text>
-              <ChevronRight size={18} />
-            </View> */}
           </View>
 
           {/* Content */}

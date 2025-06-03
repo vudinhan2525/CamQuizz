@@ -10,7 +10,6 @@ import { validateToken, checkAuthStatus } from '../../../services/AuthService';
 import StudySetService from '../../../services/StudySetService';
 import FlashCardService from '../../../services/FlashCardService';
 
-// Helper function for handling auth errors
 const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
   Toast.show({
     type: 'error',
@@ -49,25 +48,20 @@ const SelectQuestionsForFlashcard = () => {
       const response = await ReportService.getQuizAttempts(quizId);
 
       if (response && response.data && response.data.length > 0) {
-        // Lấy attempt gần nhất (attempt đầu tiên trong mảng)
         const latestAttempt = response.data[0];
-        console.log('Latest attempt:', latestAttempt); // Debug log
+        console.log('Latest attempt:', latestAttempt); 
 
-        // Xử lý cả PascalCase và snake_case/camelCase
         const questionReviews = latestAttempt.QuestionReviews || latestAttempt.questionReviews || latestAttempt.question_reviews;
 
         if (questionReviews && questionReviews.length > 0) {
-          // Format dữ liệu câu hỏi từ attempt
           const formattedQuestions = questionReviews.map(review => {
-            console.log('Processing question review:', review); // Debug log
+            console.log('Processing question review:', review); 
 
-            // Xử lý cả PascalCase và snake_case/camelCase
             const questionId = review.QuestionId || review.questionId || review.question_id;
             const questionName = review.QuestionName || review.questionName || review.question_name;
             const selectedAnswers = review.SelectedAnswers || review.selectedAnswers || review.selected_answers || [];
             const correctAnswers = review.CorrectAnswers || review.correctAnswers || review.correct_answers || [];
 
-            // Lấy đáp án đúng
             const correctAnswerTexts = correctAnswers.map(ans =>
               ans.AnswerText || ans.answerText || ans.answer_text || ans.text || 'N/A'
             ).join(', ');
@@ -81,10 +75,10 @@ const SelectQuestionsForFlashcard = () => {
             };
           });
 
-          console.log('Formatted questions:', formattedQuestions); // Debug log
+          console.log('Formatted questions:', formattedQuestions); 
           setQuestions(formattedQuestions);
         } else {
-          console.log('No question reviews found in attempt:', latestAttempt); // Debug log
+          console.log('No question reviews found in attempt:', latestAttempt); 
           Toast.show({
             type: 'info',
             text1: 'Thông báo',
@@ -92,7 +86,7 @@ const SelectQuestionsForFlashcard = () => {
           });
         }
       } else {
-        console.log('No attempts found in response:', response); // Debug log
+        console.log('No attempts found in response:', response); 
         Toast.show({
           type: 'info',
           text1: 'Thông báo',
@@ -146,7 +140,6 @@ const SelectQuestionsForFlashcard = () => {
     try {
       setCreating(true);
 
-      // Kiểm tra authentication
       if (!await validateToken()) {
         handleAuthError(navigation);
         return;
@@ -161,13 +154,11 @@ const SelectQuestionsForFlashcard = () => {
 
       const userId = authStatus.id;
 
-      // Tạo bộ thẻ mới với các câu hỏi đã chọn
       const selectedQuestionObjects = questions.filter(q => selectedQuestions.includes(q.id));
 
       console.log('Creating study set with name:', setName);
       console.log('Selected questions:', selectedQuestionObjects);
 
-      // Bước 1: Tạo StudySet trước
       const studySetData = {
         name: setName,
         user_id: userId
@@ -180,7 +171,6 @@ const SelectQuestionsForFlashcard = () => {
         throw new Error('Không thể tạo bộ thẻ học bài');
       }
 
-      // Bước 2: Tạo từng FlashCard
       const createdFlashcards = [];
       for (const question of selectedQuestionObjects) {
         try {
@@ -199,16 +189,13 @@ const SelectQuestionsForFlashcard = () => {
           }
         } catch (flashcardError) {
           console.error('Error creating individual flashcard:', flashcardError);
-          // Tiếp tục tạo các flashcard khác nếu có lỗi
         }
       }
 
       console.log(`Successfully created ${createdFlashcards.length}/${selectedQuestionObjects.length} flashcards`);
 
-      // Quay lại màn hình trước đó
       navigation.goBack();
 
-      // Hiển thị thông báo thành công
       Toast.show({
         type: 'success',
         text1: 'Thành công',
@@ -421,7 +408,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 80, // Space for the create button
+    paddingBottom: 80, 
   },
   questionItem: {
     flexDirection: 'row',

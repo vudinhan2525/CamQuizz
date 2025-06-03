@@ -94,6 +94,15 @@ export const StudyGroupCard = ({
                         </Text>
                     </View>
                 </View>
+
+                {/* Hiển thị thông báo cho pending members */}
+                {group.userRole === 'Pending' && (
+                    <View style={styles.pendingNotice}>
+                        <Text style={styles.pendingNoticeText}>
+                            Bạn đã được mời vào nhóm này. Đang chờ chủ nhóm duyệt.
+                        </Text>
+                    </View>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -181,5 +190,28 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 14,
         fontWeight: '500',
+    },
+    roleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: 4,
+    },
+    roleText: {
+        fontSize: 12,
+        fontWeight: '500',
+    },
+    pendingNotice: {
+        backgroundColor: COLORS.ORANGE + '20', // 20% opacity
+        borderRadius: 6,
+        padding: 8,
+        marginTop: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: COLORS.ORANGE,
+    },
+    pendingNoticeText: {
+        fontSize: 12,
+        color: COLORS.ORANGE,
+        fontStyle: 'italic',
     },
 });

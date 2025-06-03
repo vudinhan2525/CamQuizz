@@ -8,7 +8,6 @@ import SCREENS from '../../../screens/index';
 import ReportService from '../../../services/ReportService';
 import { validateToken } from '../../../services/AuthService';
 
-// Helper function for handling auth errors
 const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
   Toast.show({
     type: 'error',
@@ -38,16 +37,15 @@ const SelectQuizForFlashcard = () => {
       }
 
       setLoading(true);
-      const response = await ReportService.getMyQuizHistory(50, 1); // Lấy 50 quiz gần nhất
+      const response = await ReportService.getMyQuizHistory(50, 1); 
 
       if (response && response.data) {
-        // Format dữ liệu để hiển thị
         const formattedQuizzes = response.data.map(quiz => {
-          console.log('Processing quiz:', quiz); // Debug log
+          console.log('Processing quiz:', quiz); 
           return {
             id: quiz.quiz_id ? quiz.quiz_id.toString() : 'unknown',
             title: quiz.quiz_name || 'Tên quiz không xác định',
-            questionsCount: 'N/A', // QuizHistoryDto không có TotalQuestions
+            questionsCount: 'N/A', 
             attemptCount: quiz.attempt_count || 0,
             bestScore: quiz.best_score || 0,
             lastAttemptDate: quiz.last_attempt_date ? new Date(quiz.last_attempt_date).toLocaleDateString('vi-VN') : 'N/A',
@@ -56,10 +54,10 @@ const SelectQuizForFlashcard = () => {
           };
         });
 
-        console.log('Formatted quizzes:', formattedQuizzes); // Debug log
+        console.log('Formatted quizzes:', formattedQuizzes); 
         setQuizzes(formattedQuizzes);
       } else {
-        console.log('No data in response:', response); // Debug log
+        console.log('No data in response:', response); 
         setQuizzes([]);
       }
     } catch (error) {

@@ -16,8 +16,11 @@ IdentityDbContext<
 {
     public DbSet<Quizzes> Quizzes { get; set; }
     public DbSet<Genres> Genres { get; set; }
+    public DbSet<RevenueRecords> RevenueRecords { get; set; }
     public DbSet<Answers> Answers { get; set; }
     public DbSet<Questions> Questions { get; set; }
+    public DbSet<Packages> Packages { get; set; }
+    public DbSet<UserPackages> UserPackages { get; set; }
 
     public DbSet<Group> Groups { get; set; }
     public DbSet<Member> Members { get; set; }
@@ -233,9 +236,38 @@ IdentityDbContext<
             .HasForeignKey(ua => ua.AttemptId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        #region UserPackages-Packages Relationship
+        modelBuilder.Entity<UserPackages>()
+            .HasOne(up => up.Package)
+            .WithMany()
+            .HasForeignKey(up => up.PackageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
 
+        #region UserPackages-Users Relationship
+        modelBuilder.Entity<UserPackages>()
+            .HasOne(up => up.User)
+            .WithMany(u => u.UserPackages)
+            .HasForeignKey(up => up.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
 
+        #region RevenueRecords-User Relationship
+        modelBuilder.Entity<RevenueRecords>()
+            .HasOne(r => r.User)
+            .WithMany(u => u.RevenueRecords)
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
+
+        #region RevenueRecords-Package Relationship
+        modelBuilder.Entity<RevenueRecords>()
+            .HasOne(r => r.Package)
+            .WithMany()
+            .HasForeignKey(r => r.PackageId)
+            .OnDelete(DeleteBehavior.Cascade);
+        #endregion
     }
 }
-    
+
 

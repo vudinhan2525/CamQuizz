@@ -16,4 +16,6 @@ public class AppUser : IdentityUser<int>
 
     public ICollection<Member> Members { get; set; } = new List<Member>();
     public ICollection<StudySet> StudySets { get; set; } = new HashSet<StudySet>();
+    public ICollection<UserPackages> UserPackages { get; set; } = new List<UserPackages>();
+    public ICollection<RevenueRecords> RevenueRecords { get; set; } = new List<RevenueRecords>();
 }

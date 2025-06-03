@@ -1,13 +1,10 @@
-
-version: '3.8'
-
 services:
   mysql:
     image: mysql:latest
     container_name: mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password  # Change this to a secure password
+      MYSQL_ROOT_PASSWORD: password 
       MYSQL_DATABASE: camquiz
       MYSQL_USER: user
       MYSQL_PASSWORD: mypassword
@@ -17,9 +14,3 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - my_network
-
-volumes:
-  mysql_data:
-
-networks:
-  my_network:

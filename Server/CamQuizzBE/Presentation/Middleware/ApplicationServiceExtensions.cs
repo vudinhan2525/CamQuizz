@@ -43,6 +43,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IMemberRepository, MemberRepository>();
         services.AddScoped<IStudySetRepository, StudySetRepository>();
         services.AddScoped<IFlashCardRepository, FlashCardRepository>();
+        services.AddScoped<IPackagesRepository, PackagesRepository>();
         services.AddScoped<IQuestionRepository, QuestionsRepository>();
         services.AddScoped<IAnswerRepository, AnswerRepository>();
 

@@ -1,28 +1,218 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
-import EditableField from './EditableField';
 import ProfileAvatar from './ProfileAvatar';
 import EditableSection from './EditableSection';
-import { Switch } from 'react-native';
-import { logout } from '../../services/AuthService';
+import PasswordSection from './PasswordSection';
+import GenderSection from './GenderSection';
+import DateOfBirthSection from './DateOfBirthSection';
+import { logout, checkAuthStatus, updateUserProfile, changePassword } from '../../services/AuthService';
+import COLORS from '../../constant/colors';
 
 const ProfileSection = () => {
   const navigation = useNavigation();
   const [profile, setProfile] = useState({
-    name: 'Nguyen Van A',
-    description: 'Other',
-    email: '123456@gmail.com',
+    name: '',
+    gender: 'Other',
+    email: '',
+    id: null,
+    first_name: '',
+    last_name: '',
+    dateOfBirth: '',
+    roles: [],
   });
 
-  const updateProfile = (field, value) => {
-    setProfile(prev => ({ ...prev, [field]: value }));
-    Toast.show({
-      type: 'success',
-      text1: `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`
-    });
+  // Fetch user data when component mounts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await checkAuthStatus();
+
+        if (userData) {
+          // Backend trả về snake_case format
+          setProfile({
+            id: userData.id,
+            name: `${userData.first_name} ${userData.last_name}`,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            gender: userData.gender || 'Other',
+            dateOfBirth: userData.date_of_birth || userData.dateOfBirth || '',
+            roles: userData.roles || [],
+          });
+
+
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Không thể tải thông tin người dùng',
+          text2: 'Vui lòng thử lại sau'
+        });
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const updateProfile = async (field, value) => {
+    try {
+      if (field === 'name') {
+        // Split the name into first name and last name
+        const nameParts = value.trim().split(' ');
+        const lastName = nameParts.pop(); // Last word is the last name
+        const firstName = nameParts.join(' '); // Rest is the first name
+
+        if (!firstName || !lastName) {
+          Toast.show({
+            type: 'error',
+            text1: 'Tên không hợp lệ',
+            text2: 'Vui lòng nhập cả họ và tên'
+          });
+          return;
+        }
+
+        // Call API to update user profile
+        if (profile.id) {
+          const updateData = {
+            FirstName: firstName,
+            LastName: lastName
+          };
+
+          try {
+            await updateUserProfile(profile.id, updateData);
+
+            // Refresh user data from server after successful update
+            const refreshedUserData = await checkAuthStatus();
+
+            if (refreshedUserData) {
+              // Backend trả về snake_case format
+              const newProfile = {
+                id: refreshedUserData.id,
+                email: refreshedUserData.email,
+                first_name: refreshedUserData.first_name,
+                last_name: refreshedUserData.last_name,
+                name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+                gender: refreshedUserData.gender || 'Other',
+                dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || '',
+                roles: refreshedUserData.roles || []
+              };
+
+              setProfile(newProfile);
+            }
+
+            Toast.show({
+              type: 'success',
+              text1: 'Cập nhật tên thành công'
+            });
+          } catch (error) {
+            Toast.show({
+              type: 'error',
+              text1: 'Lỗi cập nhật tên',
+              text2: error.message || 'Vui lòng thử lại'
+            });
+          }
+        }
+      } else if (field === 'gender') {
+        // Call API to update user profile
+        if (profile.id) {
+          const updateData = {
+            Gender: value  // Note: Using PascalCase for API
+          };
+
+          await updateUserProfile(profile.id, updateData);
+
+          // Refresh user data from server after successful update
+          const refreshedUserData = await checkAuthStatus();
+          if (refreshedUserData) {
+            const updatedProfile = {
+              id: refreshedUserData.id,
+              email: refreshedUserData.email,
+              first_name: refreshedUserData.first_name,
+              last_name: refreshedUserData.last_name,
+              name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+              gender: refreshedUserData.gender || value,
+              dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || '',
+              roles: refreshedUserData.roles || []
+            };
+            setProfile(updatedProfile);
+          }
+
+          Toast.show({
+            type: 'success',
+            text1: 'Cập nhật giới tính thành công'
+          });
+        }
+      } else if (field === 'dateOfBirth') {
+        // Call API to update user profile
+        if (profile.id) {
+          const updateData = {
+            DateOfBirth: value // Format: YYYY-MM-DD, using PascalCase for API
+          };
+
+          await updateUserProfile(profile.id, updateData);
+
+          // Refresh user data from server after successful update
+          const refreshedUserData = await checkAuthStatus();
+          if (refreshedUserData) {
+            const updatedProfile = {
+              id: refreshedUserData.id,
+              email: refreshedUserData.email,
+              first_name: refreshedUserData.first_name,
+              last_name: refreshedUserData.last_name,
+              name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+              gender: refreshedUserData.gender || 'Other',
+              dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || value,
+              roles: refreshedUserData.roles || []
+            };
+            setProfile(updatedProfile);
+          }
+
+          Toast.show({
+            type: 'success',
+            text1: 'Cập nhật ngày sinh thành công'
+          });
+        }
+      } else {
+        // For other fields, just update the state
+        setProfile(prev => ({ ...prev, [field]: value }));
+
+        Toast.show({
+          type: 'success',
+          text1: `${field.charAt(0).toUpperCase() + field.slice(1)} updated successfully`
+        });
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Không thể cập nhật thông tin',
+        text2: error.message || 'Vui lòng thử lại sau'
+      });
+    }
+  };
+
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    try {
+      const result = await changePassword(currentPassword, newPassword);
+
+      if (result.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: result.message || 'Đổi mật khẩu thành công'
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi đổi mật khẩu',
+        text2: error.message || 'Có lỗi xảy ra khi đổi mật khẩu'
+      });
+    }
   };
 
   const handleLogout = () => {
@@ -36,17 +226,13 @@ const ProfileSection = () => {
         onPress: async () => {
           try {
             await logout();
-            
-            // Thêm log để kiểm tra
-            console.log('Navigating to Root after logout');
-            
+
             // Đảm bảo reset toàn bộ stack điều hướng
             navigation.reset({
               index: 0,
               routes: [{ name: 'Root' }],
             });
           } catch (error) {
-            console.error('Error logging out:', error);
             Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
           }
         },
@@ -62,86 +248,57 @@ const ProfileSection = () => {
           <View style={styles.profileInfo}>
             <ProfileAvatar name={profile.name} size="lg" />
             <View style={styles.textContainer}>
-              <EditableField 
-                value={profile.name} 
-                // onSave={(value) => updateProfile('name', value)}
-                style={styles.nameText}
-                icon={false}
-              />
-              <EditableField 
-                value={profile.description} 
-                onSave={(value) => updateProfile('description', value)}
-              />
-              <EditableField 
-                value={profile.email} 
-                // onSave={(value) => updateProfile('email', value)}
-                icon={false}
-              />
+              <Text style={styles.nameText}>{profile.name}</Text>
+              <Text style={styles.infoText}>Giới tính: {profile.gender}</Text>
+              <Text style={styles.infoText}>Ngày sinh: {profile.dateOfBirth || 'Chưa có thông tin'}</Text>
+              <Text style={styles.infoText}>Role: {profile.roles && profile.roles.length > 0 ? profile.roles[0] : 'User'}</Text>
             </View>
           </View>
         </View>
 
-        {/* <View style={styles.gradeContainer}>
-          <Icon name="award" size={20} color="#666" />
-          <EditableField 
-            value={profile.grade} 
-            onSave={(value) => updateProfile('grade', value)}
-            icon={false}
-          />
-        </View>
-
-        <Pressable style={styles.addSubjectButton}>
-          <Text style={styles.addSubjectText}>+ Thêm môn học</Text>
-        </Pressable>
-
-        <View style={styles.studentModeContainer}>
-          <View style={styles.studentModeText}>
-            <Icon name="repeat" size={20} color="#666" />
-            <Text>Chuyển sang chế độ sinh viên</Text>
-          </View>
-          <Switch
-            value={profile.isStudent}
-            onValueChange={(value) => updateProfile('isStudent', value)}
-          />
-        </View> */}
       </View>
 
       {/* Editable Sections */}
       <View style={styles.sections}>
-        <EditableSection
-          title="E-mail"
-          value={profile.email}
-          onSave={(value) => updateProfile('email', value)}
-          icon={<Icon name="mail" size={16} color="#666" />}
-        />
-        
+        <View style={styles.viewOnlySection}>
+          <View style={styles.sectionHeader}>
+            <Icon name="mail" size={16} color="#666" />
+            <Text style={styles.sectionTitle}>E-mail</Text>
+            <Text style={styles.sectionValue}>{profile.email}</Text>
+          </View>
+
+        </View>
+
         <EditableSection
           title="Tên tài khoản"
           value={profile.name}
           onSave={(value) => updateProfile('name', value)}
           icon={<Icon name="user" size={16} color="#666" />}
         />
-        
-        <EditableSection
+
+        <GenderSection
+          title="Giới tính"
+          value={profile.gender}
+          onSave={(value) => updateProfile('gender', value)}
+          icon={<Icon name="users" size={16} color="#666" />}
+        />
+
+        <DateOfBirthSection
+          title="Ngày sinh"
+          value={profile.dateOfBirth}
+          onSave={(value) => updateProfile('dateOfBirth', value)}
+          icon={<Icon name="calendar" size={16} color="#666" />}
+        />
+
+        <PasswordSection
           title="Mật khẩu"
-          value="********"
-          onSave={() => Toast.show({
-            type: 'success',
-            text1: 'Password updated successfully'
-          })}
+          onSave={handleChangePassword}
           icon={<Icon name="lock" size={16} color="#666" />}
         />
-        
       </View>
 
-      {/* Support Section */}
-      <Pressable style={styles.supportSection}>
-        <View style={styles.supportHeader}>
-          <Icon name="help-circle" size={16} color="#666" />
-          <Text style={styles.supportText}>Hỗ trợ</Text>
-        </View>
-        <Icon name="chevron-down" size={16} color="#666" />
-      </Pressable>
+
+
 
       {/* Logout Button */}
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
@@ -162,11 +319,16 @@ const styles = StyleSheet.create({
     card: {
       backgroundColor: '#fff',
       borderRadius: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
+      shadowColor: COLORS.BLUE,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
       shadowOpacity: 0.1,
       shadowRadius: 4,
-      elevation: 3,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: COLORS.BLUE,
     },
     cardHeader: {
       padding: 16,
@@ -184,6 +346,12 @@ const styles = StyleSheet.create({
     nameText: {
       fontSize: 20,
       fontWeight: '600',
+      marginBottom: 4,
+    },
+    infoText: {
+      fontSize: 14,
+      color: '#666',
+      marginBottom: 4,
     },
     editButton: {
       flexDirection: 'row',
@@ -232,6 +400,26 @@ const styles = StyleSheet.create({
     },
     sections: {
       marginTop: 24,
+    },
+    viewOnlySection: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: '#e5e5e5',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    sectionValue: {
+      fontSize: 14,
+      color: '#666',
+      marginLeft: 24,
     },
     supportSection: {
       flexDirection: 'row',
@@ -289,5 +477,5 @@ const styles = StyleSheet.create({
       fontWeight: '500',
     },
   });
-  
+
   export default ProfileSection;

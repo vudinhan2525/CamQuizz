@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, FlatList, ActivityIndicator } from "react-native";
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
 import FlashCardPage from "../Users/FlashCard/FlashCardPage";
@@ -8,32 +8,145 @@ import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
 import { useNavigation, useRoute } from '@react-navigation/native';
 import SCREENS from '../../screens/index';
+import QuizCard from "../../components/QuizCard";
+import QuizzService from "../../services/QuizzService";
+import AsyncStorageService from "../../services/AsyncStorageService";
+import { checkAuthStatus } from "../../services/AuthService";
 
-// Add this function to handle navigation from external components
 export const navigateToFlashcardTab = (navigation, params = {}) => {
-  navigation.navigate(SCREENS.Library, { 
+  navigation.navigate(SCREENS.LIBRARY, {
     activeTab: "flashcard",
     ...params
   });
 };
 
 export const Library = () => {
+  console.log('🔄 Library component rendered');
+
   const route = useRoute();
   const [activeTab, setActiveTab] = useState(route.params?.activeTab || "myLibrary");
-  const [visibility, setVisibility] = useState("public"); // "public" or "private"
+  const [visibility, setVisibility] = useState("public");
   const navigation = useNavigation();
 
-  // Update useEffect to handle tab changes from navigation params
+  const [allQuizzes, setAllQuizzes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  const filteredQuizzes = allQuizzes.filter(quiz => {
+    if (visibility === "public") {
+      return quiz.status === "Public";
+    } else {
+      return quiz.status === "Private";
+    }
+  });
+
+  console.log('📊 Current state:', {
+    activeTab,
+    allQuizzes: allQuizzes.length,
+    filteredQuizzes: filteredQuizzes.length,
+    visibility,
+    loading,
+    userId
+  });
+
   useEffect(() => {
     if (route.params?.activeTab) {
       setActiveTab(route.params.activeTab);
     }
   }, [route.params]);
 
-  // Hàm xử lý khi tab được chọn
+  useEffect(() => {
+    console.log('🚀 useEffect triggered - initializing data');
+
+    const initializeData = async () => {
+      try {
+        console.log('⏳ Setting loading to true');
+        setLoading(true);
+
+        console.log('🔐 Checking auth status...');
+        const authStatus = await checkAuthStatus();
+
+        if (!authStatus) {
+          console.log('Authentication check failed');
+          return;
+        }
+
+        console.log('Authentication valid, user data:', authStatus);
+        if (authStatus.id) {
+          console.log('Setting userId:', authStatus.id);
+          setUserId(authStatus.id);
+          console.log('Calling fetchMyQuizzes...');
+          await fetchMyQuizzes();
+        } else {
+          console.log('No user ID found in auth status');
+        }
+      } catch (error) {
+        console.error('Error in authentication check:', error);
+      } finally {
+        console.log('Setting loading to false');
+        setLoading(false);
+      }
+    };
+
+    initializeData();
+  }, []);
+
+  const fetchMyQuizzes = async () => {
+    try {
+      console.log('📋 fetchMyQuizzes started');
+      setLoading(true);
+
+      console.log('🌐 Calling QuizzService.getMyQuizzes()...');
+      const response = await QuizzService.getMyQuizzes();
+      console.log('📦 My quizzes response:', response);
+
+      let allMyQuizzes = [];
+
+      if (response.data) {
+        console.log('✅ Setting quizzes data, count:', response.data.length);
+        allMyQuizzes = response.data;
+      } else {
+        console.log('⚠️ No data in response');
+      }
+
+      // Temporary workaround: If my-quizzes returns empty, try getAllQuizz and filter by user_id
+      if (!response.data || response.data.length === 0) {
+        console.log('🔄 my-quizzes returned empty, trying getAllQuizz as fallback...');
+        try {
+          const allQuizzesResponse = await QuizzService.getAllQuizz();
+          console.log('📦 All quizzes response:', allQuizzesResponse);
+
+          if (allQuizzesResponse.data && userId) {
+            const myQuizzes = allQuizzesResponse.data.filter(quiz => quiz.user_id === userId);
+            console.log('🎯 Filtered my quizzes:', myQuizzes);
+            allMyQuizzes = myQuizzes;
+          }
+        } catch (fallbackError) {
+          console.error('💥 Fallback getAllQuizz also failed:', fallbackError);
+        }
+      }
+
+      // Add mock status to quizzes since backend doesn't return status
+      const quizzesWithStatus = allMyQuizzes.map((quiz, index) => ({
+        ...quiz,
+        status: index % 2 === 0 ? 'Public' : 'Private' // Mock: alternate between public/private
+      }));
+
+      setAllQuizzes(quizzesWithStatus);
+      console.log('📊 Final quizzes with status:', quizzesWithStatus);
+
+    } catch (error) {
+      console.error('💥 Error fetching my quizzes:', error);
+      setAllQuizzes([]);
+    } finally {
+      console.log('🏁 fetchMyQuizzes finished, setting loading to false');
+      setLoading(false);
+    }
+  };
+
   const handleTabPress = (tabName) => {
     setActiveTab(tabName);
-    
+
     if (tabName === "flashcard") {
       navigation.navigate(SCREENS.FlashCardPage);
     } else if (tabName === "collections") {
@@ -47,7 +160,7 @@ export const Library = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>Thư viện của tôi</Text>
-          <View style={styles.headerIcons}>           
+          <View style={styles.headerIcons}>
           </View>
         </View>
       </View>
@@ -68,39 +181,62 @@ export const Library = () => {
               <Plus size={18} color="black" />
               <Text style={styles.createButtonText}>Tạo mới</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.filterContainer}>
-              <DropdownFilter 
-                label={visibility === "public" ? "Công khai" : "Riêng tư"} 
-                count={0} 
+              <DropdownFilter
+                label={visibility === "public" ? "Công khai" : "Riêng tư"}
+                count={filteredQuizzes.length}
                 options={[
                   { label: "Công khai", value: "public" },
                   { label: "Riêng tư", value: "private" }
                 ]}
-                onSelect={(value) => setVisibility(value)}
+                onSelect={(value) => {
+                  console.log('🔄 Visibility changed to:', value);
+                  setVisibility(value);
+                }}
               />
             </View>
           </View>
 
-          <View style={styles.emptyState}>
-            <Image source={{ uri: "https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg" }} style={styles.emptyImage} />
-            <Text style={styles.emptyTitle}>
-              {visibility === "public" ? "Thư viện công khai của bạn trống" : "Thư viện riêng tư của bạn trống"}
-            </Text>
-            <Text style={styles.emptyDescription}>Tìm câu đố hoặc bài học trong Quizizz Library, hoặc tạo mới.</Text>
-            <TouchableOpacity style={styles.exploreButton} activeOpacity={0.7}>
-              <Text style={styles.exploreButtonText}>Tìm câu đố hoặc bài học</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Loading indicator */}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.BLUE} />
+              <Text style={styles.loadingText}>Đang tải bài kiểm tra...</Text>
+            </View>
+          ) : filteredQuizzes.length > 0 ? (
+            /* Quiz List */
+            <FlatList
+              data={filteredQuizzes}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              columnWrapperStyle={styles.row}
+              renderItem={({ item }) => <QuizCard quiz={item} />}
+              contentContainerStyle={styles.quizListContainer}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            /* Empty State */
+            <View style={styles.emptyState}>
+              <Image source={{ uri: "https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg" }} style={styles.emptyImage} />
+              <Text style={styles.emptyTitle}>
+                {visibility === "public" ? "Thư viện công khai của bạn trống" : "Thư viện riêng tư của bạn trống"}
+              </Text>
+              <Text style={styles.emptyDescription}>Tìm câu đố hoặc bài học trong Quizizz Library, hoặc tạo mới.</Text>
+              <TouchableOpacity style={styles.exploreButton} activeOpacity={0.7}>
+                <Text style={styles.exploreButtonText}>Tìm câu đố hoặc bài học</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
       {activeTab === "flashcard" && (
-        <FlashCardPage /> 
+        <FlashCardPage />
       )}
 
       {activeTab === "collections" && (
-        <SharedQuizz /> 
+        <SharedQuizz />
       )}
     </View>
   );
@@ -126,7 +262,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   header: {
-    padding: 20,    
+    padding: 20,
     backgroundColor: COLORS.BLUE,
   },
   headerRow: {
@@ -172,7 +308,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
     paddingHorizontal: 10,
-    
+
   },
   content: {
     padding: 20,
@@ -180,21 +316,24 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 80,
-    left: 30,
-    width: 150,
-    height: 25,
-    alignSelf: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+    width: "100%",
+  },
+  filterContainer: {
+    width: 120,
   },
   createButton: {
     flexDirection: "row",
-    justifyContent: "flex-start",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "white",
     paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 8,
-    width: 100,
-    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
   createButtonText: {
     color: "black",
@@ -230,6 +369,24 @@ const styles = StyleSheet.create({
   exploreButtonText: {
     color: "white",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: COLORS.GRAY_TEXT,
+  },
+  quizListContainer: {
+    paddingVertical: 10,
+  },
+  row: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+  },
    subTabs: {
     flexDirection: "row",
     marginBottom: 15,
@@ -253,26 +410,8 @@ const styles = StyleSheet.create({
     color: COLORS.BLUE,
     fontWeight: "bold",
   },
-  
-  // Điều chỉnh lại style cho filterRow để không xung đột với subTabs
-  filterRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 10,
-    width: "100%",
-  },
-  
-  // Điều chỉnh lại style cho createButton
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "white",
-    paddingVertical: 12,
-    borderRadius: 8,
-    width: 100,
-    marginBottom: 15,
-  },
+
+
 });
 
 export default Library;

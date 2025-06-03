@@ -22,7 +22,6 @@ const FlashcardStudy = () => {
       setCurrentCardIndex(currentCardIndex + 1);
       setIsFlipped(false);
     } else {
-      // End of deck
       completeStudySession();
     }
   };
@@ -31,7 +30,6 @@ const FlashcardStudy = () => {
     if (!studyComplete) {
       setStudyComplete(true);
       
-      // Call the callback function to update the review count
       if (onStudyComplete) {
         onStudyComplete();
       }

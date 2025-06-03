@@ -84,10 +84,12 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.SELECT_QUIZ_FOR_FLASHCARD}
                 component={SelectQuizForFlashcard}
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name={SCREENS.SELECT_QUESTIONS_FOR_FLASHCARD}
                 component={SelectQuestionsForFlashcard}
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
@@ -205,7 +207,7 @@ function LibraryStack() {
                 options={{ title: 'Được chia sẻ' }}
             />
             <Stack.Screen
-                name={SCREENS.FLASHCARD_SET_DETAIL}
+                name="LibraryFlashcardSetDetail"
                 component={FlashcardSetDetail}
                 options={{ headerShown: false }}
             />

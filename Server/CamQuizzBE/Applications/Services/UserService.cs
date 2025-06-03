@@ -12,7 +12,8 @@ namespace CamQuizzBE.Applications.Services;
 public class UserService(
     IUserRepository userRepository,
     IMapper mapper,
-    UserManager<AppUser> userManager
+    UserManager<AppUser> userManager,
+    ILogger<UserService> logger
 ) : IUserService
 {
     public async Task<IdentityResult> CreateUserAsync(RegisterDto RegisterDto)
@@ -46,13 +47,58 @@ public class UserService(
 
     public async Task<IdentityResult> UpdateUserAsync(int id, UpdateUserDto updateUserDto)
     {
-        var user = await userRepository.GetUserByIdAsync(id);
-        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+        try
+        {
+            logger.LogInformation("🚀 UpdateUserAsync called with id: {Id}, updateData: {@UpdateData}", id, updateUserDto);
 
-        mapper.Map(updateUserDto, user);
-        user.UpdatedAt = DateTime.UtcNow;
+            var user = await userRepository.GetUserByIdAsync(id);
+            if (user == null)
+            {
+                logger.LogWarning("❌ User with id {Id} not found", id);
+                return IdentityResult.Failed(new IdentityError { Description = "User not found" });
+            }
 
-        return await userRepository.UpdateUserAsync(user);
+            logger.LogInformation("✅ User found: {Email}, mapping update data", user.Email);
+
+            // Log before mapping
+            logger.LogInformation("📝 Before mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                user.FirstName, user.LastName, user.Gender, user.DateOfBirth);
+
+            // Log the DTO values being mapped
+            logger.LogInformation("📝 DTO values - FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                updateUserDto.FirstName, updateUserDto.LastName, updateUserDto.Gender, updateUserDto.DateOfBirth);
+
+            mapper.Map(updateUserDto, user);
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Log after mapping
+            logger.LogInformation("📝 After mapping - User: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                user.FirstName, user.LastName, user.Gender, user.DateOfBirth);
+
+            logger.LogInformation("💾 Calling userRepository.UpdateUserAsync...");
+            var result = await userRepository.UpdateUserAsync(user);
+
+            if (result.Succeeded)
+            {
+                logger.LogInformation("✅ User {Id} updated successfully in database", id);
+
+                // Verify the update by fetching the user again
+                var updatedUser = await userRepository.GetUserByIdAsync(id);
+                logger.LogInformation("🔍 Verification - Updated user: FirstName={FirstName}, LastName={LastName}, Gender={Gender}, DateOfBirth={DateOfBirth}",
+                    updatedUser?.FirstName, updatedUser?.LastName, updatedUser?.Gender, updatedUser?.DateOfBirth);
+            }
+            else
+            {
+                logger.LogError("❌ Failed to update user {Id}. Errors: {Errors}", id, string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "💥 Exception occurred while updating user {Id}", id);
+            throw;
+        }
     }
 
     public async Task<IdentityResult> DeleteUserAsync(int id)

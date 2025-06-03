@@ -1,16 +1,109 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import COLORS from '../../constant/colors';
+import QuizzService from '../../services/QuizzService';
 
-const CandidateTestReport = ({ tests, onGoBack }) => {
-  const getTestResult = (test) => {
-    // Lấy kết quả của người dùng hiện tại
-    return test.results && test.results.length > 0 ? test.results[0] : null;
+const CandidateTestReport = ({ tests, onGoBack, attemptData }) => {
+  console.log('CandidateTestReport - tests:', tests);
+  console.log('CandidateTestReport - attemptData:', attemptData);
+
+  const [quizData, setQuizData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const getAttempts = () => {
+    if (attemptData && attemptData.length > 0) {
+      console.log('Using attemptData from API:', attemptData);
+      return attemptData;
+    }
+    const fallbackData = tests && tests.length > 0 && tests[0].results ? tests[0].results : [];
+    console.log('Using fallback data:', fallbackData);
+    return fallbackData;
   };
 
+  const attempts = getAttempts();
+  console.log('Final attempts data:', attempts);
+  console.log('Number of attempts:', attempts.length);
+
+  // Fetch quiz data để lấy tất cả câu hỏi và đáp án
+  useEffect(() => {
+    const fetchQuizData = async () => {
+      try {
+        if (attempts.length > 0) {
+          const quizId = attempts[0].quiz_id;
+          console.log('Fetching quiz data for quizId:', quizId);
+
+          const quiz = await QuizzService.getQuizzById(quizId);
+          console.log('Fetched quiz data:', quiz);
+          setQuizData(quiz);
+        }
+      } catch (error) {
+        console.error('Error fetching quiz data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuizData();
+  }, [attempts]);
+
+  const mergeQuizWithAttemptData = (attempt) => {
+    if (!quizData || !quizData.questions) {
+      console.log('No quiz data available for merging');
+      return [];
+    }
+
+    console.log('Merging quiz data with attempt data');
+    console.log('Quiz questions:', quizData.questions);
+    console.log('Attempt question_reviews:', attempt.question_reviews);
+
+    const mergedQuestions = quizData.questions.map(question => {
+      const questionReview = attempt.question_reviews?.find(
+        review => review.question_id === question.id
+      );
+
+      console.log(`Processing question ${question.id}:`, question);
+      console.log(`Found question review:`, questionReview);
+
+      const mergedQuestion = {
+        question_id: question.id,
+        question_name: question.name,
+        all_answers: question.answers.map(answer => {
+          const isSelected = questionReview?.selected_answers?.some(
+            selected => selected.answer_id === answer.id
+          ) || false;
+
+          return {
+            answer_id: answer.id,
+            answer_text: answer.answer,
+            is_correct: answer.is_correct,
+            isSelected: isSelected
+          };
+        })
+      };
+
+      console.log(`Merged question ${question.id}:`, mergedQuestion);
+      return mergedQuestion;
+    });
+
+    console.log('Final merged questions:', mergedQuestions);
+    return mergedQuestions;
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Đang tải dữ liệu...</Text>
+      </View>
+    );
+  }
+
   return (
-  <ScrollView style={styles.container}>
+  <ScrollView
+    style={styles.container}
+    showsVerticalScrollIndicator={true}
+    nestedScrollEnabled={true}
+  >
     <TouchableOpacity style={styles.backButton} onPress={() => onGoBack && onGoBack()}>
       <Ionicons name="arrow-back" size={24} color={COLORS.BLUE} />
       <Text style={styles.backText}>Trở về</Text>
@@ -18,105 +111,181 @@ const CandidateTestReport = ({ tests, onGoBack }) => {
 
     <Text style={styles.title}>Lịch sử làm bài của bạn</Text>
 
-    {tests && tests.map((test, testIndex) => {
-      const result = getTestResult(test);
-      if (!result) return null;
+    {attempts.length > 0 ? attempts.map((attempt, attemptIndex) => {
+      const calculateScoreFromMergedData = () => {
+        if (!quizData || !quizData.questions) {
+          return {
+            totalQuestions: attempt.total_questions || 0,
+            totalCorrect: attempt.total_correct || attempt.score || 0,
+            scorePercentage: Math.round(attempt.accuracy_rate || 0)
+          };
+        }
 
-      const scorePercentage = result.totalQuestions ? 
-        Math.round((result.score / result.totalQuestions) * 100) : 0;
+        const mergedQuestions = mergeQuizWithAttemptData(attempt);
+        const totalQuestions = mergedQuestions.length;
+
+        const totalCorrect = mergedQuestions.reduce((count, question) => {
+          const selectedAnswers = question.all_answers.filter(answer => answer.isSelected);
+          const correctAnswers = question.all_answers.filter(answer => answer.is_correct);
+
+          const isQuestionCorrect = selectedAnswers.length > 0 &&
+            selectedAnswers.every(answer => answer.is_correct) &&
+            selectedAnswers.length === correctAnswers.length;
+
+          return count + (isQuestionCorrect ? 1 : 0);
+        }, 0);
+
+        const scorePercentage = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
+        console.log(`Score calculation - Total Questions: ${totalQuestions}, Total Correct: ${totalCorrect}, Percentage: ${scorePercentage}%`);
+
+        return { totalQuestions, totalCorrect, scorePercentage };
+      };
+
+      const { totalQuestions, totalCorrect, scorePercentage } = calculateScoreFromMergedData();
       const scoreColor = scorePercentage >= 70 ? '#10B981' : scorePercentage >= 40 ? '#FBBF24' : '#EF4444';
-      const attemptNumber = result.attemptNumber || testIndex + 1;
-      const completedDate = result.completedAt ? new Date(result.completedAt) : new Date();
+      const attemptNumber = attempt.attempt_number || attemptIndex + 1;
+      const completedDate = attempt.timestamp ? new Date(attempt.timestamp) : new Date();
+
+      const quizTitle = attempt.quiz_name || (tests && tests[0] ? tests[0].title : 'Bài kiểm tra');
+      const quizId = attempt.quiz_id || (tests && tests[0] ? tests[0].id : null);
 
       return (
-        <View key={test.id || testIndex} style={styles.testCard}>
+        <View key={`attempt-${attemptIndex}-${quizId || 'unknown'}`} style={styles.testCard}>
           <View style={styles.testHeader}>
             <View style={styles.testInfo}>
-              <Text style={styles.testTitle}>{test.title || 'Bài kiểm tra'}</Text>
+              <Text style={styles.testTitle}>{quizTitle}</Text>
               <Text style={styles.attemptInfo}>
                 Lần làm thứ {attemptNumber} • {completedDate.toLocaleDateString()} {completedDate.toLocaleTimeString()}
               </Text>
+              {attempt.duration && (
+                <Text style={styles.durationInfo}>
+                  Thời gian làm bài: {Math.round(attempt.duration.totalMinutes || 0)} phút
+                </Text>
+              )}
             </View>
             <View style={styles.scoreContainer}>
               <Text style={[styles.scoreValue, { color: scoreColor }]}>
                 {scorePercentage}%
               </Text>
               <Text style={styles.scoreDetail}>
-                {result.score}/{result.totalQuestions} đúng
+                {totalCorrect}/{totalQuestions} đúng
               </Text>
             </View>
           </View>
 
           <View style={styles.questionsContainer}>
             <Text style={styles.sectionTitle}>Chi tiết bài làm</Text>
-            
-            {test.questions && test.questions.map((question, index) => {
-              if (!question) return null;
-              
-              const userAnswer = result.answers && result.answers.find(a => a.questionId === question.id);
-              const selectedOption = question.options && userAnswer ? 
-                question.options.find(o => o.id === userAnswer.selectedOptionId) : null;
-              const correctOption = question.options ? 
-                question.options.find(o => o.isCorrect) : null;
-              const isCorrect = selectedOption?.isCorrect;
-              
-              return (
-                <View key={question.id || index} style={styles.questionCard}>
-                  <Text style={styles.questionNumber}>Câu {index + 1}</Text>
-                  <Text style={styles.questionText}>{question.text}</Text>
-                  
-                  <View style={styles.optionsContainer}>
-                    {question.options && question.options.map((option, optIdx) => {
-                      if (!option) return null;
-                      
-                      const isSelected = userAnswer && option.id === userAnswer.selectedOptionId;
-                      const isCorrectOption = option.isCorrect;
-                      
-                      let optionStyle = styles.option;
-                      let textStyle = styles.optionText;
-                      let iconName = null;
-                      
-                      if (isSelected && isCorrectOption) {
-                        optionStyle = {...optionStyle, ...styles.correctSelectedOption};
-                        textStyle = {...textStyle, ...styles.correctSelectedText};
-                        iconName = "checkmark-circle";
-                      } else if (isSelected && !isCorrectOption) {
-                        optionStyle = {...optionStyle, ...styles.incorrectSelectedOption};
-                        textStyle = {...textStyle, ...styles.incorrectSelectedText};
-                        iconName = "close-circle";
-                      } else if (!isSelected && isCorrectOption) {
-                        optionStyle = {...optionStyle, ...styles.correctOption};
-                        textStyle = {...textStyle, ...styles.correctText};
-                      }
-                      
-                      return (
-                        <View key={option.id || optIdx} style={optionStyle}>
-                          <Text style={textStyle}>{option.text}</Text>
-                          {iconName && (
-                            <Ionicons 
-                              name={iconName} 
-                              size={20} 
-                              color={isCorrectOption ? "#10B981" : "#EF4444"} 
-                              style={styles.optionIcon}
-                            />
-                          )}
-                        </View>
-                      );
-                    })}
+
+
+
+            {(() => {
+              const mergedQuestions = mergeQuizWithAttemptData(attempt);
+              console.log('Using merged questions:', mergedQuestions);
+
+              return mergedQuestions.length > 0 ? (
+                mergedQuestions.map((mergedQuestion, index) => {
+                if (!mergedQuestion) return null;
+
+                console.log(`Merged Question ${index}:`, mergedQuestion);
+
+                const questionName = mergedQuestion.question_name || 'Câu hỏi không có tên';
+                const questionId = mergedQuestion.question_id;
+                const allAnswers = mergedQuestion.all_answers || [];
+
+                console.log(`All answers for question ${questionId}:`, allAnswers);
+
+                return (
+                  <View key={`question-${attemptIndex}-${index}-${questionId || 'unknown'}`} style={styles.questionCard}>
+                    <Text style={styles.questionNumber}>Câu {index + 1}</Text>
+                    <Text style={styles.questionText}>{questionName}</Text>
+
+                    <View style={styles.answersContainer}>
+                      {/* Hiển thị tất cả đáp án */}
+                      <View style={styles.answerSection}>
+                        <Text style={styles.answerLabel}>Tất cả đáp án:</Text>
+                        {allAnswers.map((answer, ansIdx) => {
+                          // Xác định style và icon dựa trên trạng thái
+                          let answerStyle = styles.neutralAnswer;
+                          let textStyle = styles.neutralAnswerText;
+                          let iconName = null;
+                          let iconColor = null;
+
+                          if (answer.isSelected && answer.is_correct) {
+                            // Đã chọn và đúng - tích xanh
+                            answerStyle = styles.correctAnswer;
+                            textStyle = styles.correctAnswerText;
+                            iconName = "checkmark-circle";
+                            iconColor = "#10B981";
+                          } else if (answer.isSelected && !answer.is_correct) {
+                            // Đã chọn nhưng sai - tích đỏ
+                            answerStyle = styles.incorrectAnswer;
+                            textStyle = styles.incorrectAnswerText;
+                            iconName = "close-circle";
+                            iconColor = "#EF4444";
+                          } else if (!answer.isSelected && answer.is_correct) {
+                            // Không chọn nhưng là đáp án đúng - tích xanh
+                            answerStyle = styles.correctAnswer;
+                            textStyle = styles.correctAnswerText;
+                            iconName = "checkmark-circle";
+                            iconColor = "#10B981";
+                          }
+
+                          return (
+                            <View
+                              key={`all-answer-${attemptIndex}-${index}-${ansIdx}-${answer.answer_id || 'unknown'}`}
+                              style={[styles.answerItem, answerStyle]}
+                            >
+                              <Text style={[styles.answerText, textStyle]}>
+                                {answer.answer_text}
+                              </Text>
+                              {iconName && (
+                                <Ionicons
+                                  name={iconName}
+                                  size={20}
+                                  color={iconColor}
+                                  style={styles.answerIcon}
+                                />
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
                   </View>
-                  
-                  {userAnswer?.timeSpent && (
-                    <Text style={styles.timeSpent}>
-                      Thời gian trả lời: {userAnswer.timeSpent} giây
-                    </Text>
-                  )}
+                );
+              })
+              ) : (
+                <View>
+                  <Text style={styles.noQuestionsText}>
+                    {!quizData ? 'Đang tải dữ liệu câu hỏi...' : 'Không có chi tiết câu hỏi cho lần làm bài này'}
+                  </Text>
+
+                  {/* Hiển thị thông tin cơ bản */}
+                  <View style={styles.basicInfoContainer}>
+                    <Text style={styles.basicInfoTitle}>Thông tin cơ bản:</Text>
+                    <Text style={styles.basicInfoText}>Quiz ID: {attempt.quiz_id}</Text>
+                    <Text style={styles.basicInfoText}>Điểm số: {totalCorrect}/{totalQuestions}</Text>
+                    <Text style={styles.basicInfoText}>Độ chính xác: {scorePercentage}%</Text>
+                    {attempt.duration && (
+                      <Text style={styles.basicInfoText}>
+                        Thời gian: {attempt.duration}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               );
-            })}
+            })()}
           </View>
         </View>
       );
-    })}
+    }) : (
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyStateText}>
+          Không có lịch sử làm bài nào cho bài kiểm tra này
+        </Text>
+      </View>
+    )}
   </ScrollView>
 );
 };
@@ -252,6 +421,99 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  durationInfo: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  answersContainer: {
+    marginBottom: 8,
+  },
+  answerSection: {
+    marginBottom: 12,
+  },
+  answerLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    color: '#374151',
+  },
+  answerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderRadius: 6,
+    marginBottom: 4,
+    borderWidth: 1,
+  },
+  answerText: {
+    fontSize: 14,
+    flex: 1,
+  },
+  answerIcon: {
+    marginLeft: 8,
+  },
+  correctAnswer: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: '#10B981',
+  },
+  correctAnswerText: {
+    color: '#10B981',
+    fontWeight: '500',
+  },
+  incorrectAnswer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: '#EF4444',
+  },
+  incorrectAnswerText: {
+    color: '#EF4444',
+    fontWeight: '500',
+  },
+  neutralAnswer: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  neutralAnswerText: {
+    color: '#6B7280',
+    fontWeight: '400',
+  },
+  noQuestionsText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+
+  basicInfoContainer: {
+    backgroundColor: '#e3f2fd',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#bbdefb',
+  },
+  basicInfoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1976d2',
+  },
+  basicInfoText: {
+    fontSize: 14,
+    marginBottom: 4,
+    color: '#424242',
   },
 });
 

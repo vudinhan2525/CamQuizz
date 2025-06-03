@@ -1,26 +1,171 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
+import GroupService from '../../../services/GroupService';
+
 const tmpURL = 'https://genk.mediacdn.vn/2018/9/6/baroibeo-15362268453481952312749.jpg';
+
 const GroupMembers = ({ navigation, route }) => {
   const { group, isLeader } = route.params;
-  const [inviteEmail, setInviteEmail] = useState('');
 
-  const pendingMembers = [
-    { id: '1', name: 'Pending User 1', email: 'user1@example.com' },
-    { id: '2', name: 'Pending User 2', email: 'user2@example.com' },
-  ];
-  const members = [
-    { id: '1', name: 'User 1', role: 'Leader' },
-    { id: '2', name: 'User 2', role: 'Member' },
-    { id: '3', name: 'User 3', role: 'Member' },
-  ];
+  // State management
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [members, setMembers] = useState([]);
+  const [pendingMembers, setPendingMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [inviting, setInviting] = useState(false);
+
+  useEffect(() => {
+    loadMembersData();
+  }, [group.id]);
+
+  const loadMembersData = async () => {
+    if (!group.id) {
+      console.warn('No group ID provided');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log(`Loading members for group ID: ${group.id}`);
+
+      // Gọi API để lấy members
+      await loadMembers();
+
+    } catch (error) {
+      console.error('Error loading members data:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể tải danh sách thành viên. Vui lòng thử lại.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMembers = async () => {
+    try {
+      console.log(`Fetching members for group ${group.id}`);
+
+      // Gọi cả hai API song song
+      const [membersResponse, pendingResponse] = await Promise.all([
+        GroupService.getMembersByGroupId(group.id),
+        GroupService.getPendingMembersByGroupId(group.id)
+      ]);
+
+      console.log('Members response:', membersResponse);
+      console.log('Pending members response:', pendingResponse);
+
+      // Xử lý dữ liệu approved members
+      let membersData = [];
+      if (membersResponse && membersResponse.data) {
+        membersData = Array.isArray(membersResponse.data) ? membersResponse.data : [membersResponse.data];
+      } else if (Array.isArray(membersResponse)) {
+        membersData = membersResponse;
+      }
+
+      // Xử lý dữ liệu pending members
+      let pendingData = [];
+      if (pendingResponse && pendingResponse.data) {
+        pendingData = Array.isArray(pendingResponse.data) ? pendingResponse.data : [pendingResponse.data];
+      } else if (Array.isArray(pendingResponse)) {
+        pendingData = pendingResponse;
+      }
+
+      // Transform approved members
+      const transformedMembers = membersData.map((item, index) => ({
+        id: item.userId || item.id || index.toString(),
+        name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
+        email: item.email || 'No email',
+        role: item.userId === group.ownerId ? 'Leader' : 'Member',
+        status: item.status || 'Approved',
+        joinedAt: item.joinedAt || new Date().toISOString(),
+        avatar: item.avatar || tmpURL,
+        isOwner: item.userId === group.ownerId
+      }));
+
+      // Transform pending members
+      const transformedPendingMembers = pendingData.map((item, index) => ({
+        id: item.userId || item.id || `pending_${index}`,
+        name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
+        email: item.email || 'No email',
+        role: 'Pending',
+        status: 'Pending',
+        joinedAt: item.joinedAt || new Date().toISOString(),
+        avatar: item.avatar || tmpURL,
+        isOwner: false
+      }));
+
+      setMembers(transformedMembers);
+      setPendingMembers(transformedPendingMembers);
+
+      console.log(`Loaded ${transformedMembers.length} approved members and ${transformedPendingMembers.length} pending members`);
+
+    } catch (error) {
+      console.error('Error loading members:', error);
+
+      // Nếu lỗi 404 hoặc không có members, set empty array
+      if (error.message.includes('not found') || error.message.includes('no members')) {
+        setMembers([]);
+        setPendingMembers([]);
+        console.log('No members found for this group');
+      } else {
+        throw error; // Re-throw other errors
+      }
+    }
+  };
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email để mời');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(inviteEmail.trim())) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email hợp lệ');
+      return;
+    }
+
+    try {
+      setInviting(true);
+      console.log(`Inviting ${inviteEmail} to group ${group.id}`);
+
+      await GroupService.inviteMemberByEmail(group.id, inviteEmail);
+
+      Alert.alert(
+        'Thành công',
+        `Đã gửi lời mời đến ${inviteEmail}`,
+        [{ text: 'OK' }]
+      );
+
+      // Clear email input
+      setInviteEmail('');
+
+      // Reload members data to show new pending member
+      await loadMembersData();
+
+    } catch (error) {
+      console.error('Error inviting member:', error);
+      Alert.alert(
+        'Lỗi',
+        error.message || 'Không thể gửi lời mời. Vui lòng thử lại.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const renderPendingMember = ({ item }) => (
     <View style={styles.pendingMemberItem}>
       <Image
         style={styles.avatar}
-        source={{ uri: tmpURL }}
+        source={{ uri: item.avatar }}
       />
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.name}</Text>
@@ -38,21 +183,55 @@ const GroupMembers = ({ navigation, route }) => {
     <View style={styles.memberItem}>
       <Image
         style={styles.avatar}
-        source={{ uri: tmpURL }}
+        source={{ uri: item.avatar }}
       />
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.name}</Text>
         <Text style={styles.memberRole}>
-          {item.id === '1' ? 'Chủ nhóm' : 'Thành viên'}
+          {item.isOwner ? 'Chủ nhóm' : 'Thành viên'}
+        </Text>
+        <Text style={styles.memberEmail}>{item.email}</Text>
+        <Text style={styles.joinedDate}>
+          Tham gia: {new Date(item.joinedAt).toLocaleDateString('vi-VN')}
         </Text>
       </View>
-      {isLeader && item.id !== '1' && (
+      {isLeader && !item.isOwner && (
         <TouchableOpacity style={styles.removeButton}>
           <Ionicons name="trash-outline" size={24} color={COLORS.RED} />
         </TouchableOpacity>
       )}
     </View>
   );
+
+  const renderEmptyMembers = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="people-outline" size={64} color={COLORS.GRAY} />
+      <Text style={styles.emptyTitle}>Chưa có thành viên nào</Text>
+      <Text style={styles.emptySubtitle}>
+        {isLeader
+          ? 'Hãy mời thành viên đầu tiên vào nhóm!'
+          : 'Nhóm này chưa có thành viên nào khác.'
+        }
+      </Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{group.name}</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.BLUE} />
+          <Text style={styles.loadingText}>Đang tải danh sách thành viên...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -75,18 +254,28 @@ const GroupMembers = ({ navigation, route }) => {
               onChangeText={setInviteEmail}
               placeholder="Nhập email để mời"
             />
-            <TouchableOpacity style={styles.inviteButton}>
-              <Text style={styles.inviteButtonText}>Mời</Text>
+            <TouchableOpacity
+              style={[styles.inviteButton, inviting && styles.inviteButtonDisabled]}
+              onPress={handleInvite}
+              disabled={inviting}
+            >
+              <Text style={styles.inviteButtonText}>
+                {inviting ? 'Đang mời...' : 'Mời'}
+              </Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            horizontal
-            data={pendingMembers}
-            renderItem={renderPendingMember}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.pendingList}
-            showsHorizontalScrollIndicator={false}
-          />
+          {pendingMembers.length > 0 ? (
+            <FlatList
+              horizontal
+              data={pendingMembers}
+              renderItem={renderPendingMember}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.pendingList}
+              showsHorizontalScrollIndicator={false}
+            />
+          ) : (
+            <Text style={styles.noPendingText}>Không có thành viên đang chờ duyệt</Text>
+          )}
         </View>
       )}
 
@@ -98,7 +287,9 @@ const GroupMembers = ({ navigation, route }) => {
           data={members}
           renderItem={renderMember}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.membersList}
+          contentContainerStyle={members.length === 0 ? styles.emptyContent : styles.membersList}
+          ListEmptyComponent={renderEmptyMembers}
+          showsVerticalScrollIndicator={false}
         />
       </View>
     </View>
@@ -151,6 +342,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     justifyContent: 'center',
+  },
+  inviteButtonDisabled: {
+    backgroundColor: COLORS.GRAY,
+    opacity: 0.6,
   },
   inviteButtonText: {
     color: COLORS.WHITE,
@@ -214,6 +409,54 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 4,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.WHITE,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.GRAY,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.BLACK,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.GRAY,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  joinedDate: {
+    fontSize: 12,
+    color: COLORS.GRAY,
+    marginTop: 2,
+  },
+  noPendingText: {
+    fontSize: 14,
+    color: COLORS.GRAY,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
   },
 });
 

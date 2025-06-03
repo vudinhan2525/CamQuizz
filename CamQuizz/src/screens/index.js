@@ -1,7 +1,7 @@
 const SCREENS = {
     EXPLORE: "Khám phá",
-    LOGIN: "Đăng ký",
-    SIGNUP: "Đăng nhập",
+    LOGIN: 'Login',
+    SIGNUP: 'Signup',
     ACCOUNT: "Tài khoản",
     STUDYGROUP:"Nhóm học tập",
     LIBRARY:"Thư Viện",
@@ -33,8 +33,6 @@ const SCREENS = {
     ADMIN_PACKAGES: "Quản lý gói / doanh thu",
     ADMIN_USERS: "Quản lý người dùng",
     ADMIN_ACCOUNT: "Tài khoản admin",
-    LOGIN: 'Login',
-    SIGNUP: 'Signup',
     AUTH_STACK: 'AuthStack',
     USER_STACK: 'UserStack',
     ADMIN_STACK: 'AdminStack',

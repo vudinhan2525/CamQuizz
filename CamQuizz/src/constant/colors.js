@@ -4,6 +4,7 @@ const COLORS = {
     BLACK: '#000',
     PLACEHOLDER_COLOR: '#8B8B8B',
     GRAY_LIGHT: '#8B8B8B',
+    GRAY_DARK: '#555555',
     BLUE:'#1579ea',
     GRAY_BG:'#f2f2f2',
     GRAY_TEXT:'#8a8a8a',
@@ -15,6 +16,7 @@ const COLORS = {
     Fresh_Air: '#a6e7ff',
     BLUE_LIGHT: '#c7eaf6',
     ORANGE: '#FF9F43',
+    YELLOW: '#F1C40F',
   };
   
   export default COLORS;

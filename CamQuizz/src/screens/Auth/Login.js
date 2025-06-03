@@ -54,11 +54,10 @@ export const Login = () => {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.logoContainer}>
           <Image
-            source={require('../../../assets/logo.png')}
+            source={require('../../../assets/logo.jpg')}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.appName}>CamQuizz</Text>
         </View>
 
         <Text style={styles.title}>Đăng nhập</Text>
@@ -126,7 +125,7 @@ export const Login = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BG,
+    backgroundColor: COLORS.WHITE,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -138,8 +137,8 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 150,
+    height: 150,
   },
   appName: {
     fontSize: 24,

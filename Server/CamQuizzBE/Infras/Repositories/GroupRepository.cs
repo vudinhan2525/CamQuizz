@@ -278,6 +278,9 @@ public class GroupRepository(DataContext context, ILogger<GroupRepository> logge
 
         group.Name = updateGroupDto.Name;
         group.Description = updateGroupDto.Description;
+
+        // Lưu thay đổi vào database
+        await _context.SaveChangesAsync();
     }
     public async Task<IEnumerable<MemberDto>> GetMembersAsync(int groupId)
     {

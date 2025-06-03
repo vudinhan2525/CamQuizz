@@ -1,9 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TestCard from '../../components/Report/TestCard';
 import TestFilter from '../../components/Report/TestFilter';
 import { getCurrentUserTests, getOrganizationTests, getCandidateAttemptedTests } from '../../components/data/MocTests';
+import ReportService from '../../services/ReportService';
+import QuizzService from '../../services/QuizzService';
 import COLORS from '../../constant/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,22 +14,144 @@ export const Report = ({ navigation }) => {
   const [searchFilter, setSearchFilter] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedView, setSelectedView] = useState('author');
+  const [loading, setLoading] = useState(false);
+  const [authorQuizzes, setAuthorQuizzes] = useState([]);
+  const [candidateAttempts, setCandidateAttempts] = useState([]);
+  const [quizHistory, setQuizHistory] = useState([]);
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    loadData();
+  }, [activeView]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      switch (activeView) {
+        case 'author':
+          await loadAuthorData();
+          break;
+        case 'organization':
+          // Tạm thời sử dụng mock data cho organization
+          break;
+        case 'candidate':
+          await loadCandidateData();
+          break;
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+
+      // Handle 401 errors specifically
+      if (error.message && error.message.includes('Unauthorized')) {
+        Alert.alert(
+          'Phiên đăng nhập hết hạn',
+          'Vui lòng đăng nhập lại để tiếp tục.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Lỗi', 'Không thể tải dữ liệu báo cáo. Vui lòng thử lại.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAuthorData = async () => {
+    try {
+      const response = await ReportService.getMyQuizzesForReport(50, 1);
+      console.log('Author quizzes loaded:', response);
+
+      // Check if response and response.data exist and is an array
+      if (!response || !response.data || !Array.isArray(response.data)) {
+        console.log('No quiz data found or invalid response format');
+        setAuthorQuizzes([]);
+        return;
+      }
+
+      const formattedQuizzes = response.data.map(quiz => ({
+        id: quiz.id,
+        title: quiz.name,
+        image: quiz.image,
+        attempts: quiz.numberOfAttended || 0,
+        questions: quiz.numberOfQuestions || 0,
+        passRate: 0,
+        createdAt: quiz.createdAt,
+        description: quiz.description,
+        duration: quiz.duration,
+        genreId: quiz.genreId,
+        userId: quiz.userId,
+      }));
+
+      setAuthorQuizzes(formattedQuizzes);
+    } catch (error) {
+      console.error('Error loading author data:', error);
+      setAuthorQuizzes([]); // Set empty array on error
+      throw error;
+    }
+  };
+
+  const loadCandidateData = async () => {
+    try {
+      const historyResponse = await ReportService.getMyQuizHistory(50, 1);
+      console.log('Quiz history loaded:', historyResponse);
+
+      // Check if response and response.data exist and is an array
+      if (!historyResponse || !historyResponse.data || !Array.isArray(historyResponse.data)) {
+        console.log('No quiz history data found or invalid response format');
+        setQuizHistory([]);
+        return;
+      }
+
+      const formattedHistory = await Promise.all(
+        historyResponse.data.map(async (item) => {
+          let numberOfQuestions = 0;
+
+          try {
+            const quizDetails = await QuizzService.getQuizzById(item.quiz_id || item.quizId);
+            numberOfQuestions = quizDetails.number_of_questions || 0;
+            console.log(`Quiz ${item.quiz_id} has ${numberOfQuestions} questions`);
+          } catch (error) {
+            console.error(`Error fetching quiz details for quiz ${item.quiz_id}:`, error);
+          }
+
+          return {
+            id: item.quiz_id || item.quizId,
+            title: item.quiz_name || item.quizName,
+            image: item.quiz_image || item.quizImage,
+            attempts: item.attempt_count || item.attemptCount,
+            questions: numberOfQuestions,
+            passRate: item.best_score || item.bestScore,
+            lastAttempt: item.last_attempt_date || item.lastAttemptDate,
+            genreName: item.genre_name || item.genreName,
+            bestScore: item.best_score || item.bestScore,
+            genreId: item.genre_id || item.genreId,
+          };
+        })
+      );
+
+      console.log('Formatted history with quiz details:', formattedHistory);
+      setQuizHistory(formattedHistory);
+    } catch (error) {
+      console.error('Error loading candidate data:', error);
+      setQuizHistory([]); // Set empty array on error
+      throw error;
+    }
+  };
 
   const getTests = () => {
     switch (activeView) {
       case 'author':
-        return getCurrentUserTests();
+        return authorQuizzes;
       case 'organization':
-        return getOrganizationTests();
+        return getOrganizationTests(); // Tạm thời sử dụng mock data
       case 'candidate':
-        return getCandidateAttemptedTests();
+        return quizHistory;
       default:
         return [];
     }
   };
 
-  const allTests = useMemo(() => getTests(), [activeView]);
+  const allTests = useMemo(() => getTests(), [activeView, authorQuizzes, quizHistory]);
 
   const filteredTests = useMemo(() => {
     if (!searchFilter) return allTests;
@@ -35,7 +159,6 @@ export const Report = ({ navigation }) => {
   }, [allTests, searchFilter]);
 
   const handleViewReport = (test) => {
-    // Navigate to ReportDetail screen with test data and view type
     navigation.navigate('ReportDetail', {
       test: test,
       viewType: activeView
@@ -55,7 +178,10 @@ export const Report = ({ navigation }) => {
     setSearchFilter(null);
   };
 
-  // Cấu hình nhãn tùy chỉnh cho từng loại báo cáo
+  const handleRefresh = () => {
+    loadData();
+  };
+
   const getCustomLabels = () => {
     switch (activeView) {
       case 'author':
@@ -98,7 +224,7 @@ export const Report = ({ navigation }) => {
         style={styles.scrollView}
         contentContainerStyle={[
           styles.contentContainer,
-          { paddingBottom: insets.bottom + 80 } // Thêm padding bottom để tránh bị che bởi bottom tab
+          { paddingBottom: insets.bottom + 80 } 
         ]}
       >
         <View style={styles.sectionContainer}>
@@ -170,26 +296,54 @@ export const Report = ({ navigation }) => {
         </View> */}
 
         <View style={styles.testListContainer}>
-          {filteredTests.length > 0 ? (
-            filteredTests.map((test) => (
-              <TestCard 
-                key={test.id} 
-                test={test} 
-                onViewReport={handleViewReport} 
-                reportType={activeView}
-                showBadges={shouldShowBadges}
-                customLabels={getCustomLabels()}
-              />
-            ))
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.BLUE} />
+              <Text style={styles.loadingText}>Đang tải dữ liệu báo cáo...</Text>
+            </View>
+          ) : filteredTests.length > 0 ? (
+            <>
+              {filteredTests.map((test, index) => (
+                <TestCard
+                  key={`${activeView}-${test.id}-${index}`}
+                  test={test}
+                  onViewReport={handleViewReport}
+                  reportType={activeView}
+                  showBadges={shouldShowBadges}
+                  customLabels={getCustomLabels()}
+                />
+              ))}
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={handleRefresh}
+              >
+                <Ionicons name="refresh" size={16} color={COLORS.BLUE} />
+                <Text style={styles.refreshText}>Làm mới dữ liệu</Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons name="document-text-outline" size={48} color="#aaa" />
-              <Text style={styles.emptyStateText}>Không tìm thấy bài kiểm tra trong mục này</Text>
+              <Text style={styles.emptyStateText}>
+                {activeView === 'author'
+                  ? 'Bạn chưa tạo bài kiểm tra nào'
+                  : activeView === 'candidate'
+                  ? 'Bạn chưa làm bài kiểm tra nào'
+                  : 'Không tìm thấy bài kiểm tra trong mục này'
+                }
+              </Text>
               {searchFilter && (
                 <TouchableOpacity onPress={handleClearFilter}>
                   <Text style={styles.emptyStateAction}>Làm mới và thử lại</Text>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={styles.refreshButtonEmpty}
+                onPress={handleRefresh}
+              >
+                <Ionicons name="refresh" size={16} color={COLORS.BLUE} />
+                <Text style={styles.refreshText}>Làm mới</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -270,11 +424,32 @@ const styles = StyleSheet.create({
   refreshButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'center',
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE,
+  },
+  refreshButtonEmpty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 16,
   },
   refreshText: {
     marginLeft: 4,
     color: COLORS.BLUE,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 16,
   },
   testListContainer: {
     marginBottom: 20,

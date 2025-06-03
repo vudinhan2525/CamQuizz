@@ -1,6 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_URL}  from '@env';
+import { API_URL } from '@env';
 
 // API base URL - using ngrok for remote access
 const API_BASE_URL = `${API_URL}/api/v1`;
@@ -11,10 +11,12 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'ngrok-skip-browser-warning': 'true', 
+    'ngrok-skip-browser-warning': 'true',
   },
-  timeout: 10000, 
-  validateStatus: status => status >= 200 && status < 500, 
+  timeout: 10000,
+  validateStatus: status => status >= 200 && status < 500,
+  withCredentials: true,
+
 });
 
 // Add request interceptor to add auth token to requests
@@ -22,9 +24,10 @@ apiClient.interceptors.request.use(
   async (config) => {
 
     const token = await AsyncStorage.getItem('userToken');
-
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      //config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = token;
+
     }
 
     return config;

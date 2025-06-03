@@ -18,8 +18,8 @@ import CreateQuestion from '../screens/Users/Quiz/CreateQuestion';
 import { FlashcardSetDetail } from '../screens/Users/FlashCard/FlashcardSetDetail';
 import { CreateStudyGroup } from '../screens/Users/StudyGroup/CreateStudyGroup';
 import GroupScreen from '../screens/Users/StudyGroup/GroupScreen';
-import  GroupMembers from '../screens/Users/StudyGroup/GroupMembers';
-import  GroupMessage  from '../screens/Users/StudyGroup/GroupMessage';
+import GroupMembers from '../screens/Users/StudyGroup/GroupMembers';
+import GroupMessage from '../screens/Users/StudyGroup/GroupMessage';
 import FlashCardPage from '../screens/Users/FlashCard/FlashCardPage';
 import SharedQuizz from '../screens/Users/Library/SharedQuizz';
 import { ReportDetail } from '../components/Report/ReportDetail';
@@ -29,36 +29,38 @@ import QuestionPlay from '../screens/Users/QuizPlay/QuestionPlay';
 import EndQuiz from '../screens/Users/QuizPlay/EndQuiz';
 import QuizReport from '../screens/Users/QuizPlay/QuizReport';
 import QuizDetail from '../screens/Users/QuizPlay/QuizDetail';
-
+import UserPackage from '../screens/Users/Explore/UserPackage';
+import ReportHistory from '../screens/Users/Explore/ReportHistory';
 import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
 
 import { Quizz } from '../screens/Admin/Quizz';
-import { Package } from '../screens/Admin/Package';
+import { Package } from '../screens/Admin/Package/Package';
 import { User } from '../screens/Admin/User';
 import { Account as AdminAccount } from '../screens/Admin/Account';
-
+import Revenue from '../screens/Admin/Package/Revenue';
 import { Login } from '../screens/Auth/Login';
 import { Signup } from '../screens/Auth/Signup_new';
 import SelectQuizForFlashcard from '../screens/Users/FlashCard/SelectQuizForFlashcard';
 import SelectQuestionsForFlashcard from '../screens/Users/FlashCard/SelectQuestionsForFlashcard';
+import CreatePackage from '../screens/Admin/Package/CreatePackage';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 
 // Auth Stack
 function AuthStackNavigator() {
-  return (
-    <Stack.Navigator
-      initialRouteName={SCREENS.LOGIN}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name={SCREENS.LOGIN} component={Login} />
-      <Stack.Screen name={SCREENS.SIGNUP} component={Signup} />
-    </Stack.Navigator>
-  );
+    return (
+        <Stack.Navigator
+            initialRouteName={SCREENS.LOGIN}
+            screenOptions={{
+                headerShown: false,
+            }}
+        >
+            <Stack.Screen name={SCREENS.LOGIN} component={Login} />
+            <Stack.Screen name={SCREENS.SIGNUP} component={Signup} />
+        </Stack.Navigator>
+    );
 }
 
 
@@ -73,7 +75,7 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.QUIZ_CREATION}
                 component={QuizCreation}
-                options={{headerShown:false}}/>
+                options={{ headerShown: false }} />
             <Stack.Screen
                 name={SCREENS.QUESTION_SETTING}
                 component={CreateQuestion}
@@ -153,7 +155,16 @@ function UsersStackNavigation() {
                 component={QuestionPlaySetting}
                 options={{ headerShown: false }}
             />
-
+            <Stack.Screen
+                name={SCREENS.REPORT_HISTORY}
+                component={ReportHistory}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.USER_PACKAGE}
+                component={UserPackage}
+                options={{ headerShown: false }}
+            />
         </Stack.Navigator>
     );
 }
@@ -189,9 +200,9 @@ function LibraryStack() {
                 options={{ title: 'Thẻ học bài' }}
             />
             <Stack.Screen
-            name={SCREENS.SharedQuizz}
-            component={SharedQuizz}
-            options={{ title: 'Được chia sẻ' }}
+                name={SCREENS.SharedQuizz}
+                component={SharedQuizz}
+                options={{ title: 'Được chia sẻ' }}
             />
             <Stack.Screen
                 name={SCREENS.FLASHCARD_SET_DETAIL}
@@ -302,9 +313,9 @@ function AdminTabNavigator() {
                     display: isKeyboardVisible ? 'none' : 'flex',
                 },
                 headerStyle: {
-                    backgroundColor: COLORS.BLUE,
+                    backgroundColor: COLORS.WHITE,
                 },
-                headerTintColor: COLORS.WHITE,
+                headerTintColor: COLORS.BLUE,
                 headerTitleStyle: {
                     fontWeight: 'bold',
                 },
@@ -365,6 +376,16 @@ function AdminStackNavigation() {
             <Stack.Screen
                 name={SCREENS.ADMIN_TAB}
                 component={AdminTabNavigator}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.REVENUE}
+                component={Revenue}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.CREATE_PACKAGE}
+                component={CreatePackage}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

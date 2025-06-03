@@ -11,6 +11,8 @@ import BottomSheet from '../../../components/BottomSheet';
 import { Dropdown } from 'react-native-element-dropdown';
 import GenreService from '../../../services/GenreService';
 import QuizzService from '../../../services/QuizzService';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+
 export const ExploreSearch = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -63,8 +65,9 @@ export const ExploreSearch = () => {
       resetState();
     };
   }, []);
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = async () => {
     console.log('searchQuery', searchQuery);
+    await AsyncStorageService.saveRecentSearch(searchQuery);
     setShowResult(true);
   };
   const resetState = () => {
@@ -87,8 +90,11 @@ export const ExploreSearch = () => {
     setShowResult(false);
   };
 
-  const handleSearchPress = (query) => {
+  const handleSearchPress = async (query) => {
     setSearchQuery(query);
+    console.log('Search query:', query);
+    await AsyncStorageService.saveRecentSearch(query);
+
     setShowResult(true);
   };
 

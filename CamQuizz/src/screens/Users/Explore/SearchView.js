@@ -1,10 +1,35 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet,TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import Antdesign from 'react-native-vector-icons/AntDesign';
-export const SearchView = ({onSearchPress}) => {
-  const recentSearches = ['Quiz 1', 'Quiz 2 Quiz 2 Quiz 2', 'Quiz 3', 'Quiz 1', 'Quiz 2', 'Quiz 3'];
-  const popularSearches = ['Popular Quiz 1', 'Popular Quiz 2', 'Popular Quiz 3'];
-
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import QuizzService from '../../../services/QuizzService';
+export const SearchView = ({ onSearchPress }) => {
+  const [recentSearches, setRecentSearches] = React.useState([]);
+  const [popularSearches, setPopularSearches] =React.useState([]); ;
+  React.useEffect(() => {
+    const fetchRecentSearches = async () => {
+      try {
+        const recentSearches = await AsyncStorageService.get5RecentSearches();
+        if (recentSearches) {
+          setRecentSearches(recentSearches);
+        }
+      } catch (error) {
+        console.error('Error fetching recent searches:', error);
+      }
+    };
+    const fetchPopularSearches = async () => {
+      try {
+        const topQuizzes = await QuizzService.getTop5Quizzes();
+        if (topQuizzes) {
+          setPopularSearches(topQuizzes.map(quiz => quiz.name));
+        }
+      } catch (error) {
+        console.error('Error fetching popular searches:', error);
+      }
+    };
+    fetchPopularSearches();
+    fetchRecentSearches();
+  }, []);
   const renderPopular = ({ item }) => (
     <TouchableOpacity style={styles.itemContainer} onPress={() => onSearchPress(item)}>
       <Text style={styles.itemText}>{item}</Text>
@@ -26,7 +51,7 @@ export const SearchView = ({onSearchPress}) => {
           }
         </View>
       </View>
-      <Text style={styles.title}>TÌM KIẾM HÀNG ĐẦU</Text>
+      <Text style={styles.title}>BÀI KIỂM TRA PHỔ BIẾN</Text>
       <FlatList
         data={popularSearches}
         renderItem={renderPopular}
@@ -70,7 +95,7 @@ const styles = StyleSheet.create({
   },
   recentItemText: {
     fontSize: 16,
-    color: 'black', 
+    color: 'black',
   },
   containerRecent: {
     flexDirection: 'row',

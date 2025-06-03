@@ -88,6 +88,7 @@ const QuizDetail = ({ navigation, route }) => {
                 const hubConnection = await connectToHub(connectionId);
                 // await createRoom();
                 const userId = await AsyncStorageService.getUserId();
+                console.log('User ID:',  hubConnection);
                 hubConnection.on('roomCreated', (room) => {
                     console.log('Room created:', room);
                     navigation.navigate(SCREENS.LOBBY, {

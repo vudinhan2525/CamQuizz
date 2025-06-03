@@ -38,7 +38,7 @@ public static class IdentityServiceExtensions
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenKey)),
                 ValidateIssuer = false,
                 ValidateAudience = false,
-                ValidateLifetime = false,
+                ValidateLifetime = true,
                 RoleClaimType = ClaimTypes.Role
             };
 
@@ -46,15 +46,26 @@ public static class IdentityServiceExtensions
             {
                 OnMessageReceived = context =>
                 {
-                    var token = context.Request.Headers["Authorization"].ToString();
-                    Console.WriteLine($"🔹 Raw Token Received: '{token}'");
+                    var authHeader = context.Request.Headers["Authorization"].ToString();
+                    Console.WriteLine($"🔹 Raw Authorization Header: '{authHeader}'");
 
-                    if (string.IsNullOrEmpty(token))
+                    if (string.IsNullOrEmpty(authHeader))
                     {
-                        Console.WriteLine("❌ No token received!");
+                        Console.WriteLine("❌ No authorization header received!");
+                        return Task.CompletedTask;
                     }
 
-                    context.Token = token;
+                    // Extract the token part after "Bearer "
+                    if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var token = authHeader.Substring("Bearer ".Length).Trim();
+                        Console.WriteLine($"🔹 Extracted Token: '{token}'");
+                        context.Token = token;
+                    }
+                    else
+                    {
+                        Console.WriteLine("❌ Authorization header does not start with 'Bearer'");
+                    }
                     return Task.CompletedTask;
                 }
             };

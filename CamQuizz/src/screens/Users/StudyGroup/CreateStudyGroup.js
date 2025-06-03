@@ -1,12 +1,35 @@
-import React, { useState } from 'react';
-import {ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
+import GroupService from '../../../services/GroupService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const CreateStudyGroup = ({ navigation }) => {
   const [groupName, setGroupName] = useState('');
+  const [description, setDescription] = useState('');
   const [email, setEmail] = useState('');
   const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  // Fetch user ID from AsyncStorage
+  useEffect(() => {
+    const fetchUserId = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserId(user.id);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        Alert.alert('Lỗi', 'Không thể lấy thông tin người dùng');
+      }
+    };
+
+    fetchUserId();
+  }, []);
 
   const handleAddEmail = () => {
     if (email.trim()) {
@@ -20,15 +43,69 @@ export const CreateStudyGroup = ({ navigation }) => {
     setEmails(newEmails);
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      alert('Vui lòng nhập tên nhóm');
+      Alert.alert('Lỗi', 'Vui lòng nhập tên nhóm');
       return;
     }
-    // Thêm logic tạo nhóm ở đây
-    
-    // Reset form và quay lại
-    navigation.goBack();
+
+    if (!userId) {
+      Alert.alert('Lỗi', 'Không thể xác định người dùng. Vui lòng đăng nhập lại.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const groupData = {
+        name: groupName.trim(),
+        description: description.trim(),
+        ownerId: userId
+      };
+
+      const response = await GroupService.createGroup(groupData);
+
+      console.log('Nhóm đã được tạo:', response);
+
+      if (emails.length > 0) {
+        console.log('Mời thành viên với email:', emails);
+      }
+
+      Alert.alert(
+        'Thành công',
+        'Nhóm học tập đã được tạo thành công',
+        [{
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
+          }
+        }]
+      );
+    } catch (error) {
+      console.error('Lỗi khi tạo nhóm:', error);
+
+      // Hiển thị thông báo lỗi chi tiết hơn
+      let errorMessage = error.message || 'Không thể tạo nhóm học tập. Vui lòng thử lại sau.';
+
+      // Hiển thị thông báo lỗi dựa trên thông tin từ API
+      // Thông báo lỗi đã được xử lý chi tiết trong GroupService.js
+      console.log('Error message from API:', errorMessage);
+
+      console.log('Hiển thị thông báo lỗi:', errorMessage);
+
+      Alert.alert(
+        'Lỗi',
+        errorMessage,
+        [
+          {
+            text: 'OK',
+            onPress: () => console.log('Error alert closed')
+          }
+        ]
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,12 +115,16 @@ export const CreateStudyGroup = ({ navigation }) => {
           <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Tạo nhóm học tập</Text>
-        <TouchableOpacity 
-        disabled={!groupName.trim()}
-        style={groupName.trim() ? styles.saveButton : styles.saveButtonDisabled} 
-        onPress={handleCreateGroup}>
-          <Text style={styles.saveButton}>Lưu</Text>
-        </TouchableOpacity>
+        {loading ? (
+          <ActivityIndicator size="small" color={COLORS.BLUE} />
+        ) : (
+          <TouchableOpacity
+            disabled={!groupName.trim() || loading}
+            style={groupName.trim() && !loading ? styles.saveButton : styles.saveButtonDisabled}
+            onPress={handleCreateGroup}>
+            <Text style={styles.saveButtonText}>Lưu</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.content}>
@@ -56,7 +137,20 @@ export const CreateStudyGroup = ({ navigation }) => {
             onChangeText={setGroupName}
           />
         </View>
-        
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Mô tả</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Nhập mô tả về nhóm học tập (không bắt buộc)"
+            value={description}
+            onChangeText={setDescription}
+            multiline={true}
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
+
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Mời thành viên</Text>
           <View style={styles.emailInputContainer}>
@@ -66,7 +160,7 @@ export const CreateStudyGroup = ({ navigation }) => {
               value={email}
               onChangeText={setEmail}
             />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.addButton}
               onPress={handleAddEmail}
             >
@@ -74,7 +168,7 @@ export const CreateStudyGroup = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
-        
+
         {emails.length > 0 && (
           <View style={styles.emailList}>
             {emails.map((item, index) => (
@@ -113,9 +207,17 @@ const styles = StyleSheet.create({
     color: COLORS.BLACK,
   },
   saveButton: {
+    padding: 8,
+    borderRadius: 4,
+  },
+  saveButtonText: {
     color: COLORS.BLUE,
     fontSize: 16,
     fontWeight: '500',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
   },
   content: {
     flex: 1,
@@ -181,4 +283,4 @@ const styles = StyleSheet.create({
   saveButtonDisabled:{
     opacity:0.5,
   }
-}); 
+});

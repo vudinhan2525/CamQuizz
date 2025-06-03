@@ -25,8 +25,8 @@ apiClient.interceptors.request.use(
 
     const token = await AsyncStorage.getItem('userToken');
     if (token) {
-      //config.headers.Authorization = `Bearer ${token}`;
-      config.headers.Authorization = token;
+      config.headers.Authorization = `Bearer ${token}`;
+      // config.headers.Authorization = token;
 
     }
 
@@ -41,7 +41,7 @@ apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
+  async (error) => {
     // Handle common errors here
     if (error.response) {
       // Server responded with error status
@@ -50,8 +50,18 @@ apiClient.interceptors.response.use(
       // Handle specific status codes
       switch (error.response.status) {
         case 401:
-          console.log('Unauthorized access, please login again');
-          // Có thể thêm logic để đăng xuất người dùng ở đây
+          console.log('Unauthorized access, clearing auth data and redirecting to login');
+          // Clear auth data when token is invalid
+          try {
+            await AsyncStorage.removeItem('userToken');
+            await AsyncStorage.removeItem('userData');
+            console.log('Auth data cleared due to 401 error');
+
+            // You might want to navigate to login screen here
+            // This would require importing navigation or using a global state
+          } catch (clearError) {
+            console.error('Error clearing auth data:', clearError);
+          }
           break;
         case 403:
           console.log('Forbidden access, you do not have permission');

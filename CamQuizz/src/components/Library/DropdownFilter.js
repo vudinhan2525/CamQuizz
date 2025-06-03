@@ -5,8 +5,9 @@ import COLORS from '../../constant/colors';
 
 const DropdownFilter = ({ label, count, options = [], onSelect }) => {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const handleOptionSelect = (value, label) => {
+    console.log('🎯 DropdownFilter option selected:', { value, label });
     if (onSelect) {
       onSelect(value, label);
     }
@@ -15,7 +16,10 @@ const DropdownFilter = ({ label, count, options = [], onSelect }) => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={() => setIsOpen(!isOpen)}>
+      <TouchableOpacity style={styles.button} onPress={() => {
+        console.log('🔽 DropdownFilter button clicked, isOpen:', !isOpen);
+        setIsOpen(!isOpen);
+      }}>
         <Text style={styles.label}>{label}</Text>
         <View style={styles.rightContainer}>
           {count !== undefined && (
@@ -33,9 +37,9 @@ const DropdownFilter = ({ label, count, options = [], onSelect }) => {
         <View style={styles.dropdown}>
           {options && options.length > 0 ? (
             options.map((option, index) => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 key={index}
-                style={styles.option} 
+                style={styles.option}
                 onPress={() => handleOptionSelect(option.value, option.label)}
               >
                 <Text>{option.label}</Text>
@@ -61,6 +65,7 @@ const styles = StyleSheet.create({
   container: {
     position: "relative",
     width: "100%",
+    zIndex: 1000,
   },
   button: {
     flexDirection: "row",
@@ -71,8 +76,8 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 5,
     backgroundColor: "white",
-    alignSelf: "flex-start",  
-    minWidth: 50, 
+    alignSelf: "flex-start",
+    minWidth: 50,
 },
 
   label: {
@@ -104,8 +109,16 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     backgroundColor: "white",
     borderRadius: 5,
-    elevation: 2, // Thay cho boxShadow
+    elevation: 10,
+    zIndex: 1000, 
     padding: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   option: {
     padding: 8,

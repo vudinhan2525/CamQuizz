@@ -4,33 +4,111 @@ import { ArrowLeft, Check } from 'lucide-react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import COLORS from '../../../constant/colors';
-import SCREENS from '../../../screens/index';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { navigateToFlashcardTab } from '../../../screens/Users/Library';
+
+import ReportService from '../../../services/ReportService';
+import { validateToken, checkAuthStatus } from '../../../services/AuthService';
+import StudySetService from '../../../services/StudySetService';
+import FlashCardService from '../../../services/FlashCardService';
+
+const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
+  Toast.show({
+    type: 'error',
+    text1: 'Lỗi xác thực',
+    text2: message
+  });
+  navigation.getParent()?.reset({
+    index: 0,
+    routes: [{ name: 'AuthStack' }],
+  });
+};
 
 const SelectQuestionsForFlashcard = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { quizId, quizTitle } = route.params;
-  
+
   const [questions, setQuestions] = useState([]);
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
   const [setName, setSetName] = useState(quizTitle || 'Bộ thẻ mới');
 
   useEffect(() => {
-    // Giả lập tải dữ liệu câu hỏi từ API
-    setTimeout(() => {
-      setQuestions([
-        { id: '1', question: 'Thủ đô của Việt Nam là gì?', answer: 'Hà Nội' },
-        { id: '2', question: '1 + 1 = ?', answer: '2' },
-        { id: '3', question: 'Ngôn ngữ lập trình phổ biến nhất?', answer: 'JavaScript' },
-        { id: '4', question: 'Ai là người sáng lập Facebook?', answer: 'Mark Zuckerberg' },
-        { id: '5', question: 'Trái đất quay quanh mặt trời mất bao lâu?', answer: '365 ngày' },
-      ]);
+    fetchQuizAttempts();
+  }, [quizId]);
+
+  const fetchQuizAttempts = async () => {
+    try {
+      if (!await validateToken()) {
+        handleAuthError(navigation);
+        return;
+      }
+
+      setLoading(true);
+      const response = await ReportService.getQuizAttempts(quizId);
+
+      if (response && response.data && response.data.length > 0) {
+        const latestAttempt = response.data[0];
+        console.log('Latest attempt:', latestAttempt); 
+
+        const questionReviews = latestAttempt.QuestionReviews || latestAttempt.questionReviews || latestAttempt.question_reviews;
+
+        if (questionReviews && questionReviews.length > 0) {
+          const formattedQuestions = questionReviews.map(review => {
+            console.log('Processing question review:', review); 
+
+            const questionId = review.QuestionId || review.questionId || review.question_id;
+            const questionName = review.QuestionName || review.questionName || review.question_name;
+            const selectedAnswers = review.SelectedAnswers || review.selectedAnswers || review.selected_answers || [];
+            const correctAnswers = review.CorrectAnswers || review.correctAnswers || review.correct_answers || [];
+
+            const correctAnswerTexts = correctAnswers.map(ans =>
+              ans.AnswerText || ans.answerText || ans.answer_text || ans.text || 'N/A'
+            ).join(', ');
+
+            return {
+              id: questionId ? questionId.toString() : 'unknown',
+              question: questionName || 'Câu hỏi không xác định',
+              answer: correctAnswerTexts || 'Không có đáp án',
+              selectedAnswers: selectedAnswers,
+              correctAnswers: correctAnswers
+            };
+          });
+
+          console.log('Formatted questions:', formattedQuestions); 
+          setQuestions(formattedQuestions);
+        } else {
+          console.log('No question reviews found in attempt:', latestAttempt); 
+          Toast.show({
+            type: 'info',
+            text1: 'Thông báo',
+            text2: 'Không tìm thấy câu hỏi trong kết quả quiz này.'
+          });
+        }
+      } else {
+        console.log('No attempts found in response:', response); 
+        Toast.show({
+          type: 'info',
+          text1: 'Thông báo',
+          text2: 'Bạn chưa có kết quả nào cho quiz này.'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching quiz attempts:', error);
+
+      if (error.message === 'Unauthorized - Please log in again' || error.response?.status === 401) {
+        handleAuthError(navigation);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: 'Không thể tải câu hỏi từ kết quả quiz. Vui lòng thử lại sau.'
+        });
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
   const toggleQuestionSelection = (questionId) => {
     if (selectedQuestions.includes(questionId)) {
@@ -59,54 +137,85 @@ const SelectQuestionsForFlashcard = () => {
       return;
     }
 
-    // Tạo bộ thẻ mới với các câu hỏi đã chọn
-    const selectedQuestionObjects = questions.filter(q => selectedQuestions.includes(q.id));
-    
-    // Tạo đối tượng bộ thẻ mới
-    const newFlashcardSet = {
-      id: Date.now().toString(),
-      title: setName,
-      totalCards: selectedQuestionObjects.length,
-      newCards: selectedQuestionObjects.length,
-      learningCards: 0,
-      reviewCards: 0,
-      
-      cards: selectedQuestionObjects.map(q => ({
-        front: q.question,
-        back: q.answer
-      }))
-    };
-
     try {
-      // Lấy danh sách bộ thẻ hiện có
-      const existingSetsJson = await AsyncStorage.getItem('flashcardSets');
-      const existingSets = existingSetsJson ? JSON.parse(existingSetsJson) : [];
-      
-      // Thêm bộ thẻ mới
-      const updatedSets = [...existingSets, newFlashcardSet];
-      
-      // Lưu danh sách đã cập nhật
-      await AsyncStorage.setItem('flashcardSets', JSON.stringify(updatedSets));
-      
-      // Lưu flashcard set vào AsyncStorage
-      await AsyncStorage.setItem('latestFlashcardSet', JSON.stringify(newFlashcardSet));
-      
-      // Quay lại màn hình trước đó
+      setCreating(true);
+
+      if (!await validateToken()) {
+        handleAuthError(navigation);
+        return;
+      }
+
+      // Lấy thông tin user
+      const authStatus = await checkAuthStatus();
+      if (!authStatus || !authStatus.id) {
+        handleAuthError(navigation, 'Vui lòng đăng nhập lại để tiếp tục');
+        return;
+      }
+
+      const userId = authStatus.id;
+
+      const selectedQuestionObjects = questions.filter(q => selectedQuestions.includes(q.id));
+
+      console.log('Creating study set with name:', setName);
+      console.log('Selected questions:', selectedQuestionObjects);
+
+      const studySetData = {
+        name: setName,
+        user_id: userId
+      };
+
+      const createdStudySet = await StudySetService.createStudySet(studySetData);
+      console.log('Created study set:', createdStudySet);
+
+      if (!createdStudySet || !createdStudySet.id) {
+        throw new Error('Không thể tạo bộ thẻ học bài');
+      }
+
+      const createdFlashcards = [];
+      for (const question of selectedQuestionObjects) {
+        try {
+          const flashcardData = {
+            study_set_id: createdStudySet.id,
+            question: question.question,
+            answer: question.answer
+          };
+
+          console.log('Creating flashcard:', flashcardData);
+          const createdFlashcard = await FlashCardService.createFlashCard(flashcardData);
+          console.log('Created flashcard:', createdFlashcard);
+
+          if (createdFlashcard) {
+            createdFlashcards.push(createdFlashcard);
+          }
+        } catch (flashcardError) {
+          console.error('Error creating individual flashcard:', flashcardError);
+        }
+      }
+
+      console.log(`Successfully created ${createdFlashcards.length}/${selectedQuestionObjects.length} flashcards`);
+
       navigation.goBack();
-      
-      // Hiển thị thông báo thành công
+
       Toast.show({
         type: 'success',
         text1: 'Thành công',
-        text2: `Đã tạo bộ thẻ "${setName}" với ${selectedQuestionObjects.length} thẻ`
+        text2: `Đã tạo bộ thẻ "${setName}" với ${createdFlashcards.length} thẻ`
       });
+
     } catch (error) {
-      console.error('Lỗi khi lưu bộ thẻ:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Lỗi',
-        text2: 'Không thể lưu bộ thẻ. Vui lòng thử lại.'
-      });
+      console.error('Lỗi khi tạo bộ thẻ:', error);
+
+      if (error.message === 'Unauthorized - Please log in again' || error.response?.status === 401) {
+        handleAuthError(navigation);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: error.message || 'Không thể tạo bộ thẻ. Vui lòng thử lại.'
+        });
+      }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -151,12 +260,12 @@ const SelectQuestionsForFlashcard = () => {
           <ActivityIndicator size="large" color={COLORS.BLUE} />
           <Text style={styles.loadingText}>Đang tải câu hỏi...</Text>
         </View>
-      ) : (
+      ) : questions.length > 0 ? (
         <FlatList
           data={questions}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.questionItem,
                 selectedQuestions.includes(item.id) && styles.selectedQuestionItem
@@ -165,7 +274,33 @@ const SelectQuestionsForFlashcard = () => {
             >
               <View style={styles.questionContent}>
                 <Text style={styles.questionText}>{item.question}</Text>
-                <Text style={styles.answerText}>Đáp án: {item.answer}</Text>
+                <Text style={styles.answerText}>Đáp án đúng: {item.answer}</Text>
+
+                {/* Hiển thị đáp án đã chọn nếu có */}
+                {item.selectedAnswers && item.selectedAnswers.length > 0 && (
+                  <View style={styles.selectedAnswersContainer}>
+                    <Text style={styles.selectedAnswersLabel}>Bạn đã chọn:</Text>
+                    {item.selectedAnswers.map((ans, index) => {
+                      // Xử lý cả PascalCase và snake_case/camelCase
+                      const answerText = ans.AnswerText || ans.answerText || ans.answer_text || ans.text || 'N/A';
+                      const isCorrect = ans.IsCorrect !== undefined ? ans.IsCorrect :
+                                       ans.isCorrect !== undefined ? ans.isCorrect :
+                                       ans.is_correct !== undefined ? ans.is_correct : false;
+
+                      return (
+                        <Text
+                          key={index}
+                          style={[
+                            styles.selectedAnswerText,
+                            isCorrect ? styles.correctAnswer : styles.incorrectAnswer
+                          ]}
+                        >
+                          • {answerText} {isCorrect ? '✓' : '✗'}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
               <View style={[
                 styles.checkbox,
@@ -179,20 +314,34 @@ const SelectQuestionsForFlashcard = () => {
           )}
           contentContainerStyle={styles.listContent}
         />
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Không có câu hỏi nào.</Text>
+          <Text style={styles.emptySubText}>Vui lòng thử lại hoặc chọn quiz khác.</Text>
+        </View>
       )}
 
       {/* Create Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[
-                    styles.createButton,
-          selectedQuestions.length === 0 && styles.disabledButton
+          styles.createButton,
+          (selectedQuestions.length === 0 || creating) && styles.disabledButton
         ]}
         onPress={handleCreateFlashcardSet}
-        disabled={selectedQuestions.length === 0}
+        disabled={selectedQuestions.length === 0 || creating}
       >
-        <Text style={styles.createButtonText}>
-          Tạo bộ thẻ với {selectedQuestions.length} câu hỏi
-        </Text>
+        {creating ? (
+          <View style={styles.loadingButtonContent}>
+            <ActivityIndicator size="small" color="white" />
+            <Text style={[styles.createButtonText, { marginLeft: 8 }]}>
+              Đang tạo bộ thẻ...
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.createButtonText}>
+            Tạo bộ thẻ với {selectedQuestions.length} câu hỏi
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -259,7 +408,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 80, // Space for the create button
+    paddingBottom: 80, 
   },
   questionItem: {
     flexDirection: 'row',
@@ -319,6 +468,50 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  selectedAnswersContainer: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 4,
+  },
+  selectedAnswersLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 4,
+  },
+  selectedAnswerText: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  correctAnswer: {
+    color: '#4CAF50',
+  },
+  incorrectAnswer: {
+    color: '#F44336',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptySubText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  loadingButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

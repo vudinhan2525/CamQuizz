@@ -22,7 +22,7 @@ public class AuthController(
     ITokenService tokenService,
     UserManager<AppUser> userManager,
     IMapper mapper,
-    IUserService userService 
+    IUserService userService
 ) : BaseApiController
 {
     private Dictionary<string, UserMap> pincodeMap = [];
@@ -132,7 +132,7 @@ public class AuthController(
     }
    [HttpPut("{id}")]
    [Authorize]
-   public async Task<IActionResult> UpdateUser(int id, UpdateUserDto updateUserDto)
+   public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto updateUserDto)
    {
        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
        
@@ -152,7 +152,7 @@ public class AuthController(
     public async Task<IActionResult> DeleteUser(int id)
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         // Check if user is trying to delete their own account or is admin
         if (currentUserId != id && !User.IsInRole("Admin"))
         {
@@ -167,18 +167,35 @@ public class AuthController(
     [Authorize]
     public async Task<IActionResult> GetUserById(int id)
     {
+        Console.WriteLine($"🔍 AuthController.GetUserById called with id: {id}");
         var user = await userService.GetUserByIdAsync(id);
         if (user == null) return NotFound("User not found");
-        
+
         var userDto = mapper.Map<UserDto>(user);
+        Console.WriteLine($"📤 Returning user data: FirstName={userDto.FirstName}, LastName={userDto.LastName}");
         return Ok(userDto);
+    }
+
+    [HttpGet("test-debug")]
+    public IActionResult TestDebug()
+    {
+        Console.WriteLine("🧪 TEST DEBUG ENDPOINT CALLED");
+        return Ok("Debug endpoint working");
+    }
+
+    [HttpPut("test-put/{id}")]
+    public IActionResult TestPut(int id, [FromBody] object data)
+    {
+        Console.WriteLine($"🧪 TEST PUT ENDPOINT CALLED with id: {id}");
+        Console.WriteLine($"🧪 Data received: {data}");
+        return Ok($"Test PUT successful for id: {id}");
     }
     [HttpGet]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAllUser(
-        [FromQuery] string? kw, 
-        [FromQuery] int limit = 10, 
-        [FromQuery] int page = 1, 
+        [FromQuery] string? kw,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
         [FromQuery] string? sort = null)
     {
         var userParams = new UserParams();
@@ -192,7 +209,7 @@ public class AuthController(
     {
         var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         var result = await userService.ChangePasswordAsync(userId, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
-        
+
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
@@ -237,7 +254,7 @@ public class AuthController(
     //     }
 
     //     var user = await userManager.FindByEmailAsync(userInfo.Email);
-        
+
     //     if (user == null)
     //     {
     //         user = new AppUser
@@ -264,7 +281,7 @@ public class AuthController(
     //     {
     //         var addLoginResult = await userManager.AddLoginAsync(user,
     //             new UserLoginInfo("Google", userInfo.Sub, "Google"));
-            
+
     //         if (!addLoginResult.Succeeded)
     //             return BadRequest("Failed to link Google account");
     //     }
@@ -272,7 +289,7 @@ public class AuthController(
     //     // Return user with token as per your existing pattern
     //     var userDto = mapper.Map<UserDto>(user);
     //     userDto.Token = await tokenService.CreateTokenAsync(user);
-        
+
     //     return Ok(userDto);
     // }
     // catch (Exception ex)
@@ -300,6 +317,8 @@ public class AuthController(
 
         return Ok($"User has been {(banUserDto.IsBanned ? "banned" : "unbanned")} successfully");
     }
+
+
 
 }
 

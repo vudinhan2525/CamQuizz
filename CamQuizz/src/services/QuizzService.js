@@ -45,12 +45,12 @@ class QuizzService {
             throw error;
         }
     }
-    static async updateQuizz(id, updateQuizDto) {
+    static async updateQuizz(updateQuizDto) {
         try {
-            const response = await apiClient.put(`/quiz/${id}`, updateQuizDto);
+            const response = await apiClient.put('/quiz', updateQuizDto);
             return response.data;
         } catch (error) {
-            console.error(`Error updating quiz with ID ${id}:`, error);
+            console.error(`Error updating quiz with ID ${updateQuizDto.id}:`, error);
             throw error;
         }
     }

@@ -1,24 +1,44 @@
 import React from 'react';
-import { View, Text, StyleSheet,Dimensions, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../constant/colors';
 import { useNavigation } from '@react-navigation/native';
 
 import SCREENS from '../screens';
 const tmpUrl='https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
-const { width } = Dimensions.get('window'); 
+const { width } = Dimensions.get('window');
 
-const QuizCard = ({ quiz, attemptText = "lượt thi" }) => {
+const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEdit, onDelete }) => {
   const navigation = useNavigation();
+
   const handlePress = () => {
     navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: quiz.id });
   };
+
+  const handleEditPress = (e) => {
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(quiz, onDelete); 
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.quizCard}  onPress={() => handlePress()}>
-      <Image source={{ uri: quiz.image ||tmpUrl }} style={styles.quizImage} />
+    <TouchableOpacity style={styles.quizCard} onPress={handlePress}>
+      <Image source={{ uri: quiz.image || tmpUrl }} style={styles.quizImage} />
       <View style={styles.quizInfo}>
         <Text style={styles.quizTitle}>{quiz.name}</Text>
         <Text style={styles.quizQuestions}>{quiz.number_of_questions} câu hỏi</Text>
-        <Text style={styles.quizAttempts}>{quiz.number_of_attended} {attemptText}</Text>
+        <View style={styles.bottomRow}>
+          <Text style={styles.quizAttempts}>{quiz.number_of_attended} {attemptText}</Text>
+          {showOptions && (
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={handleEditPress}
+            >
+              <Ionicons name="create-outline" size={20} color={COLORS.BLUE} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -35,7 +55,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     marginVertical: 10,
-    width: width * 0.45,
+    width: width * 0.42,
   },
   quizImage: {
     width: '100%',
@@ -52,10 +72,23 @@ const styles = StyleSheet.create({
   quizQuestions: {
     color: COLORS.GRAY_TEXT,
     fontSize: 14,
+    marginBottom: 4,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   quizAttempts: {
     color: COLORS.GRAY_TEXT,
     fontSize: 14,
+    flex: 1,
+  },
+  editButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: COLORS.BLUE + '10',
+    marginLeft: 8,
   },
 });
 

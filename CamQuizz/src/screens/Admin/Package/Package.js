@@ -19,18 +19,10 @@ import COLORS from '../../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
 import SCREENS from '../../index'
 import PackageService from '../../../services/PackageService';
-const defaultPackage = {
-  id: -1,
-  name: 'Mặc định',
-  max_number_of_quizz: 2,
-  max_number_of_attended: 10,
-  price: 0,
-  isActive: true
-};
 
+import Toast from 'react-native-toast-message';
 export const Package = ({ navigation }) => {
-  const [packages, setPackages] = useState([defaultPackage]);
-  const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState([]);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [editedPackage, setEditedPackage] = useState({
@@ -46,11 +38,9 @@ export const Package = ({ navigation }) => {
         // Simulate fetching packages from an API
         const packagesData = await PackageService.getAllPackages();
         console.log('Fetched packages:', packagesData);
-        setPackages([defaultPackage, ...packagesData]);
-        setLoading(false);
+        setPackages(packagesData);
       } catch (error) {
         console.error('Error fetching packages:', error);
-        setLoading(false);
         Alert.alert('Error', 'Không thể tải gói dịch vụ. Vui lòng thử lại sau.');
       }
     };
@@ -59,33 +49,6 @@ export const Package = ({ navigation }) => {
 
 
 
-
-
-  const togglePackageStatus = (id) => {
-    setPackages(prevPackages =>
-      prevPackages.map(pkg =>
-        pkg.id === id ? { ...pkg, isActive: !pkg.isActive } : pkg
-      )
-    );
-
-    const pkg = packages.find(p => p.id === id);
-    if (pkg) {
-      Alert.alert('Success', `Gói ${pkg.name} đã được ${!pkg.isActive ? 'kích hoạt' : 'vô hiệu hóa'}`);
-    }
-  };
-
-  const toggleFeatured = (id) => {
-    setPackages(prevPackages =>
-      prevPackages.map(pkg =>
-        pkg.id === id ? { ...pkg, isFeatured: !pkg.isFeatured } : pkg
-      )
-    );
-
-    const pkg = packages.find(p => p.id === id);
-    if (pkg) {
-      Alert.alert('Success', `Gói ${pkg.name} đã ${!pkg.isFeatured ? 'được' : 'bị hủy'} đánh dấu nổi bật`);
-    }
-  };
 
   const handleEditPackage = (pkg) => {
     setSelectedPackage(pkg);
@@ -119,7 +82,15 @@ export const Package = ({ navigation }) => {
         Alert.alert('Lỗi', 'Số người tham gia tối đa phải lớn hơn 0');
         return;
       }
-
+      const packageData = {
+        id: selectedPackage.id,
+        name: editedPackage.name,
+        price: editedPackage.price,
+        max_number_of_quizz: editedPackage.max_number_of_quizz,
+        max_number_of_attended: editedPackage.max_number_of_attended,
+        start_date: selectedPackage.start_date,
+        end_date: selectedPackage.end_date,
+      }
       // Call API to update package
       const updatePkt = await PackageService.updatePackage(selectedPackage.id, {
         id: selectedPackage.id,
@@ -127,23 +98,30 @@ export const Package = ({ navigation }) => {
         price: editedPackage.price,
         max_number_of_quizz: editedPackage.max_number_of_quizz,
         max_number_of_attended: editedPackage.max_number_of_attended,
+        start_date: selectedPackage.start_date,
+        end_date: selectedPackage.end_date,
       });
+      console.log('Saving package data:', packageData);
+
       console.log('Updated package:', updatePkt);
       // Update local state
-      setPackages(prevPackages =>
-        prevPackages.map(pkg =>
-          pkg.id === selectedPackage.id ? {
-            updatePkt
-          } : pkg
-        )
-      );
+      if (updatePkt) {
+        setPackages(prevPackages =>
+          prevPackages.map(pkg =>
+            pkg.id === selectedPackage.id ? {
+              updatePkt
+            } : pkg
+          )
+        );
+      }
 
       Alert.alert('Thành công', `Gói ${editedPackage.name} đã được cập nhật`);
       setEditModalVisible(false);
 
       // Refresh package list
       const updatedPackages = await PackageService.getAllPackages();
-      setPackages([defaultPackage, ...updatedPackages]);
+      console.log('Updated packages:', updatedPackages);
+      setPackages([updatedPackages]);
 
     } catch (error) {
       console.error('Error updating package:', error);
@@ -216,7 +194,7 @@ export const Package = ({ navigation }) => {
           </View>
 
           <ScrollView style={styles.modalBody}>
-            {editedPackage?.name !== 'Mặc định' ? (<View style={styles.inputGroup}>
+            {editedPackage?.price !== 0 ? (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Tên gói:</Text>
               <TextInput
                 style={styles.input}
@@ -237,7 +215,7 @@ export const Package = ({ navigation }) => {
                 </View>
               )}
 
-            {editedPackage?.name !== 'Mặc định' && <View style={styles.inputGroup}>
+            {editedPackage?.price !== 0 && <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Giá (VNĐ):</Text>
               <TextInput
                 style={styles.input}
@@ -316,6 +294,7 @@ export const Package = ({ navigation }) => {
             style: 'destructive',
             onPress: async () => {
               try {
+                // Call API to delete package
                 await PackageService.deletePackage(packageId);
 
                 // Update local state
@@ -323,10 +302,22 @@ export const Package = ({ navigation }) => {
                   prevPackages.filter(pkg => pkg.id !== packageId)
                 );
 
-                Alert.alert('Thành công', `Đã xóa gói ${packageName}`);
+                // Refresh package list to ensure sync with server
+                const updatedPackages = await PackageService.getAllPackages();
+                setPackages(updatedPackages);
+
+                Toast.show({
+                  type: 'success',
+                  text1: 'Thành công',
+                  text2: `Đã xóa gói ${packageName}`,
+                });
               } catch (error) {
                 console.error('Error deleting package:', error);
-                Alert.alert('Lỗi', 'Không thể xóa gói dịch vụ. Vui lòng thử lại sau.');
+                Toast.show({
+                  type: 'error',
+                  text1: 'Lỗi',
+                  text2: 'Không thể xóa gói dịch vụ. Vui lòng thử lại sau.',
+                });
               }
             },
           },
@@ -334,7 +325,11 @@ export const Package = ({ navigation }) => {
       );
     } catch (error) {
       console.error('Error handling delete:', error);
-      Alert.alert('Lỗi', 'Đã xảy ra lỗi. Vui lòng thử lại sau.');
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Đã xảy ra lỗi. Vui lòng thử lại sau.',
+      });
     }
   };
 
@@ -356,12 +351,12 @@ export const Package = ({ navigation }) => {
           <Text style={{ color: COLORS.WHITE, textAlign: 'center' }}>Xem báo cáo</Text>
         </TouchableOpacity>
       </View>
-      <Text style={{ color: COLORS.BLUE, textAlign: 'left', marginLeft: 20 }}>{packages.length} <Text style={{ color: COLORS.BLACK }}>gói</Text></Text>
 
 
 
       <FlatList
         data={packages}
+        ListHeaderComponent={<Text style={{ color: COLORS.BLUE, textAlign: 'left', marginBottom: 12 }}>{packages.length} <Text style={{ color: COLORS.BLACK }}>gói</Text></Text>}
         renderItem={renderPackageItem}
         keyExtractor={item => item.id?.toString()}
         contentContainerStyle={styles.listContainer}

@@ -10,15 +10,20 @@ import {
   Alert,
   Image
 } from 'react-native';
-import COLORS from '../../constant/colors';
+import COLORS from '../../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
 
 export const Quizz = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-
+  const [stats, setStats] = useState({
+    totalQuizzes:5,
+    totalParticipants: 500,
+    publicQuizzes: 3,
+    pendingQuizzes: 1,
+    processedQuizzes: 3
+  });
   // Mock data for development
   const mockQuizzes = [
     {
@@ -80,7 +85,7 @@ export const Quizz = () => {
 
   useEffect(() => {
     fetchQuizzes();
-  }, [filterStatus, searchQuery]);
+  }, [filterStatus]);
 
   const fetchQuizzes = async () => {
     setLoading(true);
@@ -91,12 +96,6 @@ export const Quizz = () => {
       // Filter mock data based on search query and status
       let filteredQuizzes = [...mockQuizzes];
 
-      if (searchQuery) {
-        filteredQuizzes = filteredQuizzes.filter(quiz =>
-          quiz.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          quiz.createdBy.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
 
       if (filterStatus !== 'All') {
         filteredQuizzes = filteredQuizzes.filter(quiz =>
@@ -117,21 +116,6 @@ export const Quizz = () => {
     fetchQuizzes();
   };
 
-  const toggleQuizStatus = (id) => {
-    const quiz = quizzes.find(q => q.id === id);
-    if (!quiz) return;
-
-    // Toggle between Public and Private
-    const newStatus = quiz.status === 'Public' ? 'Private' : 'Public';
-
-    setQuizzes(prevQuizzes =>
-      prevQuizzes.map(q =>
-        q.id === id ? { ...q, status: newStatus } : q
-      )
-    );
-
-    Alert.alert('Success', `Trạng thái của "${quiz.name}" đã được cập nhật thành ${newStatus}`);
-  };
 
   const handleDeleteQuiz = (id) => {
     const quiz = quizzes.find(q => q.id === id);
@@ -188,7 +172,7 @@ export const Quizz = () => {
         <Image
           source={{ uri: item.image }}
           style={styles.quizImage}
-          defaultSource={require('../../../assets/icon.png')}
+          defaultSource={require('../../../../assets/icon.png')}
         />
         <View style={styles.quizInfo}>
           <Text style={styles.quizName}>{item.name}</Text>
@@ -219,10 +203,9 @@ export const Quizz = () => {
       <View style={styles.quizActions}>
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => toggleQuizStatus(item.id)}
         >
-          <Ionicons name="swap-horizontal" size={20} color={COLORS.BLUE} />
-          <Text style={styles.actionText}>Đổi trạng thái</Text>
+          <Ionicons name="eye-outline" size={20} color={COLORS.BLUE} />
+          <Text style={styles.actionText}>Xem tố cáo</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -246,21 +229,36 @@ export const Quizz = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Tìm kiếm bài kiểm tra..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-          />
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Ionicons name="search" size={20} color={COLORS.WHITE} />
-          </TouchableOpacity>
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.totalQuizzes}</Text>
+          <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>
+            {stats.totalParticipants}
+          </Text>
+          <Text style={styles.statLabel}>Tổng lượt thi</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>
+            {stats.publicQuizzes}
+          </Text>
+          <Text style={styles.statLabel}>Bài kiểm tra công khai</Text>
         </View>
       </View>
 
+
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.pendingQuizzes}</Text>
+          <Text style={styles.statLabel}>Chờ xử lý</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.processedQuizzes}</Text>
+          <Text style={styles.statLabel}>Đã xử lý</Text>
+        </View>
+      </View>
       <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Lọc theo trạng thái:</Text>
         <View style={styles.filterOptions}>
@@ -273,42 +271,25 @@ export const Quizz = () => {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterOption, filterStatus === 'Public' && styles.activeFilterOption]}
-            onPress={() => setFilterStatus('Public')}
+            style={[styles.filterOption, filterStatus === 'Pending' && styles.activeFilterOption]}
+            onPress={() => setFilterStatus('Pending')}
           >
-            <Text style={[styles.filterText, filterStatus === 'Public' && styles.activeFilterText]}>
-              Công khai
+            <Text style={[styles.filterText, filterStatus === 'Pending' && styles.activeFilterText]}>
+              Chờ xử lý
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterOption, filterStatus === 'Private' && styles.activeFilterOption]}
-            onPress={() => setFilterStatus('Private')}
+            style={[styles.filterOption, filterStatus === 'Processed' && styles.activeFilterOption]}
+            onPress={() => setFilterStatus('Processed')}
           >
-            <Text style={[styles.filterText, filterStatus === 'Private' && styles.activeFilterText]}>
-              Riêng tư
+            <Text style={[styles.filterText, filterStatus === 'Processed' && styles.activeFilterText]}>
+              Đã xử lý
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{quizzes.length}</Text>
-          <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {quizzes.reduce((sum, quiz) => sum + quiz.numberOfAttended, 0)}
-          </Text>
-          <Text style={styles.statLabel}>Tổng lượt thi</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {quizzes.filter(quiz => quiz.status === 'Public').length}
-          </Text>
-          <Text style={styles.statLabel}>Bài kiểm tra công khai</Text>
-        </View>
-      </View>
+
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -403,9 +384,9 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
     backgroundColor: COLORS.WHITE,
-    marginBottom: 8,
   },
   statCard: {
     flex: 1,
@@ -432,7 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
   },
   quizCard: {
     backgroundColor: COLORS.WHITE,
@@ -440,8 +421,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: COLORS.BLUE,
     shadowOffset: {
-        width: 0,
-        height: 2,
+      width: 0,
+      height: 2,
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,

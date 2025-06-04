@@ -371,7 +371,7 @@ public class GroupService : IGroupService
         {
             GroupId = groupId,
             UserId = user.Id,
-            Status = MemberStatus.Pending
+            Status = MemberStatus.Approved
         };
 
         await _groupRepo.AddMemberAsync(member);

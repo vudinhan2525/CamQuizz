@@ -1,6 +1,7 @@
 using CamQuizzBE.Applications.DTOs.Packages;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
+using CamQuizzBE.Domain.Repositories;
 using CamQuizzBE.Presentation.Exceptions;
 using CamQuizzBE.Presentation.Utils;
 using System.Security.Cryptography;
@@ -10,10 +11,17 @@ namespace CamQuizzBE.Presentation.Controllers
 {
     [Route("api/v1/packages")]
     [ApiController]
-    public class PackagesController(IPackagesRepository packagesRepository, IConfiguration config, ILogger<PackagesController> logger, IUserRepository userRepository, IMapper mapper) : ControllerBase
+    public class PackagesController(
+        IPackagesRepository packagesRepository,
+        IConfiguration config,
+        ILogger<PackagesController> logger,
+        IUserRepository userRepository,
+        IUserQuotaRepository userQuotaRepository,
+        IMapper mapper) : ControllerBase
     {
         private readonly IPackagesRepository _packagesRepository = packagesRepository;
         private readonly IUserRepository _userRepository = userRepository;
+        private readonly IUserQuotaRepository _userQuotaRepository = userQuotaRepository;
         private readonly ILogger<PackagesController> _logger = logger;
         private readonly IMapper _mapper = mapper;
         private readonly IConfiguration _config = config;
@@ -146,6 +154,13 @@ namespace CamQuizzBE.Presentation.Controllers
                     UpdatedAt = DateTime.Now,
                 });
 
+                // Add package quotas to user's total
+                await _userQuotaRepository.AddPackageQuotaAsync(
+                    extraData.UserId,
+                    package.MaxNumberOfQuizz,
+                    package.MaxNumberOfAttended
+                );
+
 
                 await _packagesRepository.AddRevenueRecordAsync(new RevenueRecords
                 {
@@ -197,8 +212,6 @@ namespace CamQuizzBE.Presentation.Controllers
             {
                 Name = packageDto.Name,
                 Price = packageDto.Price,
-                EndDate = packageDto.EndDate,
-                StartDate = packageDto.StartDate,
                 MaxNumberOfAttended = packageDto.MaxNumberOfAttended,
                 MaxNumberOfQuizz = packageDto.MaxNumberOfQuizz,
                 CreatedAt = DateTime.UtcNow,
@@ -232,15 +245,20 @@ namespace CamQuizzBE.Presentation.Controllers
                 Id = updatePackageDto.Id,
                 Name = updatePackageDto.Name ?? existing.Name,
                 Price = updatePackageDto.Price ?? existing.Price,
-                StartDate = updatePackageDto.StartDate ?? existing.StartDate,
-                EndDate = updatePackageDto.EndDate ?? existing.EndDate,
                 MaxNumberOfAttended = updatePackageDto.MaxNumberOfAttended ?? existing.MaxNumberOfAttended,
                 MaxNumberOfQuizz = updatePackageDto.MaxNumberOfQuizz ?? existing.MaxNumberOfQuizz,
-                CreatedAt = existing.CreatedAt
+                CreatedAt = existing.CreatedAt,
+                UpdatedAt = DateTime.UtcNow
             };
 
             await _packagesRepository.UpdateAsync(package);
             return Ok(new ApiResponse<PackageDto>(_mapper.Map<PackageDto>(package)));
         }
+        //Total Quizz + Totel Participants for each package
+        //Field: remainingQuizz, totalQuizz, totalParticipants (remainingQuizz +/- when create new or delete quizz)
+        //Remove StartDate, EndDate. Scale by Total Quizz and Total Participants
+        //Get Limit: res 3 new fields
+        //Packages: total quizzes added up as subcription
+        //Get Public Quizzes for user (not include private quizzes)
     }
 }

@@ -22,7 +22,8 @@ public class AuthController(
     ITokenService tokenService,
     UserManager<AppUser> userManager,
     IMapper mapper,
-    IUserService userService
+    IUserService userService,
+    IUserQuotaService userQuotaService
 ) : BaseApiController
 {
     private Dictionary<string, UserMap> pincodeMap = [];
@@ -318,6 +319,21 @@ public class AuthController(
         return Ok($"User has been {(banUserDto.IsBanned ? "banned" : "unbanned")} successfully");
     }
 
+    [HttpGet("quota/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> GetUserQuota(int userId)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        
+        // Check if user is trying to get their own quota or is admin
+        if (currentUserId != userId && !User.IsInRole("Admin"))
+        {
+            return Unauthorized("You can only view your own quota");
+        }
+
+        var userQuota = await userQuotaService.GetDefaultQuotaAsync(userId);
+        return Ok(userQuota);
+    }
 
 
 }

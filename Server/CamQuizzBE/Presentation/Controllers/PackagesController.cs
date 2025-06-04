@@ -242,5 +242,12 @@ namespace CamQuizzBE.Presentation.Controllers
             await _packagesRepository.UpdateAsync(package);
             return Ok(new ApiResponse<PackageDto>(_mapper.Map<PackageDto>(package)));
         }
+        //Total Quizz + Totel Participants for each package
+        //Field: remainingQuizz, totalQuizz, totalParticipants (remainingQuizz +/- when create new or delete quizz)
+        //Remove StartDate, EndDate. Scale by Total Quizz and Total Participants
+        //Get Limit: res 3 new fields
+        //Group Member: get rid of response invitation
+        //Packages: total quizzes added up as subcription
+        //Get Public Quizzes for user (not include private quizzes)
     }
 }

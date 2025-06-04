@@ -26,7 +26,11 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
         [FromQuery] int genre_id = 0,
         [FromQuery] string? sort = "created_at")
     {
-        var data = await _quizzesService.GetAllQuizzesAsync(kw, limit, page, sort, genre_id);
+        bool isAdmin = User.IsInRole("Admin");
+        bool showPrivate = isAdmin;
+
+        // Pass the showPrivate flag to the service to filter quizzes
+        var data = await _quizzesService.GetAllQuizzesAsync(kw, limit, page, sort, genre_id, showPrivate);
 
         var quizzesDto = _mapper.Map<IEnumerable<QuizzesDto>>(data.Items);
         var pagination = new PaginationMeta

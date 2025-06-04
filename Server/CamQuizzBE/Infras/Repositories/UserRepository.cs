@@ -181,10 +181,10 @@ public class UserRepository(
 
             var userQuizzCount = await context.Quizzes
                 .CountAsync(q => q.UserId == userId);
-
+            
             if (userQuizzCount >= defaultPackage.MaxNumberOfQuizz)
             {
-                return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({defaultPackage.MaxNumberOfQuizz}) cho phép.");
+                return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({defaultPackage.MaxNumberOfQuizz}) ({userQuizzCount}) ");
             }
         }
         else if (userQuota.RemainingQuizz <= 0)

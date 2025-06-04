@@ -19,9 +19,9 @@ public class QuizzesService : IQuizzesService
         _userService = userService;
     }
 
-    public async Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId)
+    public async Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId, bool showPrivate = false)
     {
-        return await _quizzesRepo.GetAllAsync(kw, limit, page, sort, genreId);
+        return await _quizzesRepo.GetAllAsync(kw, limit, page, sort, genreId, showPrivate);
     }
 
     public async Task<List<Quizzes>> GetTop5Quizzes()

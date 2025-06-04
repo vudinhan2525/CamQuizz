@@ -8,7 +8,7 @@ using CamQuizzBE.Domain.Enums;
 
 public interface IQuizzesService
 {
-    Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId);
+    Task<PagedResult<Quizzes>> GetAllQuizzesAsync(string? kw, int limit, int page, string? sort, int? genreId, bool showPrivate = false);
     Task<List<Quizzes>> GetTop5Quizzes();
     Task<PagedResult<Quizzes>> GetQuizzesByUserAsync(int userId, string? kw, int limit, int page, string? sort);
     Task<Quizzes?> GetQuizByIdAsync(int id);

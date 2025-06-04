@@ -21,4 +21,23 @@ public class QuizzesDto
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public List<QuestionsDto> Questions { get; set; } = new();
+
+    [JsonPropertyName("shared_users")]
+    public List<UserSharedDto> SharedUsers { get; set; } = new();
+
+    [JsonPropertyName("shared_groups")]
+    public List<GroupSharedDto> SharedGroups { get; set; } = new();
+}
+
+public class UserSharedDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+}
+
+public class GroupSharedDto
+{
+    public int GroupId { get; set; }
+    public string Name { get; set; } = string.Empty;
 }

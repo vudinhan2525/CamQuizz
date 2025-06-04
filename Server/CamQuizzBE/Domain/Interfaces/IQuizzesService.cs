@@ -16,6 +16,7 @@ public interface IQuizzesService
     Task DeleteQuizAsync(int id);
 
     Task<Quizzes> UpdateQuizAsync(UpdateQuizDto updateQuiz);
+    Task<ShareQuizByEmailResponse> ShareQuizByEmailAsync(ShareQuizByEmailDto request);
 }
 public class CreateQuizBody
 {
@@ -24,7 +25,7 @@ public class CreateQuizBody
     public string? Image { get; set; } = string.Empty;
     public int? GenreId { get; set; }
     public QuizStatus? Status { get; set; }
-    public List<string> UserShareIds = new List<string>();
+    public List<string> UserEmails = new List<string>();
     public List<string> GroupShareIds = new List<string>();
 
     public List<CreateQuestionBody> Questions = new List<CreateQuestionBody>();

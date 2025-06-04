@@ -15,4 +15,7 @@ public interface IQuizzesRepository
 
     Task UpdateAsync(Quizzes quiz);
     Task IncrementQuestionCountAsync(int quizId);
+    Task<bool> IsQuizSharedWithUserAsync(int quizId, int userId);
+    Task ShareQuizWithUserAsync(UserShared userShared);
+    Task ShareQuizWithGroupAsync(GroupShared groupShared);
 }

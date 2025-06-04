@@ -21,7 +21,11 @@ public class CreateQuizDto
     public int? UserId { get; set; }
 
     public QuizStatus Status { get; set; } = QuizStatus.Public;
-    public List<string> UserShareIds = new List<string>();
+    
+    [JsonPropertyName("userEmails")]
+    public List<string> UserEmails = new List<string>();
+    
+    [JsonPropertyName("groupIds")]
     public List<string> GroupShareIds = new List<string>();
 
     [JsonPropertyName("questions")]

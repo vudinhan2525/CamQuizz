@@ -40,11 +40,26 @@ public class GroupController : ControllerBase
 
     [HttpGet("my-groups/{userId}")]
     [Authorize]
-    public async Task<IActionResult> GetMyGroups(int userId)
+    public async Task<IActionResult> GetMyGroups(int userId, [FromQuery] bool onlyOwned = false)
     {
-        var groups = await _groupService.GetMyGroupsAsync(userId);
-        var response = new ApiResponse<IEnumerable<GroupDto>>(groups);
-        return Ok(response);
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        if (currentUserId != userId)
+        {
+            return Unauthorized("You can only view your own groups");
+        }
+
+        var allGroups = await _groupService.GetAllGroupsAsync();
+        var ownedGroups = allGroups.Where(g => g.OwnerId == userId);
+
+        if (onlyOwned)
+        {
+            return Ok(new ApiResponse<IEnumerable<GroupDto>>(ownedGroups));
+        }
+        
+        var joinedGroups = await _groupService.GetMyGroupsAsync(userId);
+        var combinedGroups = joinedGroups.Union(ownedGroups);
+        
+        return Ok(new ApiResponse<IEnumerable<GroupDto>>(combinedGroups));
     }
 
     [HttpGet("{id}")]

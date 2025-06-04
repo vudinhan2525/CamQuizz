@@ -31,6 +31,17 @@ public class AutoMapperProfiles : Profile
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
         CreateMap<Quizzes, QuizzesDto>()
             .ForMember(dest => dest.Questions, opt => opt.MapFrom(src => src.Questions))
+            .ForMember(dest => dest.SharedUsers, opt => opt.MapFrom(src => src.SharedUsers.Select(us => new UserSharedDto
+            {
+                UserId = us.UserId,
+                Email = us.User != null ? us.User.Email : string.Empty,
+                Username = us.User != null ? us.User.UserName : string.Empty
+            })))
+            .ForMember(dest => dest.SharedGroups, opt => opt.MapFrom(src => src.SharedGroups.Select(gs => new GroupSharedDto
+            {
+                GroupId = gs.GroupId,
+                Name = gs.Group != null ? gs.Group.Name : string.Empty
+            })))
             .ReverseMap();
         CreateMap<Questions, QuestionsDto>()
             .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.Answers))

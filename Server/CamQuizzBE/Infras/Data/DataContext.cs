@@ -34,6 +34,7 @@ IdentityDbContext<
     public DbSet<GroupShared> GroupShared { get; set; }
     public DbSet<QuizAttempts> QuizAttempts { get; set; }
     public DbSet<UserAnswers> UserAnswers { get; set; }
+    public DbSet<UserShared> UserShared { get; set; }
 
     override protected void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -144,7 +145,7 @@ IdentityDbContext<
         // Define foreign keys
         modelBuilder.Entity<UserShared>()
             .HasOne(us => us.Quiz)
-            .WithMany()
+            .WithMany(q => q.SharedUsers)
             .HasForeignKey(us => us.QuizId)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -166,7 +167,7 @@ IdentityDbContext<
 
         modelBuilder.Entity<GroupShared>()
             .HasOne(gs => gs.Quiz)
-            .WithMany()
+            .WithMany(q => q.SharedGroups)
             .HasForeignKey(gs => gs.QuizId)
             .OnDelete(DeleteBehavior.Cascade);
 

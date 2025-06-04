@@ -167,34 +167,29 @@ public class UserRepository(
     }
     public async Task<(bool, string)> CheckUserRule(int userId)
     {
-        var now = DateTime.UtcNow;
+        var userQuota = await context.Set<UserQuota>()
+            .FirstOrDefaultAsync(q => q.UserId == userId);
 
-        var userPackages = await context.UserPackages
-            .Include(up => up.Package)
-            .Where(up => up.UserId == userId &&
-                         up.Package.StartDate <= now &&
-                         up.Package.EndDate >= now)
-            .ToListAsync();
-
-        int totalNumberPossibleQuiz;
-
-        if (userPackages.Count == 0)
+        if (userQuota == null)
         {
-            totalNumberPossibleQuiz = 20;
+            var defaultPackage = await context.Packages
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+
+            if (defaultPackage == null)
+                return (false, "Không tìm thấy gói mặc định");
+
+            var userQuizzCount = await context.Quizzes
+                .CountAsync(q => q.UserId == userId);
+
+            if (userQuizzCount >= defaultPackage.MaxNumberOfQuizz)
+            {
+                return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({defaultPackage.MaxNumberOfQuizz}) cho phép.");
+            }
         }
-        else
+        else if (userQuota.RemainingQuizz <= 0)
         {
-            totalNumberPossibleQuiz = userPackages
-                .Where(up => up.Package != null)
-                .Sum(up => up.Package.MaxNumberOfQuizz);
-        }
-
-        var userQuizzCount = await context.Quizzes
-            .CountAsync(q => q.UserId == userId);
-
-        if (userQuizzCount >= totalNumberPossibleQuiz)
-        {
-            return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({totalNumberPossibleQuiz}) cho phép.");
+            return (false, $"Bạn đã tạo tối đa số lượng bài quiz ({userQuota.TotalQuizz}) cho phép.");
         }
 
         return (true, "Cho phép tạo quiz.");

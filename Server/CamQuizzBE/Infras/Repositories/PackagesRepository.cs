@@ -22,10 +22,8 @@ namespace CamQuizzBE.Infras.Repositories
                     Id = p.Id,
                     Name = p.Name,
                     Price = p.Price,
-                    StartDate = p.StartDate,
                     MaxNumberOfAttended = p.MaxNumberOfAttended,
                     MaxNumberOfQuizz = p.MaxNumberOfQuizz,
-                    EndDate = p.EndDate,
                     CreatedAt = p.CreatedAt,
                     UpdatedAt = p.UpdatedAt
                 })
@@ -41,8 +39,8 @@ namespace CamQuizzBE.Infras.Repositories
                     Id = p.Id,
                     Name = p.Name,
                     Price = p.Price,
-                    StartDate = p.StartDate,
-                    EndDate = p.EndDate,
+                    MaxNumberOfAttended = p.MaxNumberOfAttended,
+                    MaxNumberOfQuizz = p.MaxNumberOfQuizz,
                     CreatedAt = p.CreatedAt,
                     UpdatedAt = p.UpdatedAt
                 })

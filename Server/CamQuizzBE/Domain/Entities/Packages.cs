@@ -24,12 +24,6 @@ public class Packages
     [Required]
     public int Price { get; set; }
 
-    [Column("start_date")]
-    public DateTime StartDate { get; set; } = DateTime.UtcNow;
-
-    [Column("end_date")]
-    public DateTime EndDate { get; set; } = DateTime.UtcNow;
-
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

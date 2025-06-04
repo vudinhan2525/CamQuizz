@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250603074125_AddQuizReportFeature")]
+    partial class AddQuizReportFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -454,6 +457,10 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .HasColumnType("datetime(6)")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("end_date");
+
                     b.Property<int>("MaxNumberOfAttended")
                         .HasColumnType("int")
                         .HasColumnName("max_number_of_attended");
@@ -470,6 +477,10 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Property<int>("Price")
                         .HasColumnType("int")
                         .HasColumnName("price");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("start_date");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)")
@@ -799,33 +810,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("user_packages");
-                });
-
-            modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserQuota", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("user_id");
-
-                    b.Property<int>("RemainingQuizz")
-                        .HasColumnType("int")
-                        .HasColumnName("remaining_quizz");
-
-                    b.Property<int>("TotalParticipants")
-                        .HasColumnType("int")
-                        .HasColumnName("total_participants");
-
-                    b.Property<int>("TotalQuizz")
-                        .HasColumnType("int")
-                        .HasColumnName("total_quizz");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("user_quotas");
                 });
 
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>
@@ -1274,17 +1258,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserQuota", b =>
-                {
-                    b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
-                        .WithOne("Quota")
-                        .HasForeignKey("CamQuizzBE.Domain.Entities.UserQuota", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CamQuizzBE.Domain.Entities.UserShared", b =>
                 {
                     b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "Owner")
@@ -1377,9 +1350,6 @@ namespace CamQuizzBE.Infras.Data.Migrations
                     b.Navigation("Members");
 
                     b.Navigation("Quizzes");
-
-                    b.Navigation("Quota")
-                        .IsRequired();
 
                     b.Navigation("RevenueRecords");
 

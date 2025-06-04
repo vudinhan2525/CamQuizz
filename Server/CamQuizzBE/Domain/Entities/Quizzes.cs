@@ -59,4 +59,8 @@ public class Quizzes
     public AppUser User { get; set; } = null!;
 
     public ICollection<Questions> Questions { get; set; } = new List<Questions>();
+
+    // Navigation properties for sharing
+    public ICollection<UserShared> SharedUsers { get; set; } = new List<UserShared>();
+    public ICollection<GroupShared> SharedGroups { get; set; } = new List<GroupShared>();
 }

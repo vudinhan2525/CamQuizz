@@ -4,6 +4,7 @@ using CamQuizzBE.Infras.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CamQuizzBE.Infras.Data.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250604120124_SharedUserAndGroupToQuizzes")]
+    partial class SharedUserAndGroupToQuizzes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -375,11 +378,16 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("group_id");
 
+                    b.Property<int?>("QuizzesId")
+                        .HasColumnType("int");
+
                     b.HasKey("QuizId", "OwnerId", "GroupId");
 
                     b.HasIndex("GroupId");
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("QuizzesId");
 
                     b.ToTable("group_shared");
                 });
@@ -842,9 +850,14 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .HasColumnType("int")
                         .HasColumnName("owner_id");
 
+                    b.Property<int?>("QuizzesId")
+                        .HasColumnType("int");
+
                     b.HasKey("QuizId", "UserId", "OwnerId");
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("QuizzesId");
 
                     b.HasIndex("UserId");
 
@@ -1094,10 +1107,14 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .IsRequired();
 
                     b.HasOne("CamQuizzBE.Domain.Entities.Quizzes", "Quiz")
-                        .WithMany("SharedGroups")
+                        .WithMany()
                         .HasForeignKey("QuizId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("CamQuizzBE.Domain.Entities.Quizzes", null)
+                        .WithMany("SharedGroups")
+                        .HasForeignKey("QuizzesId");
 
                     b.Navigation("Group");
 
@@ -1294,10 +1311,14 @@ namespace CamQuizzBE.Infras.Data.Migrations
                         .IsRequired();
 
                     b.HasOne("CamQuizzBE.Domain.Entities.Quizzes", "Quiz")
-                        .WithMany("SharedUsers")
+                        .WithMany()
                         .HasForeignKey("QuizId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("CamQuizzBE.Domain.Entities.Quizzes", null)
+                        .WithMany("SharedUsers")
+                        .HasForeignKey("QuizzesId");
 
                     b.HasOne("CamQuizzBE.Domain.Entities.AppUser", "User")
                         .WithMany()

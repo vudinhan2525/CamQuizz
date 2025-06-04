@@ -61,8 +61,28 @@ public class UserQuotaRepository : IUserQuotaRepository
 
     public async Task DecrementQuizzQuotaAsync(int userId, int participants)
     {
-        var quota = await GetByUserIdAsync(userId)
-            ?? throw new NotFoundException($"No quota found for user {userId}");
+        var quota = await GetByUserIdAsync(userId);
+        
+        // If no quota exists, create default from first package
+        if (quota == null)
+        {
+            var defaultPackage = await _context.Packages
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+
+            if (defaultPackage == null)
+                throw new ValidatorException("No default package found");
+
+            quota = new UserQuota
+            {
+                UserId = userId,
+                TotalQuizz = defaultPackage.MaxNumberOfQuizz,
+                RemainingQuizz = defaultPackage.MaxNumberOfQuizz,
+                TotalParticipants = defaultPackage.MaxNumberOfAttended,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await AddQuotaAsync(quota);
+        }
 
         if (quota.RemainingQuizz <= 0)
             throw new ValidatorException("No remaining quiz quota");

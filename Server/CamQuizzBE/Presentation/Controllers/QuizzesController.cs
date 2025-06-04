@@ -149,7 +149,7 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
             GenreId = createQuizDto.GenreId ?? 0,
             UserId = createQuizDto.UserId ?? 0,
             Status = createQuizDto.Status,
-            UserShareIds = createQuizDto.UserShareIds,
+            UserEmails = createQuizDto.UserEmails,
             GroupShareIds = createQuizDto.GroupShareIds,
             Questions = createQuizDto.Questions
         };
@@ -189,5 +189,30 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
 
         await _quizzesService.DeleteQuizAsync(id);
         return NoContent();
+    }
+
+    // POST: api/v1/quiz/share/email
+    [HttpPost("share/email")]
+    [Authorize]
+    public async Task<ActionResult> ShareByEmail([FromBody] ShareQuizByEmailDto request)
+    {
+        try
+        {
+            // Set the owner ID from the current user's claims
+            request.OwnerId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            
+            var result = await _quizzesService.ShareQuizByEmailAsync(request);
+            if (!result.Success)
+            {
+                return BadRequest(new ApiResponse<object>(null, result.Message));
+            }
+
+            return Ok(new ApiResponse<object>(null, result.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sharing quiz by email");
+            return BadRequest(new ApiResponse<object>(null, ex.Message));
+        }
     }
 }

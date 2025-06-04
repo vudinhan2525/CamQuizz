@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, FlatList, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, FlatList, ActivityIndicator, Alert } from "react-native";
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
 import FlashCardPage from "../Users/FlashCard/FlashCardPage";
@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import SCREENS from '../../screens/index';
 import QuizCard from "../../components/QuizCard";
 import QuizzService from "../../services/QuizzService";
+import EditQuizModal from "../../components/EditQuizModal";
 import AsyncStorageService from "../../services/AsyncStorageService";
 import { checkAuthStatus } from "../../services/AuthService";
 
@@ -21,7 +22,7 @@ export const navigateToFlashcardTab = (navigation, params = {}) => {
 };
 
 export const Library = () => {
-  console.log('🔄 Library component rendered');
+  console.log(' Library component rendered');
 
   const route = useRoute();
   const [activeTab, setActiveTab] = useState(route.params?.activeTab || "myLibrary");
@@ -31,6 +32,8 @@ export const Library = () => {
   const [allQuizzes, setAllQuizzes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
 
   const filteredQuizzes = allQuizzes.filter(quiz => {
     if (visibility === "public") {
@@ -40,7 +43,7 @@ export const Library = () => {
     }
   });
 
-  console.log('📊 Current state:', {
+  console.log(' Current state:', {
     activeTab,
     allQuizzes: allQuizzes.length,
     filteredQuizzes: filteredQuizzes.length,
@@ -56,14 +59,14 @@ export const Library = () => {
   }, [route.params]);
 
   useEffect(() => {
-    console.log('🚀 useEffect triggered - initializing data');
+    console.log(' useEffect triggered - initializing data');
 
     const initializeData = async () => {
       try {
-        console.log('⏳ Setting loading to true');
+        console.log(' Setting loading to true');
         setLoading(true);
 
-        console.log('🔐 Checking auth status...');
+        console.log(' Checking auth status...');
         const authStatus = await checkAuthStatus();
 
         if (!authStatus) {
@@ -93,53 +96,51 @@ export const Library = () => {
 
   const fetchMyQuizzes = async () => {
     try {
-      console.log('📋 fetchMyQuizzes started');
+      console.log(' fetchMyQuizzes started');
       setLoading(true);
 
-      console.log('🌐 Calling QuizzService.getMyQuizzes()...');
+      console.log(' Calling QuizzService.getMyQuizzes()...');
       const response = await QuizzService.getMyQuizzes();
-      console.log('📦 My quizzes response:', response);
+      console.log(' My quizzes response:', response);
 
       let allMyQuizzes = [];
 
       if (response.data) {
-        console.log('✅ Setting quizzes data, count:', response.data.length);
+        console.log(' Setting quizzes data, count:', response.data.length);
         allMyQuizzes = response.data;
       } else {
-        console.log('⚠️ No data in response');
+        console.log(' No data in response');
       }
 
-      // Temporary workaround: If my-quizzes returns empty, try getAllQuizz and filter by user_id
       if (!response.data || response.data.length === 0) {
-        console.log('🔄 my-quizzes returned empty, trying getAllQuizz as fallback...');
+        console.log(' my-quizzes returned empty, trying getAllQuizz as fallback...');
         try {
           const allQuizzesResponse = await QuizzService.getAllQuizz();
-          console.log('📦 All quizzes response:', allQuizzesResponse);
+          console.log(' All quizzes response:', allQuizzesResponse);
 
           if (allQuizzesResponse.data && userId) {
             const myQuizzes = allQuizzesResponse.data.filter(quiz => quiz.user_id === userId);
-            console.log('🎯 Filtered my quizzes:', myQuizzes);
+            console.log(' Filtered my quizzes:', myQuizzes);
             allMyQuizzes = myQuizzes;
           }
         } catch (fallbackError) {
-          console.error('💥 Fallback getAllQuizz also failed:', fallbackError);
+          console.error(' Fallback getAllQuizz also failed:', fallbackError);
         }
       }
 
-      // Add mock status to quizzes since backend doesn't return status
       const quizzesWithStatus = allMyQuizzes.map((quiz, index) => ({
         ...quiz,
-        status: index % 2 === 0 ? 'Public' : 'Private' // Mock: alternate between public/private
+        status: index % 2 === 0 ? 'Public' : 'Private' 
       }));
 
       setAllQuizzes(quizzesWithStatus);
-      console.log('📊 Final quizzes with status:', quizzesWithStatus);
+      console.log(' Final quizzes with status:', quizzesWithStatus);
 
     } catch (error) {
-      console.error('💥 Error fetching my quizzes:', error);
+      console.error(' Error fetching my quizzes:', error);
       setAllQuizzes([]);
     } finally {
-      console.log('🏁 fetchMyQuizzes finished, setting loading to false');
+      console.log(' fetchMyQuizzes finished, setting loading to false');
       setLoading(false);
     }
   };
@@ -151,6 +152,63 @@ export const Library = () => {
       navigation.navigate(SCREENS.FlashCardPage);
     } else if (tabName === "collections") {
       navigation.navigate(SCREENS.SharedQuizz);
+    }
+  };
+
+  const handleEditQuiz = (quiz, deleteCallback) => {
+    console.log(' Edit quiz:', quiz);
+    setSelectedQuiz({ ...quiz, deleteCallback });
+    setShowEditModal(true);
+  };
+
+  const handleDeleteQuiz = async (quizId) => {
+    try {
+      console.log(' Deleting quiz:', quizId);
+      setLoading(true);
+
+      await QuizzService.deleteQuizz(quizId);
+
+      // Remove quiz from local state
+      setAllQuizzes(prevQuizzes =>
+        prevQuizzes.filter(quiz => quiz.id !== quizId)
+      );
+
+      Alert.alert('Thành công', 'Đã xóa bài kiểm tra thành công');
+    } catch (error) {
+      console.error(' Error deleting quiz:', error);
+      Alert.alert('Lỗi', 'Không thể xóa bài kiểm tra. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveQuiz = async (updatedQuizData) => {
+    try {
+      console.log(' Saving quiz:', updatedQuizData);
+
+      const updateDto = {
+        id: updatedQuizData.id,
+        name: updatedQuizData.name,
+        image: updatedQuizData.image,
+        genreId: updatedQuizData.genreId,
+        status: updatedQuizData.status
+      };
+
+      const response = await QuizzService.updateQuizz(updateDto);
+
+      // Update quiz in local state
+      setAllQuizzes(prevQuizzes =>
+        prevQuizzes.map(quiz =>
+          quiz.id === updatedQuizData.id
+            ? { ...quiz, ...updatedQuizData, genre_id: updatedQuizData.genreId }
+            : quiz
+        )
+      );
+
+      Alert.alert('Thành công', 'Đã cập nhật bài kiểm tra thành công');
+    } catch (error) {
+      console.error(' Error updating quiz:', error);
+      throw error; 
     }
   };
 
@@ -191,7 +249,7 @@ export const Library = () => {
                   { label: "Riêng tư", value: "private" }
                 ]}
                 onSelect={(value) => {
-                  console.log('🔄 Visibility changed to:', value);
+                  console.log(' Visibility changed to:', value);
                   setVisibility(value);
                 }}
               />
@@ -211,7 +269,14 @@ export const Library = () => {
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
               columnWrapperStyle={styles.row}
-              renderItem={({ item }) => <QuizCard quiz={item} />}
+              renderItem={({ item }) => (
+                <QuizCard
+                  quiz={item}
+                  showOptions={true}
+                  onEdit={handleEditQuiz}
+                  onDelete={handleDeleteQuiz}
+                />
+              )}
               contentContainerStyle={styles.quizListContainer}
               showsVerticalScrollIndicator={false}
             />
@@ -238,6 +303,18 @@ export const Library = () => {
       {activeTab === "collections" && (
         <SharedQuizz />
       )}
+
+      {/* Edit Quiz Modal */}
+      <EditQuizModal
+        visible={showEditModal}
+        quiz={selectedQuiz}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedQuiz(null);
+        }}
+        onSave={handleSaveQuiz}
+        onDelete={selectedQuiz?.deleteCallback || handleDeleteQuiz}
+      />
     </View>
   );
 };

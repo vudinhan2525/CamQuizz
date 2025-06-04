@@ -39,7 +39,6 @@ const QuizCreation = () => {
     const accesses = [
         { label: 'Công khai', value: 'Public' },
         { label: 'Riêng tư', value: 'Private' },
-        { label: 'Tùy chọn', value: 'Option' },
     ];
     const mockGroups = [
         { id: '1', name: 'Nhóm Toán học' },
@@ -118,10 +117,10 @@ const QuizCreation = () => {
                 };
             }));
 
-            const userShareIds = quizInfo.access === 'Tùy chọn' ?
+            const userShareIds = quizInfo.access === 'Private' ?
                 quizInfo.invitedEmails.map(email => email) : [];
 
-            const groupShareIds = quizInfo.access === 'Tùy chọn' ?
+            const groupShareIds = quizInfo.access === 'Private' ?
                 quizInfo.selectedGroups.map(groupId => groupId) : [];
 
             return {
@@ -129,8 +128,7 @@ const QuizCreation = () => {
                 image: quizImageUrl||"",
                 genre_id: parseInt(quizInfo.categoryId),
                 user_id: userId,
-                status: quizInfo.access === 'Công khai' ? 'Public' :
-                    quizInfo.access === 'Riêng tư' ? 'Private' : 'Option',
+                status: quizInfo.access === 'Công khai' ? 'Public' : 'Private',
                 userShareIds,
                 groupShareIds,
                 questions: formattedQuestions
@@ -202,15 +200,13 @@ const QuizCreation = () => {
                 return 'Công khai';
             case 'Private':
                 return 'Riêng tư';
-            case 'Option':
-                return 'Tùy chọn';
             default:
                 return 'Công khai';
         }
     };
     const handleAccessChange = (item) => {
         setTmpQuizInfo({ ...tmpQuizInfo, access: item.value });
-        if (item.value === 'Option') {
+        if (item.value === 'Private') {
             setShowGroupModal(true);
         }
     };
@@ -356,7 +352,7 @@ const QuizCreation = () => {
                             <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{getCategoryName(quizInfo.categoryId)}</Text></Text>
                             <Text style={styles.quizInfoText}>Quyền truy cập: <Text style={{ color: COLORS.BLACK }}>{quizInfo.access}</Text></Text>
                             <View style={styles.accessDetailsContainer}>
-                                {quizInfo.access === 'Option' && <Text style={styles.quizInfoText}>Tùy chọn truy cập:</Text>}
+                                {quizInfo.access === 'Riêng tư' && <Text style={styles.quizInfoText}>Chia sẻ với:</Text>}
                                 <View style={styles.flowContainer}>
                                     {quizInfo.selectedGroups.map(groupId => {
                                         const group = mockGroups.find(g => g.id === groupId);
@@ -375,7 +371,6 @@ const QuizCreation = () => {
                                     ))}
                                 </View>
                             </View>
-                            <Text style={styles.quizInfoText}>Số câu hỏi: <Text style={{ color: COLORS.BLACK }}>{quizInfo.amount}</Text></Text>
                         </View>
                         <TouchableOpacity style={styles.editButton}>
                             <Ionicons name="create-outline" size={24} color={COLORS.BLUE} onPress={() => bottomSheetRef.current.open()} />
@@ -497,8 +492,8 @@ const QuizCreation = () => {
 
                 <View style={styles.modalButtons}>
                     <TouchableOpacity
-                        disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Option' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
-                        style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || tmpQuizInfo.access === 'Option' && (tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
+                        disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
+                        style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
                         onPress={() => saveQuizInfo()} >
                         <Text style={styles.buttonText}>Lưu</Text>
                     </TouchableOpacity>

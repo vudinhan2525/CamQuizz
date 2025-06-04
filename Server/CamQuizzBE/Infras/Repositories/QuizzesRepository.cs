@@ -13,12 +13,18 @@ public class QuizzesRepository(DataContext context, ILogger<QuizzesRepository> l
     private readonly IAnswerRepository _answerRepo = answerRepo;
     private readonly ILogger<QuizzesRepository> _logger = logger;
 
-    public async Task<PagedResult<Quizzes>> GetAllAsync(string? kw, int limit, int page, string? sort, int? genreId)
+    public async Task<PagedResult<Quizzes>> GetAllAsync(string? kw, int limit, int page, string? sort, int? genreId, bool showPrivate = false)
     {
         var query = _context.Quizzes
             .Include(q => q.Questions)
                 .ThenInclude(q => q.Answers)
             .AsQueryable();
+
+        // Filter by status if not admin
+        if (!showPrivate)
+        {
+            query = query.Where(q => q.Status == QuizStatus.Public);
+        }
 
 
         if (!string.IsNullOrWhiteSpace(kw))

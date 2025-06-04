@@ -35,6 +35,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IAnswerService, AnswerService>();
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserQuotaService, UserQuotaService>();
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IQuizReportService, QuizReportService>();
         // Repos
@@ -47,6 +48,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPackagesRepository, PackagesRepository>();
         services.AddScoped<IQuestionRepository, QuestionsRepository>();
         services.AddScoped<IAnswerRepository, AnswerRepository>();
+        services.AddScoped<IUserQuotaRepository, UserQuotaRepository>();
 
         // Register Auto Mapper
         services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());

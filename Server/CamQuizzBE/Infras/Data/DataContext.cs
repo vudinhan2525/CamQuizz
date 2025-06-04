@@ -26,6 +26,7 @@ IdentityDbContext<
     public DbSet<Group> Groups { get; set; }
     public DbSet<Member> Members { get; set; }
     public DbSet<StudySet> StudySets { get; set; }
+    public DbSet<UserQuota> UserQuotas { get; set; }
     public DbSet<FlashCard> FlashCards { get; set; }
     public DbSet<GroupQuiz> GroupQuizzes { get; set; }
     public DbSet<ChatMessage> ChatMessages { get; set; }

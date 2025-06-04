@@ -27,7 +27,6 @@
     "expo": "^53.0.9",
     "expo-av": "~15.1.4",
     "expo-clipboard": "~7.1.4",
-    "expo-dev-client": "~5.1.8",
     "expo-image-picker": "~16.1.4",
     "expo-linking": "^7.1.5",
     "expo-splash-screen": "^0.30.8",

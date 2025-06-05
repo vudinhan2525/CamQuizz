@@ -18,6 +18,9 @@ public class QuizzesDto
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public QuizStatus Status { get; set; } = QuizStatus.Public;
 
+    [JsonPropertyName("is_deleted")]
+    public bool IsDeleted { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public List<QuestionsDto> Questions { get; set; } = new();

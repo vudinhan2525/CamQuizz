@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
 import Entypo from 'react-native-vector-icons/Entypo';
 import GroupService from '../../../services/GroupService';
+import StudyGroupService from '../../../services/StudyGroupService';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import * as signalR from '@microsoft/signalr';
+import { useIsFocused } from '@react-navigation/native';
+import { API_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GroupScreen = ({ navigation, route }) => {
@@ -13,120 +18,85 @@ const GroupScreen = ({ navigation, route }) => {
   const [group, setGroup] = useState(routeGroup || { name: 'Study Group', id: 1 });
   const [isLeader, setIsLeader] = useState(routeIsLeader || false);
   const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
-  const [memberStatus, setMemberStatus] = useState({
-    isMember: false,
-    isOwner: false,
-    status: null
-  });
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [connection, setConnection] = useState(null);
+  const isFocused = useIsFocused();
+  const flatListRef = React.useRef(null);
 
   useEffect(() => {
+    console.log("group", group)
+    console.log("is leader", isLeader)
     const fetchUserId = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          const user = JSON.parse(userData);
-          setUserId(user.id);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
+      const id = await AsyncStorageService.getUserId();
+      setUserId(id);
     };
-
     fetchUserId();
+    loadSharedQuizzes();
   }, []);
 
   useEffect(() => {
-    if (userId && group.id) {
-      loadGroupData();
-    }
-  }, [group.id, userId]);
+    if (!userId) return;
+    console.log("API_URL", API_URL)
+    const connectToHub = async () => {
+      try {
+        const newConnection = new signalR.HubConnectionBuilder()
+          .withUrl(`${API_URL}/groupChat`, {
+            skipNegotiation: true,
+            transport: signalR.HttpTransportType.WebSockets
+          })
+          .configureLogging(signalR.LogLevel.Information)
+          .withAutomaticReconnect()
+          .build();
 
-  const loadGroupData = async () => {
-    if (!group.id || !userId) {
-      console.warn('No group ID or user ID provided');
-      setLoading(false);
-      return;
-    }
+        setConnection(newConnection);
 
-    try {
-      setLoading(true);
-      console.log(`Loading data for group ID: ${group.id}, user ID: ${userId}`);
 
-      console.log(`=== CHECKING MEMBER STATUS ===`);
-      console.log(`Group ID: ${group.id}`);
-      console.log(`User ID: ${userId}`);
-      console.log(`Group object:`, group);
-
-      const memberStatusResult = await GroupService.checkMemberStatus(group.id, userId);
-      setMemberStatus(memberStatusResult);
-
-      console.log('=== MEMBER STATUS RESULT ===');
-      console.log('Member status result:', memberStatusResult);
-      console.log(`isMember: ${memberStatusResult.isMember}`);
-      console.log(`isOwner: ${memberStatusResult.isOwner}`);
-      console.log(`status: ${memberStatusResult.status}`);
-
-      // Fallback logic: If API check failed but we have isLeader from route params
-      let finalMemberStatus = memberStatusResult;
-      if (memberStatusResult.status === 'Error' && isLeader) {
-        console.log('=== USING FALLBACK LOGIC ===');
-        console.log('API check failed but isLeader is true, using fallback');
-        finalMemberStatus = {
-          isMember: true,
-          isOwner: true,
-          status: 'Owner (Fallback)'
-        };
-        setMemberStatus(finalMemberStatus);
+      } catch (error) {
+        console.error('Error connecting to SignalR hub:', error);
       }
-
-      if (finalMemberStatus.isMember) {
-        console.log('User is a member, loading shared quizzes');
-        await loadSharedQuizzes();
-      } else {
-        setQuizzes([]);
-        console.log('User is not a member, not loading shared quizzes');
-      }
-
-    } catch (error) {
-      console.error('Error loading group data:', error);
-      if (memberStatus.isMember) {
-        Alert.alert(
-          'Lỗi',
-          'Không thể tải dữ liệu nhóm. Vui lòng thử lại.',
-          [{ text: 'OK' }]
-        );
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+    connectToHub();
+  }, [userId, isFocused]);
+
+  useEffect(() => {
+    if (connection) {
+      connection.start().then(() => {
+        connection.invoke('GetUnreadMessageCounts', userId.toString());
+        connection.on('unreadMessageCounts', (counts) => {
+          console.log("counts", counts)
+          const groupUnread = counts.find(c => c.GroupId === group.id.toString());
+          setUnreadCount(groupUnread ? groupUnread.UnreadCount : 0);
+        });
+        connection.on('receiveMessage', (message) => {
+          if (message) {
+            connection.invoke('GetUnreadMessageCounts', userId.toString());
+          }
+        });
+      });
+    }
+  }, [connection, group.id, userId, isFocused]);
 
   const loadSharedQuizzes = async () => {
     try {
       console.log(`Fetching shared quizzes for group ${group.id}`);
-      const response = await GroupService.getSharedQuizzesByGroupId(group.id);
+      const quizzesData = await StudyGroupService.getGroupQuizzes(group.id);
 
-      console.log('Shared quizzes response:', response);
+      console.log('Shared quizzes response:', quizzesData);
 
-      let quizzesData = [];
-      if (response && response.data) {
-        quizzesData = Array.isArray(response.data) ? response.data : [response.data];
-      } else if (Array.isArray(response)) {
-        quizzesData = response;
-      }
 
-      const transformedQuizzes = quizzesData.map((item, index) => ({
-        id: item.quizId || item.id || index.toString(),
-        title: item.quiz?.title || item.title || `Quiz ${index + 1}`,
-        category: item.quiz?.genre?.name || item.category || 'Chưa phân loại',
-        plays: item.quiz?.attendNum || item.plays || 0,
-        questions: item.quiz?.questionsCount || item.questions || 0,
-        image: item.quiz?.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
-        sharedBy: item.sharedBy?.firstName || item.sharedBy?.name || 'Unknown',
-        sharedAt: item.sharedAt || new Date().toISOString(),
-        originalQuiz: item.quiz || item
+
+      const transformedQuizzes = quizzesData.map((item) => ({
+        id: item.quiz_id,
+        title: item.quiz_name,
+        image: item.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
+        duration: item.duration,
+        questions: item.number_of_questions,
+        sharedBy: item.shared_by_name,
+        sharedAt: item.shared_at,
+        status: item.status,
+        groupId: item.group_id,
+        groupName: item.group_name
       }));
 
       setQuizzes(transformedQuizzes);
@@ -139,17 +109,16 @@ const GroupScreen = ({ navigation, route }) => {
         setQuizzes([]);
         console.log('No shared quizzes found for this group');
       } else {
-        throw error; 
+        throw error;
       }
     }
   };
 
 
-
   const renderQuizItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quiz: item.originalQuiz })}
+      onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id })}
     >
       <Image source={{ uri: item.image }} style={styles.image} />
       <View style={styles.infoContainer}>
@@ -157,12 +126,17 @@ const GroupScreen = ({ navigation, route }) => {
         <View style={styles.row}>
           <Text style={styles.questions}>{item.questions} câu hỏi</Text>
           <Entypo name="dot-single" size={20} color={COLORS.GRAY} />
-          <Text style={styles.plays}>{item.plays} lượt làm bài</Text>
+          <Text style={styles.duration}>{item.duration} giây</Text>
         </View>
         <View style={styles.categoryContainer}>
-          <Text style={styles.category}>{item.category}</Text>
+          <Text style={styles.category}>{item.status === 'Public' ? 'Công khai' : 'Riêng tư'}</Text>
         </View>
-        <Text style={styles.sharedInfo}>Chia sẻ bởi: {item.sharedBy}</Text>
+        <View style={styles.sharedInfoContainer}>
+          <Text style={styles.sharedBy}>Chia sẻ bởi: {item.sharedBy}</Text>
+          <Text style={styles.sharedAt}>
+            {new Date(item.sharedAt).toLocaleDateString('vi-VN')}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -171,45 +145,9 @@ const GroupScreen = ({ navigation, route }) => {
     <View style={styles.emptyContainer}>
       <Ionicons name="library-outline" size={64} color={COLORS.GRAY} />
       <Text style={styles.emptyTitle}>Chưa có quiz nào được chia sẻ</Text>
-      <Text style={styles.emptySubtitle}>
-        {memberStatus.isOwner
-          ? 'Hãy chia sẻ quiz đầu tiên cho nhóm của bạn!'
-          : 'Chờ các thành viên chia sẻ quiz cho nhóm.'
-        }
-      </Text>
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{group.name}</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.navigate(SCREENS.GROUP_MESSAGE, { group })}
-            >
-              <Ionicons name="chatbubble-outline" size={24} color={COLORS.BLACK} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.navigate(SCREENS.GROUP_MEMBERS, { group, isLeader })}
-            >
-              <Ionicons name="people-outline" size={24} color={COLORS.BLACK} />
-            </TouchableOpacity>
-          </View>
-        </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.BLUE} />
-          <Text style={styles.loadingText}>Đang tải quiz...</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -224,6 +162,23 @@ const GroupScreen = ({ navigation, route }) => {
             onPress={() => navigation.navigate(SCREENS.GROUP_MESSAGE, { group })}
           >
             <Ionicons name="chatbubble-outline" size={24} color={COLORS.BLACK} />
+            {unreadCount > 0 && (
+              <View style={{
+                position: 'absolute',
+                right: -6,
+                top: -6,
+                backgroundColor: COLORS.RED,
+                borderRadius: 8,
+                minWidth: 16,
+                height: 16,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingHorizontal: 4,
+                zIndex: 1,
+              }}>
+                <Text style={{ color: COLORS.WHITE, fontSize: 10, fontWeight: 'bold' }}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
@@ -234,30 +189,47 @@ const GroupScreen = ({ navigation, route }) => {
         </View>
       </View>
 
-      {memberStatus.isMember ? (
-        <>
-          <View style={styles.quizHeader}>
-            <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
-          </View>
 
-          <FlatList
-            data={quizzes}
-            renderItem={renderQuizItem}
-            keyExtractor={(item, index) => item.id || index.toString()}
-            contentContainerStyle={quizzes.length === 0 ? styles.emptyContent : styles.content}
-            ListEmptyComponent={renderEmptyState}
-            showsVerticalScrollIndicator={false}
-          />
-        </>
-      ) : (
-        <View style={styles.nonMemberContainer}>
-          <Ionicons name="people-outline" size={64} color={COLORS.GRAY} />
-          <Text style={styles.nonMemberTitle}>Chỉ thành viên nhóm mới có thể xem quiz được chia sẻ</Text>
-          <Text style={styles.nonMemberSubtitle}>
-            Bạn cần là thành viên của nhóm để có thể xem các quiz được chia sẻ trong nhóm này.
-          </Text>
+      <>
+        <View style={styles.quizHeader}>
+          <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
+          <TouchableOpacity
+            style={styles.quitButton}
+            onPress={() => {
+              Alert.alert(
+                "Xác nhận",
+                "Bạn có chắc chắn muốn rời khỏi nhóm không?",
+                [
+                  {
+                    text: "Hủy",
+                    style: "cancel"
+                  },
+                  {
+                    text: "Đồng ý",
+                    onPress: () => {
+                      StudyGroupService.leaveGroup(group.id, userId);
+                    }
+                  }
+                ]
+              );
+            }}
+
+          >
+            <Text style={styles.quitText}>Rời nhóm</Text>
+          </TouchableOpacity>
         </View>
-      )}
+
+        <FlatList
+          data={quizzes}
+          renderItem={renderQuizItem}
+          keyExtractor={(item, index) => item.id || index.toString()}
+          contentContainerStyle={quizzes.length === 0 ? styles.emptyContent : styles.content}
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+          ref={flatListRef}
+        />
+      </>
+
     </View>
   );
 };
@@ -315,7 +287,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color:COLORS.BLUE
+    color: COLORS.BLUE
   },
   row: {
     flexDirection: 'row',
@@ -353,11 +325,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.WHITE,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.GRAY_BG,
+    flexDirection: 'row',
+    justifyContent: 'space-between'
   },
   quizHeaderTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.BLACK,
+    textAlignVertical: 'center'
   },
 
   loadingContainer: {
@@ -435,6 +410,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  quitButton: {
+    backgroundColor: COLORS.RED,
+    borderRadius: 8,
+    padding: 8
+  },
+  quitText: {
+    color: COLORS.WHITE
+  },
+  duration: {
+    fontSize: 14,
+    color: '#888',
+  },
+  sharedInfoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  sharedBy: {
+    fontSize: 12,
+    color: COLORS.GRAY,
+    fontStyle: 'italic',
+  },
+  sharedAt: {
+    fontSize: 12,
+    color: COLORS.GRAY,
+  }
 });
 
 export default GroupScreen;

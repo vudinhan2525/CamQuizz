@@ -22,14 +22,13 @@ namespace CamQuizzBE.Domain.Enums
     public enum ReportStatus
     {
         Pending,
-        Resolved,
-        Dismissed
+        Resolved
     }
 
     public enum QuizReportAction
     {
-        Keep,           // No action needed
-        SoftDelete,     // Mark as deleted
-        HardDelete     // Permanent delete
+        Keep,           
+        SoftDelete,     
+        HardDelete     
     }
 }

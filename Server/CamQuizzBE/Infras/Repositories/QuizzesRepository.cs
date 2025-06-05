@@ -26,6 +26,7 @@ public class QuizzesRepository(
                 .ThenInclude(us => us.User)
             .Include(q => q.SharedGroups)
                 .ThenInclude(gs => gs.Group)
+            .Where(q => !q.IsDeleted)
             .AsQueryable();
 
         // Filter by status if not admin
@@ -72,6 +73,7 @@ public class QuizzesRepository(
     public async Task<List<Quizzes>> GetTop5()
     {
         var top5Quizzes = await _context.Quizzes
+            .Where(q => !q.IsDeleted)
             .OrderByDescending(q => q.NumberOfAttended)
             .Take(5)
             .ToListAsync();
@@ -87,7 +89,7 @@ public class QuizzesRepository(
                 .ThenInclude(us => us.User)
             .Include(q => q.SharedGroups)
                 .ThenInclude(gs => gs.Group)
-            .Where(q => q.UserId == userId)
+            .Where(q => q.UserId == userId && !q.IsDeleted)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(kw))
@@ -133,7 +135,7 @@ public class QuizzesRepository(
             .Include(q => q.SharedGroups)
                 .ThenInclude(gs => gs.Owner)
             .AsSplitQuery() // Split the query to avoid cartesian explosion
-            .FirstOrDefaultAsync(q => q.Id == id);
+            .FirstOrDefaultAsync(q => q.Id == id);  // Remove IsDeleted filter from GetByIdAsync
 
         return quiz;
     }

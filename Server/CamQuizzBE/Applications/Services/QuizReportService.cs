@@ -200,20 +200,22 @@ public class QuizReportService : IQuizReportService
         report.ResolvedAt = DateTime.UtcNow;
 
         // Handle the action
-        if (updateDto.Action == QuizReportAction.SoftDelete)
+        var quiz = await _context.Quizzes.FindAsync(report.QuizId);
+        if (quiz != null)
         {
-            var quiz = await _context.Quizzes.FindAsync(report.QuizId);
-            if (quiz != null)
+            switch (updateDto.Action)
             {
-                quiz.IsDeleted = true;
-            }
-        }
-        else if (updateDto.Action == QuizReportAction.HardDelete)
-        {
-            var quiz = await _context.Quizzes.FindAsync(report.QuizId);
-            if (quiz != null)
-            {
-                _context.Quizzes.Remove(quiz);
+                case QuizReportAction.Keep:
+                    quiz.IsDeleted = false;  
+                    _context.Quizzes.Update(quiz);
+                    break;
+                case QuizReportAction.SoftDelete:
+                    quiz.IsDeleted = true; 
+                    _context.Quizzes.Update(quiz);
+                    break;
+                case QuizReportAction.HardDelete:
+                    _context.Quizzes.Remove(quiz);  
+                    break;
             }
         }
 

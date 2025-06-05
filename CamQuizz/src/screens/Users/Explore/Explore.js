@@ -88,7 +88,8 @@ export const Explore = ({ navigation }) => {
         quizId: room.QuizId,
         isHost: false,
         roomCode: room.RoomId,
-        playerList: room.PlayerList
+        playerList: room.PlayerList,
+        HostId: room.HostId
       });
       setJoinCode('');
       setIsJoining(false);

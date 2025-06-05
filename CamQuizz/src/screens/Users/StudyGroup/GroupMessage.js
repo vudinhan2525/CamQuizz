@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,52 +10,177 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
+import { API_URL } from '@env';
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import * as signalR from '@microsoft/signalr';
 
 const tmpAvatar = 'https://i.pravatar.cc/40?img=3';
 
 const GroupMessage = ({ navigation, route }) => {
   const { group } = route.params;
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [connection, setConnection] = useState(null);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const flatListRef = useRef();
 
-  const messages = [
-    { id: '1', sender: 'User 1', text: 'Hello everyone!', time: '10:00' },
-    { id: '2', sender: 'Me', text: 'Hi User 1!', time: '10:01' },
-    { id: '3', sender: 'User 2', text: 'Chào bạn!', time: '10:02' },
-    { id: '4', sender: 'Me', text: 'Mọi người chuẩn bị kiểm tra nhé.', time: '10:03' },
-  ];
+  const formatMessage = useCallback(
+    (msg) => ({
+      id: msg.MessageId || Math.random().toString(),
+      sender: msg.UserName || 'Unknown',
+      text: msg.Message,
+      time: msg.Timestamp
+        ? new Date(new Date(msg.Timestamp).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : '',
+      userId: msg.FromUserId,
+    }),
+    []
+  );
+
+  /**  Handle a single incoming real‑time message */
+  const handleReceiveMessage = useCallback(
+    (msg) => {
+      //console.log("msg", msg) 
+      //console.log(`${msg.GroupId} !== ${group.id.toString()}`)
+      //console.log("ignore", msg.GroupId !== group.id.toString())
+      //if (msg.GroupId !== group.id.toString()) return; // ignore messages for other groups
+      setMessages((prev) => [...prev, formatMessage(msg)]);
+      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+    },
+    [formatMessage]
+  );
+
+  const handleLoadMessageHistory = useCallback(
+    (result) => {
+      if (!result?.Messages) return;
+      const loaded = result.Messages.map(formatMessage);
+      if (result.Page === 1) {
+        setMessages(loaded);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+      } else {
+        setMessages((prev) => [...loaded, ...prev]);
+      }
+      setHasMore(result.Page < result.TotalPages);
+      setLoadingMore(false);
+    },
+    [formatMessage]
+  );
+
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const id = await AsyncStorageService.getUserId();
+      setUserId(id);
+    };
+    fetchUserId();
+
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    const newConnection = new signalR.HubConnectionBuilder()
+      .withUrl(`${API_URL}/groupChat`, {
+        skipNegotiation: true,
+        transport: signalR.HttpTransportType.WebSockets,
+      })
+      .configureLogging(signalR.LogLevel.Information)
+      .withAutomaticReconnect()
+      .build();
+    setConnection(newConnection);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!connection || !userId) return;
+    let isMounted = true;
+
+    connection
+      .start()
+      .then(() => {
+        connection.invoke('JoinGroup', {
+          GroupId: group.id.toString(),
+          UserId: userId.toString(),
+        });
+        connection.invoke('LoadMessageHistory', {
+          GroupId: group.id.toString(),
+          Page: 1,
+          Limit: 20,
+        });
+        setPage(1);
+        connection.on('receiveMessage', handleReceiveMessage);
+        connection.on('loadMessageHistory', handleLoadMessageHistory);
+      })
+      .catch((err) => console.warn('SignalR connection error:', err));
+
+    return () => {
+      isMounted = false;
+      connection.off('receiveMessage', handleReceiveMessage);
+      connection.off('loadMessageHistory', handleLoadMessageHistory);
+      connection.stop();
+    };
+  }, [connection, group.id, userId, handleReceiveMessage, handleLoadMessageHistory]);
+
+  useEffect(() => {
+    if (connection && userId && messages.length) {
+      connection.invoke('MarkMessagesAsRead', group.id.toString(), userId.toString());
+    }
+  }, [messages.length, connection, group.id, userId]);
+
+  useEffect(() => {
+    if (!connection) return;
+    const messagesReadHandler = ({ UserId }) => {
+      // Here you could update a badge, etc.
+      // console.log('Messages marked as read for user:', UserId);
+    };
+    connection.on('messagesRead', messagesReadHandler);
+    return () => connection.off('messagesRead', messagesReadHandler);
+  }, [connection]);
+
+
+  const handleSend = () => {
+    if (!message.trim() || !connection || !userId) return;
+
+    connection.invoke('SendMessage', {
+      GroupId: group.id.toString(),
+      UserId: userId.toString(),
+      Message: message.trim(),
+    });
+    setMessage('');
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore || !connection) return;
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    connection.invoke('LoadMessageHistory', {
+      GroupId: group.id.toString(),
+      Page: nextPage,
+      Limit: 20,
+    });
+  };
 
   const renderMessage = ({ item }) => {
-    const isMe = item.sender === 'Me';
-
+    const isMe = item.userId?.toString() === userId?.toString();
     return (
       <View
-        style={[
-          styles.messageWrapper,
-          isMe ? styles.myMessageWrapper : styles.otherMessageWrapper,
-        ]}
+        style={[styles.messageWrapper, isMe ? styles.myMessageWrapper : styles.otherMessageWrapper]}
       >
         {!isMe && <Image source={{ uri: tmpAvatar }} style={styles.avatar} />}
-        <View
-          style={[
-            styles.messageItem,
-            isMe ? styles.myMessage : styles.otherMessage,
-          ]}
-        >
+        <View style={[styles.messageItem, isMe ? styles.myMessage : styles.otherMessage]}>
           {!isMe && <Text style={styles.messageSender}>{item.sender}</Text>}
-          <Text 
-          style={[
-            isMe ? styles.myMessageText : styles.messageText,
-          ]}>{item.text}</Text>
-          <Text 
-          style={[
-            isMe ? styles.myMessageTime : styles.messageTime,
-          ]}
-          >{item.time}</Text>
+          <Text style={isMe ? styles.myMessageText : styles.messageText}>{item.text}</Text>
+          <Text style={isMe ? styles.myMessageTime : styles.messageTime}>{item.time}</Text>
         </View>
       </View>
     );
   };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -65,10 +190,19 @@ const GroupMessage = ({ navigation, route }) => {
         <Text style={styles.headerTitle}>{group.name}</Text>
       </View>
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
+        onEndReached={null}
+        onEndReachedThreshold={0.1}
+        onScroll={({ nativeEvent }) => {
+          if (nativeEvent.contentOffset.y <= 0) {
+            handleLoadMore();
+          }
+        }}
+        inverted={false}
       />
       <View style={styles.inputContainer}>
         <TextInput
@@ -76,8 +210,9 @@ const GroupMessage = ({ navigation, route }) => {
           value={message}
           onChangeText={setMessage}
           placeholder="Type a message..."
+          onSubmitEditing={handleSend}
         />
-        <TouchableOpacity style={styles.sendButton}>
+        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
           <Ionicons name="send" size={24} color={COLORS.BLUE} />
         </TouchableOpacity>
       </View>

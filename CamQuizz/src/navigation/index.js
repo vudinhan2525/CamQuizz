@@ -34,7 +34,7 @@ import ReportHistory from '../screens/Users/Explore/ReportHistory';
 import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
 
-import { Quizz } from '../screens/Admin/Quizz';
+import { Quizz } from '../screens/Admin/Quizz/Quizz';
 import { Package } from '../screens/Admin/Package/Package';
 import { User } from '../screens/Admin/User';
 import { Account as AdminAccount } from '../screens/Admin/Account';

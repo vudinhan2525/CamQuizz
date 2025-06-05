@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {ScrollView, View, Text, StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
-import GroupService from '../../../services/GroupService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import StudyGroupService from '../../../services/StudyGroupService';
 export const CreateStudyGroup = ({ navigation }) => {
   const [groupName, setGroupName] = useState('');
   const [description, setDescription] = useState('');
@@ -17,11 +16,11 @@ export const CreateStudyGroup = ({ navigation }) => {
   useEffect(() => {
     const fetchUserId = async () => {
       try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          const user = JSON.parse(userData);
-          setUserId(user.id);
+        const userId = await AsyncStorageService.getUserId();
+        if (userId) { 
+          setUserId(userId);
         }
+
       } catch (error) {
         console.error('Error fetching user data:', error);
         Alert.alert('Lỗi', 'Không thể lấy thông tin người dùng');
@@ -31,17 +30,6 @@ export const CreateStudyGroup = ({ navigation }) => {
     fetchUserId();
   }, []);
 
-  const handleAddEmail = () => {
-    if (email.trim()) {
-      setEmails([...emails, email.trim()]);
-      setEmail('');
-    }
-  };
-
-  const handleRemoveEmail = (index) => {
-    const newEmails = emails.filter((_, i) => i !== index);
-    setEmails(newEmails);
-  };
 
   const handleCreateGroup = async () => {
     if (!groupName.trim()) {
@@ -63,7 +51,7 @@ export const CreateStudyGroup = ({ navigation }) => {
         ownerId: userId
       };
 
-      const response = await GroupService.createGroup(groupData);
+      const response = await StudyGroupService.createGroup(groupData);
 
       console.log('Nhóm đã được tạo:', response);
 
@@ -151,7 +139,7 @@ export const CreateStudyGroup = ({ navigation }) => {
           />
         </View>
 
-        <View style={styles.inputContainer}>
+        {/* <View style={styles.inputContainer}>
           <Text style={styles.label}>Mời thành viên</Text>
           <View style={styles.emailInputContainer}>
             <TextInput
@@ -180,7 +168,7 @@ export const CreateStudyGroup = ({ navigation }) => {
               </View>
             ))}
           </View>
-        )}
+        )} */}
       </ScrollView>
       <View style={{ height: 20 }} />
 
@@ -199,7 +187,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.GRAY_LIGHT,
+    borderBottomColor: COLORS.GRAY_BG,
   },
   headerTitle: {
     fontSize: 18,

@@ -9,7 +9,6 @@ using CamQuizzBE.Applications.Services;
 using CamQuizzBE.Presentation.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using CamQuizzBE.Presentation.Utils;
-
 [Route("api/v1/groups")]
 [ApiController]
 public class GroupController : ControllerBase
@@ -37,7 +36,14 @@ public class GroupController : ControllerBase
             return StatusCode(500, "An error occurred while retrieving groups");
         }
     }
-
+    [HttpGet("groups/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> GetMyGroups(int userId, String status = "Active", bool  isOwner = true)
+    {
+        var groups = await _groupService.GetMyGroupsAsync(userId, status, isOwner);
+        var response = new ApiResponse<IEnumerable<GroupDto>>(groups);
+        return Ok(response);
+    }
     [HttpGet("my-groups/{userId}")]
     [Authorize]
     public async Task<IActionResult> GetMyGroups(int userId, [FromQuery] bool onlyOwned = false)

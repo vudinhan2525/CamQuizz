@@ -212,6 +212,8 @@ namespace CamQuizzBE.Presentation.Controllers
             {
                 Name = packageDto.Name,
                 Price = packageDto.Price,
+                // EndDate = packageDto.EndDate,
+                // StartDate = packageDto.StartDate,
                 MaxNumberOfAttended = packageDto.MaxNumberOfAttended,
                 MaxNumberOfQuizz = packageDto.MaxNumberOfQuizz,
                 CreatedAt = DateTime.UtcNow,

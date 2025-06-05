@@ -4,12 +4,13 @@ using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Applications.DTOs.Groups;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 public interface IGroupRepository
 {
     Task<IEnumerable<GroupDto>> GetAllGroupsAsync();
     Task<IEnumerable<GroupDto>> GetGroupsAsync(string? search, int page, int pageSize, string? sort);
     Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId);
+    Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, String status = "Active", bool  isOwner= true );
+
     Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, string? search, int page, int pageSize, string? sort);
     Task<Member?> GetMemberAsync(int groupId, int userId);
     Task<IEnumerable<MemberDto>> GetMembersAsync(int groupId);

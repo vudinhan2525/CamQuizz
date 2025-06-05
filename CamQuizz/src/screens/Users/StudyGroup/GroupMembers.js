@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Image, A
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import GroupService from '../../../services/GroupService';
-
+import StudyGroupService from '../../../services/StudyGroupService';
 const tmpURL = 'https://genk.mediacdn.vn/2018/9/6/baroibeo-15362268453481952312749.jpg';
 
 const GroupMembers = ({ navigation, route }) => {
@@ -45,6 +45,47 @@ const GroupMembers = ({ navigation, route }) => {
       setLoading(false);
     }
   };
+  const handleRemoveMember = async (memberId) => {
+    if (!isLeader) {
+      Alert.alert('Thông báo', 'Chỉ trưởng nhóm mới có thể xóa thành viên');
+      return;
+    }
+    try {
+      Alert.alert(
+        'Xác nhận',
+        'Bạn có chắc chắn muốn xóa thành viên này khỏi nhóm?',
+        [
+          { text: 'Hủy', style: 'cancel' },
+          {
+            text: 'Xóa',
+            style: 'destructive',
+            onPress: () => removeMember(memberId)
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error confirming member removal:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể xác nhận xóa thành viên. Vui lòng thử lại sau.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+  const removeMember = async (memberId) => {
+    try {
++      await StudyGroupService.removeMember(group.id, memberId, group.owner_id);
+      Alert.alert('Thành công', 'Đã xóa thành viên khỏi nhóm');
+      await loadMembersData();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      Alert.alert(
+        'Lỗi',
+        'Không thể xóa thành viên. Vui lòng thử lại sau.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
 
   const loadMembers = async () => {
     try {
@@ -74,29 +115,32 @@ const GroupMembers = ({ navigation, route }) => {
       } else if (Array.isArray(pendingResponse)) {
         pendingData = pendingResponse;
       }
-
+      console.log("owner", group.owner_id);
       // Transform approved members
       const transformedMembers = membersData.map((item, index) => ({
         id: item.userId || item.id || index.toString(),
-        name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
+        name: `${item.display_name}`.trim() ,
         email: item.email || 'No email',
         role: item.userId === group.ownerId ? 'Leader' : 'Member',
         status: item.status || 'Approved',
         joinedAt: item.joinedAt || new Date().toISOString(),
         avatar: item.avatar || tmpURL,
-        isOwner: item.userId === group.ownerId
+        isOwner: item.user_id === group.owner_id,
+        user_id: item.user_id
+
       }));
 
       // Transform pending members
       const transformedPendingMembers = pendingData.map((item, index) => ({
-        id: item.userId || item.id || `pending_${index}`,
+        id: item.user_id || item.id || `pending_${index}`,
         name: `${item.firstName || ''} ${item.lastName || ''}`.trim() || item.name || 'Unknown User',
         email: item.email || 'No email',
         role: 'Pending',
         status: 'Pending',
         joinedAt: item.joinedAt || new Date().toISOString(),
         avatar: item.avatar || tmpURL,
-        isOwner: false
+        isOwner: false,
+        user_id: item.user_id
       }));
 
       setMembers(transformedMembers);
@@ -123,7 +167,10 @@ const GroupMembers = ({ navigation, route }) => {
       Alert.alert('Lỗi', 'Vui lòng nhập email để mời');
       return;
     }
-
+    if(members.some(member => member.email === inviteEmail.trim())) {
+      Alert.alert('Thông báo', 'Email này đã là thành viên của nhóm');
+      return;
+    }
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(inviteEmail.trim())) {
@@ -152,8 +199,8 @@ const GroupMembers = ({ navigation, route }) => {
     } catch (error) {
       console.error('Error inviting member:', error);
       Alert.alert(
-        'Lỗi',
-        error.message || 'Không thể gửi lời mời. Vui lòng thử lại.',
+        'Thông báo',
+        'Hệ thống không tồn tại tài khoản với email này',
         [{ text: 'OK' }]
       );
     } finally {
@@ -196,7 +243,7 @@ const GroupMembers = ({ navigation, route }) => {
         </Text>
       </View>
       {isLeader && !item.isOwner && (
-        <TouchableOpacity style={styles.removeButton}>
+        <TouchableOpacity style={styles.removeButton} onPress={() => handleRemoveMember(item.user_id)}>
           <Ionicons name="trash-outline" size={24} color={COLORS.RED} />
         </TouchableOpacity>
       )}
@@ -264,7 +311,7 @@ const GroupMembers = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
           </View>
-          {pendingMembers.length > 0 ? (
+          {pendingMembers.length > 0 && (
             <FlatList
               horizontal
               data={pendingMembers}
@@ -273,8 +320,6 @@ const GroupMembers = ({ navigation, route }) => {
               contentContainerStyle={styles.pendingList}
               showsHorizontalScrollIndicator={false}
             />
-          ) : (
-            <Text style={styles.noPendingText}>Không có thành viên đang chờ duyệt</Text>
           )}
         </View>
       )}

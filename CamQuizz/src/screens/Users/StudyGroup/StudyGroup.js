@@ -5,402 +5,116 @@ import { Ionicons } from '@expo/vector-icons';
 import { StudyGroupCard } from '../../../components/StudyGroupCard';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens/index';
-import GroupService from '../../../services/GroupService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-
+import AsyncStorageService from '../../../services/AsyncStorageService';
+import StudyGroupService from '../../../services/StudyGroupService';
+import Toast from 'react-native-toast-message';
 export const StudyGroup = ({ navigation, route }) => {
   const [selectedGroupState, setSelectedGroupState] = useState('Active');
-  const [selectedOwnership, setSelectedOwnership] = useState('all');
+  const [selectedOwnership, setSelectedOwnership] = useState(false);
   const [groups, setGroups] = useState([]);
-  const [filteredGroups, setFilteredGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [editedGroupName, setEditedGroupName] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [updateCounter, setUpdateCounter] = useState(0); 
-  const [forceRender, setForceRender] = useState(false); 
-
-  const groupsRef = useRef(groups);
-  const filteredGroupsRef = useRef(filteredGroups);
 
   const groupState = [
     { label: 'Đang hoạt động', value: 'Active' },
     { label: 'Đã lưu trữ', value: 'OnHold' },
-    { label: 'Đã xóa', value: 'Deleted' },
   ];
 
   const ownershipState = [
-    { label: 'Tất cả', value: 'all' },
-    { label: 'Nhóm của bạn', value: 'own' },
+    { label: 'Vai trò thành viên', value: false },
+    { label: 'Vai trò chủ nhóm', value: true },
   ];
-
+  const fetchMyGroups = async () => {
+    try {
+      const userId = await AsyncStorageService.getUserId();
+      setUserId(userId);
+      console.log('data send to server:', userId, selectedGroupState, selectedOwnership);
+      const groupsData = await StudyGroupService.getGroups(userId, selectedGroupState, selectedOwnership);
+      setGroups(formatGroups(groupsData));
+      setLoading(false);
+    }
+    catch (error) {
+      console.error('Error fetching my groups:', error);
+    }
+  }
   useEffect(() => {
-    const fetchUserId = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('userData');
-        if (userData) {
-          const user = JSON.parse(userData);
-          setUserId(user.id);
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setError('Không thể lấy thông tin người dùng');
-      }
-    };
 
-    fetchUserId();
+    fetchMyGroups();
   }, []);
 
-  useEffect(() => {
-    if (route.params?.refreshGroups && userId) {
-      console.log('Refreshing groups after creating new group');
-      fetchGroups();
+  const formatGroups = (groupsData) => {
+    return groupsData.map(group => {
+      const owner = group.members?.find(member => member.user_id === group.owner_id);
 
-      navigation.setParams({ refreshGroups: undefined });
-    }
-  }, [route.params?.refreshGroups, userId]);
-
-  const fetchGroups = async () => {
-    if (!userId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      let response;
-      if (selectedOwnership === 'own') {
-        response = await GroupService.getMyGroups(userId);
-        console.log('My groups response:', response);
-      } else {
-        response = await GroupService.getAllGroups();
-        console.log('All groups response:', response);
-      }
-
-      console.log('Fetched groups at:', new Date().toISOString());
-
-        console.log('API response structure:', JSON.stringify(response));
-
-        let groupsData = [];
-
-        if (response.data) {
-          if (response.data.data && Array.isArray(response.data.data)) {
-            groupsData = response.data.data;
-          }
-          else if (Array.isArray(response.data)) {
-            groupsData = response.data;
-          }
-        }
-
-        console.log('Extracted groups data:', groupsData);
-
-        if (groupsData.length === 0) {
-          console.log('No groups found');
-          setGroups([]);
-          return;
-        }
-
-        const formattedGroups = groupsData.map(group => {
-          const ownerId = group.ownerId || group.owner_id;
-          const isOwner = ownerId === userId || ownerId === parseInt(userId);
-
-          let userRole = 'Guest';
-          let userMemberStatus = null;
-
-          if (isOwner) {
-            userRole = 'Owner';
-            userMemberStatus = 'Approved';
-          } else if (group.members && Array.isArray(group.members)) {
-            const userMember = group.members.find(member =>
-              member.userId === userId || member.userId === parseInt(userId)
-            );
-            if (userMember) {
-              userMemberStatus = userMember.status;
-              userRole = userMember.status === 'Approved' ? 'Member' : 'Pending';
-            }
-          }
-
-          console.log(`Group ${group.id} - Owner ID: ${ownerId}, User ID: ${userId}, Is Owner: ${isOwner}, Role: ${userRole}, Status: ${userMemberStatus}`);
-
-          console.log('Raw group data from API:', JSON.stringify(group));
-
-          return {
-            id: group.id.toString(),
-            name: group.name,
-            leaderInfo: {
-              leaderName: group.ownerName || 'Không xác định', 
-              leaderAvatar: null, 
-            },
-            memberCount: group.approvedMembers || group.totalMembers || 0,
-            status: group.status || 'Active',
-            isOwn: isOwner,
-            userRole: userRole,
-            userMemberStatus: userMemberStatus,
-            description: group.description || '',
-            ownerId: ownerId
-          };
-        });
-
-        console.log('Formatted groups:', formattedGroups);
-
-        if (selectedOwnership === 'own') {
-          console.log('Showing my groups (owned or member):', formattedGroups);
-
-          if (formattedGroups.length === 0) {
-            console.log('No groups found for this user');
-          }
-
-          setGroups(formattedGroups);
-        } else {
-          setGroups(formattedGroups);
-        }
-      } catch (error) {
-        console.error('Error fetching groups:', error);
-
-        // Handle 401 errors specifically
-        if (error.message && error.message.includes('Unauthorized')) {
-          setError('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-        } else {
-          setError('Không thể tải danh sách nhóm học tập');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  useEffect(() => {
-    if (userId) {
-      console.log('Calling fetchGroups due to userId or selectedOwnership change');
-      fetchGroups();
-    }
-  }, [userId, selectedOwnership]);
-
-  useEffect(() => {
-    if (groups.length > 0) {
-      let result = [...groups];
-
-      result = result.filter(group => group.status === selectedGroupState);
-
-      console.log(`Filtered groups by status '${selectedGroupState}':`, result);
-      setFilteredGroups(result);
-    } else {
-      setFilteredGroups([]);
-    }
-  }, [groups, selectedGroupState]);
-
-  useEffect(() => {
-    if (updateCounter > 0) {
-      console.log(`UI update triggered (counter: ${updateCounter})`);
-      console.log('Current groups:', groups.map(g => ({ id: g.id, name: g.name })));
-      console.log('Current filteredGroups:', filteredGroups.map(g => ({ id: g.id, name: g.name })));
-    }
-  }, [updateCounter]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('Screen focused - checking for local changes');
-
-      const checkLocalChanges = async () => {
-        try {
-          const localChangesString = await AsyncStorage.getItem('localGroupChanges');
-          if (localChangesString) {
-            const localChanges = JSON.parse(localChangesString);
-            console.log('Found local changes:', localChanges);
-
-            if (groups.length > 0 && filteredGroups.length > 0) {
-              const updatedGroups = groups.map(group => {
-                const localChange = localChanges.find(change => change.id === group.id);
-                if (localChange) {
-                  console.log(`Applying local change to group ${group.id}: ${group.name} -> ${localChange.name}`);
-                  return { ...group, name: localChange.name };
-                }
-                return group;
-              });
-
-              const updatedFilteredGroups = filteredGroups.map(group => {
-                const localChange = localChanges.find(change => change.id === group.id);
-                if (localChange) {
-                  console.log(`Applying local change to filtered group ${group.id}: ${group.name} -> ${localChange.name}`);
-                  return { ...group, name: localChange.name };
-                }
-                return group;
-              });
-
-              setGroups(updatedGroups);
-              setFilteredGroups(updatedFilteredGroups);
-
-              setUpdateCounter(prev => prev + 1);
-
-              setForceRender(prev => !prev);
-            }
-          }
-        } catch (error) {
-          console.error('Error checking local changes:', error);
-        }
+      return {
+        id: group.id,
+        name: group.name,
+        owner_id: group.owner_id,
+        description: group.description || '',
+        isOwn: selectedOwnership && group.owner_id === userId,
+        status: group.status || 'Active',
+        leaderInfo: {
+          leaderAvatar: owner?.Avatar || null,
+          leaderName: owner ? `${owner.first_name} ${owner.last_name}` : 'Chủ nhóm',
+        },
+        memberCount: group.members.length
       };
-
-      checkLocalChanges();
-
-      return () => {
-      };
-    }, [])
-  );
-
-  useEffect(() => {
-    console.log('=== GROUPS CHANGED ===');
-    console.log('New groups:', groups.map(g => ({ id: g.id, name: g.name })));
-
-    groupsRef.current = groups;
-
-    console.log('Có thay đổi không?', JSON.stringify(groupsRef.current) !== JSON.stringify(groups));
-    console.log('=== END GROUPS CHANGED ===');
-  }, [groups]);
-
-  useEffect(() => {
-    console.log('=== FILTERED GROUPS CHANGED ===');
-    console.log('New filteredGroups:', filteredGroups.map(g => ({ id: g.id, name: g.name })));
-
-    filteredGroupsRef.current = filteredGroups;
-
-    console.log('Có thay đổi không?', JSON.stringify(filteredGroupsRef.current) !== JSON.stringify(filteredGroups));
-
-    console.log('=== END FILTERED GROUPS CHANGED ===');
-  }, [filteredGroups]);
-
+    });
+  };
   const handleMorePress = (group) => {
-    console.log('Selected group for editing:', group);
     setSelectedGroup(group);
     setEditedGroupName(group.name);
     setShowSettingsModal(true);
   };
 
+
+
   const handleUpdateGroup = async () => {
     if (!editedGroupName.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên nhóm');
+      Alert.alert('Lỗi', 'Tên nhóm không được để trống');
       return;
     }
-
+    const groupData = {
+      name: editedGroupName,
+      description: selectedGroup.description || '',
+    };
     try {
       setModalLoading(true);
-      const updateData = {
-        name: editedGroupName.trim(),
-        description: selectedGroup.description || ''
-      };
 
-      console.log('Sending update data:', JSON.stringify(updateData));
-
-      const response = await GroupService.updateGroup(selectedGroup.id, updateData);
-
-      console.log('=== KIỂM TRA PHẢN HỒI TỪ SERVER ===');
-      console.log('Update group response:', JSON.stringify(response, null, 2));
-
-      if (!response) {
-        console.log('CẢNH BÁO: Không nhận được phản hồi từ server');
-      } else {
-        console.log('Nhận được phản hồi từ server');
-
-        if (response.id) {
-          console.log('Phản hồi chứa ID nhóm:', response.id);
-        } else {
-          console.log('Phản hồi không chứa ID nhóm');
-        }
-
-        if (response.name) {
-          console.log('Phản hồi chứa tên nhóm đã cập nhật:', response.name);
-
-          if (response.name === editedGroupName.trim()) {
-            console.log('Tên nhóm đã được cập nhật đúng');
-          } else {
-            console.log('Tên nhóm không được cập nhật đúng');
-            console.log(`Tên nhóm mong muốn: "${editedGroupName.trim()}", tên nhóm nhận được: "${response.name}"`);
-          }
-        } else {
-          console.log('Phản hồi không chứa tên nhóm');
-        }
-      }
-      console.log('=== KẾT THÚC KIỂM TRA ===');
-
-      const oldName = selectedGroup.name;
-      const newName = editedGroupName.trim();
-
-      console.log(`Tên nhóm: ${oldName} -> ${newName}`);
-
-      if (oldName !== newName) {
-        console.log('Tên nhóm đã thay đổi, cập nhật UI');
-      } else {
-        console.log('Tên nhóm không thay đổi');
-      }
+      const updatedGroup = await StudyGroupService.updateGroup(selectedGroup.id, groupData);
 
       Alert.alert('Thành công', 'Đã cập nhật tên nhóm thành công');
 
-      const updatedSelectedGroup = {
-        ...selectedGroup,
-        name: editedGroupName.trim()
-      };
+      const brandNewGroups = JSON.parse(JSON.stringify(groups));
 
-      setSelectedGroup(updatedSelectedGroup);
-
-      const updatedName = (response && response.name) || editedGroupName.trim();
-      console.log('Tên nhóm sẽ được cập nhật trong UI:', updatedName);
-
-      const updatedGroups = groups.map(group => {
+      const updatedBrandNewGroups = brandNewGroups.map(group => {
         if (group.id === selectedGroup.id) {
-          console.log(`Cập nhật nhóm trong groups: ID ${group.id}, tên cũ: "${group.name}", tên mới: "${updatedName}"`);
-          return {
-            ...group,
-            name: updatedName
-          };
+          group.name = updatedGroup.name;
         }
         return group;
       });
 
-      const updatedFilteredGroups = filteredGroups.map(group => {
-        if (group.id === selectedGroup.id) {
-          console.log(`Cập nhật nhóm trong filteredGroups: ID ${group.id}, tên cũ: "${group.name}", tên mới: "${updatedName}"`);
-          return {
-            ...group,
-            name: updatedName
-          };
-        }
-        return group;
-      });
-
-      console.log('Cập nhật groups với:', updatedGroups.map(g => ({ id: g.id, name: g.name })));
-      console.log('Cập nhật filteredGroups với:', updatedFilteredGroups.map(g => ({ id: g.id, name: g.name })));
-
-      setGroups(updatedGroups);
-      setFilteredGroups(updatedFilteredGroups);
-
-      setUpdateCounter(prev => {
-        console.log('Tăng updateCounter từ', prev, 'lên', prev + 1);
-        return prev + 1;
-      });
-
-      setForceRender(prev => {
-        console.log('Đảo ngược forceRender từ', prev, 'thành', !prev);
-        return !prev;
-      });
-
+      setGroups(updatedBrandNewGroups);
       setShowSettingsModal(false);
       setSelectedGroup(null);
-
-      console.log(' Cập nhật UI thành công');
     } catch (error) {
-      console.error('Lỗi khi cập nhật nhóm:', error);
-      Alert.alert('Lỗi', error.message || 'Không thể cập nhật nhóm. Vui lòng thử lại sau.');
+      console.error('Lỗi khi cập nhật tên nhóm:', error);
+      Alert.alert('Lỗi', error.message || 'Không thể cập nhật tên nhóm. Vui lòng thử lại sau.');
     } finally {
       setModalLoading(false);
     }
-  };
+  }
+
 
   const handleArchiveGroup = async () => {
     try {
       setModalLoading(true);
 
-      await GroupService.changeGroupStatus(selectedGroup.id, 'OnHold');
+      await StudyGroupService.changeGroupStatus(selectedGroup.id, 'OnHold');
 
       Alert.alert('Thành công', 'Đã lưu trữ nhóm thành công');
 
@@ -412,22 +126,9 @@ export const StudyGroup = ({ navigation, route }) => {
         }
         return group;
       });
-
       setGroups(updatedBrandNewGroups);
-
-      setUpdateCounter(prev => prev + 1);
-
-      setForceRender(prev => !prev);
-
-      setTimeout(() => {
-        console.log('Tải lại danh sách nhóm từ server sau 2 giây');
-        fetchGroups().catch(error => {
-          console.log('Error refreshing groups after archive:', error);
-        });
-      }, 2000);
-
       setShowSettingsModal(false);
-      setSelectedGroup(null); 
+      setSelectedGroup(null);
     } catch (error) {
       console.error('Lỗi khi lưu trữ nhóm:', error);
       Alert.alert('Lỗi', error.message || 'Không thể lưu trữ nhóm. Vui lòng thử lại sau.');
@@ -440,7 +141,7 @@ export const StudyGroup = ({ navigation, route }) => {
     try {
       setModalLoading(true);
 
-      await GroupService.changeGroupStatus(selectedGroup.id, 'Active');
+      await StudyGroupService.changeGroupStatus(selectedGroup.id, 'Active');
 
       Alert.alert('Thành công', 'Đã khôi phục nhóm thành công');
 
@@ -455,19 +156,9 @@ export const StudyGroup = ({ navigation, route }) => {
 
       setGroups(updatedBrandNewGroups);
 
-      setUpdateCounter(prev => prev + 1);
-
-      setForceRender(prev => !prev);
-
-      setTimeout(() => {
-        console.log('Tải lại danh sách nhóm từ server sau 2 giây');
-        fetchGroups().catch(error => {
-          console.log('Error refreshing groups after restore:', error);
-        });
-      }, 2000);
 
       setShowSettingsModal(false);
-      setSelectedGroup(null); 
+      setSelectedGroup(null);
     } catch (error) {
       console.error('Lỗi khi khôi phục nhóm:', error);
       Alert.alert('Lỗi', error.message || 'Không thể khôi phục nhóm. Vui lòng thử lại sau.');
@@ -491,30 +182,13 @@ export const StudyGroup = ({ navigation, route }) => {
             try {
               setModalLoading(true);
 
-              await GroupService.deleteGroup(selectedGroup.id);
+              await StudyGroup.deleteGroup(selectedGroup.id);
 
               Alert.alert('Thành công', 'Đã xóa nhóm thành công');
 
               const brandNewGroups = JSON.parse(JSON.stringify(groups));
-              const brandNewFilteredGroups = JSON.parse(JSON.stringify(filteredGroups));
-
               const updatedBrandNewGroups = brandNewGroups.filter(group => group.id !== selectedGroup.id);
-              const updatedBrandNewFilteredGroups = brandNewFilteredGroups.filter(group => group.id !== selectedGroup.id);
-
               setGroups(updatedBrandNewGroups);
-              setFilteredGroups(updatedBrandNewFilteredGroups);
-
-              setUpdateCounter(prev => prev + 1);
-
-              setForceRender(prev => !prev);
-
-              setTimeout(() => {
-                console.log('Tải lại danh sách nhóm từ server sau 2 giây');
-                fetchGroups().catch(error => {
-                  console.log('Error refreshing groups after delete:', error);
-                });
-              }, 2000);
-
               setShowSettingsModal(false);
               setSelectedGroup(null);
             } catch (error) {
@@ -545,9 +219,9 @@ export const StudyGroup = ({ navigation, route }) => {
             valueField="value"
             value={selectedOwnership}
             onChange={(item) => setSelectedOwnership(item.value)}
-            placeholder="Phạm vi"
+            placeholder="Vai trò"
           />
-         <Dropdown
+          <Dropdown
             style={styles.dropdown}
             data={groupState}
             labelField="label"
@@ -556,6 +230,12 @@ export const StudyGroup = ({ navigation, route }) => {
             onChange={(item) => setSelectedGroupState(item.value)}
             placeholder="Trạng thái"
           />
+          <TouchableOpacity
+            style={styles.updateButton}
+            onPress={() => fetchMyGroups()}
+          >
+            <Text style={styles.update}>Áp dụng</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -573,40 +253,14 @@ export const StudyGroup = ({ navigation, route }) => {
             <ActivityIndicator size="large" color={COLORS.BLUE} />
             <Text style={styles.loadingText}>Đang tải nhóm học tập...</Text>
           </View>
-        ) : error ? (
-          <View style={styles.centerContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => {
-                setUserId(null);
-                const fetchUserId = async () => {
-                  try {
-                    const userData = await AsyncStorage.getItem('userData');
-                    if (userData) {
-                      const user = JSON.parse(userData);
-                      setUserId(user.id);
-                    }
-                  } catch (error) {
-                    console.error('Error fetching user data:', error);
-                    setError('Không thể lấy thông tin người dùng');
-                  }
-                };
-                fetchUserId();
-              }}
-            >
-              <Text style={styles.retryButtonText}>Thử lại</Text>
-            </TouchableOpacity>
-          </View>
-        ) : filteredGroups.length === 0 ? (
+        ) : groups?.length === 0 ? (
           <View style={styles.centerContainer}>
             <Text style={styles.emptyText}>
-              {selectedOwnership === 'own'
+              {selectedOwnership === true
                 ? 'Bạn chưa tạo hoặc tham gia nhóm học tập nào'
-                : `Không có nhóm học tập nào ở trạng thái "${
-                    selectedGroupState === 'Active' ? 'Đang hoạt động' :
-                    selectedGroupState === 'OnHold' ? 'Đã lưu trữ' : 'Đã xóa'
-                  }"`
+                : `Không có nhóm học tập nào ở trạng thái "${selectedGroupState === 'Active' ? 'Đang hoạt động' :
+                  selectedGroupState === 'OnHold' ? 'Đã lưu trữ' : 'Đã xóa'
+                }"`
               }
             </Text>
             <TouchableOpacity
@@ -618,24 +272,27 @@ export const StudyGroup = ({ navigation, route }) => {
           </View>
         ) : (
           <FlatList
-            key={`list-${updateCounter}-${forceRender ? 'true' : 'false'}`}
             style={styles.groupList}
-            data={filteredGroups}
-            extraData={[updateCounter, forceRender]}
-            keyExtractor={(item) => `${item.id}-${updateCounter}-${forceRender ? 'true' : 'false'}-${item.name}`}
-            renderItem={({ item: group }) => {
-              // Log để kiểm tra dữ liệu của mỗi group trước khi render
-              console.log(`FlatList rendering group: ${group.id}, name: ${group.name}, forceRender: ${forceRender}`);
-
-              return (
-                <StudyGroupCard
-                  group={group}
-                  onPressMore={() => handleMorePress(group)}
-                  onPress={() => navigation.navigate(SCREENS.STUDY_GROUP_DETAIL, { group, isLeader: group.isOwn })}
-                  isLeader={group.isOwn}
-                />
-              );
-            }}
+            data={groups}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item: group }) => (
+              <StudyGroupCard
+                group={group}
+                onPressMore={() => handleMorePress(group)}
+                onPress={() => {
+                  if (!selectedOwnership && group.status === 'OnHold')
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Thông tin',
+                      text2: 'Bạn không thể truy cập nhóm đã lưu trữ với vai trò thành viên',
+                      visibilityTime: 2000,
+                    });
+                  else
+                    navigation.navigate(SCREENS.STUDY_GROUP_DETAIL, { group, isLeader: userId === group.owner_id })
+                }}
+                isLeader={group.isOwn}
+              />
+            )}
             showsVerticalScrollIndicator={false}
           />
         )}
@@ -647,7 +304,7 @@ export const StudyGroup = ({ navigation, route }) => {
         animationType="fade"
         onRequestClose={() => {
           setShowSettingsModal(false);
-          setSelectedGroup(null); 
+          setSelectedGroup(null);
         }}
       >
         <View style={styles.modalOverlay}>
@@ -913,7 +570,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.GRAY_LIGHT,
+    borderBottomColor: COLORS.GRAY_BG,
   },
   modalTitle: {
     fontSize: 18,
@@ -1036,5 +693,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.GRAY,
     textAlign: 'center',
+  },
+  update: {
+    color: COLORS.WHITE,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  updateButton: {
+    backgroundColor: COLORS.BLUE,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
   },
 });

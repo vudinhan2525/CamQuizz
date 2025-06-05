@@ -14,4 +14,9 @@ public class CreatePackageDto
     [Required]
     public int MaxNumberOfAttended { get; set; }
 
+    // [Required]
+    // public DateTime StartDate { get; set; }
+
+    // [Required]
+    // public DateTime EndDate { get; set; }
 }

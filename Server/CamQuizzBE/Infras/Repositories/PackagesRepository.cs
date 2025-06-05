@@ -62,8 +62,10 @@ namespace CamQuizzBE.Infras.Repositories
 
             existing.Name = package.Name;
             existing.Price = package.Price;
-            existing.MaxNumberOfQuizz = package.MaxNumberOfQuizz;
-            existing.MaxNumberOfAttended = package.MaxNumberOfAttended;
+            // existing.StartDate = package.StartDate;
+            // existing.EndDate = package.EndDate;
+            existing.MaxNumberOfQuizz = package.MaxNumberOfQuizz; 
+            existing.MaxNumberOfAttended = package.MaxNumberOfAttended; 
             existing.UpdatedAt = DateTime.UtcNow;
 
             _context.Packages.Update(existing);

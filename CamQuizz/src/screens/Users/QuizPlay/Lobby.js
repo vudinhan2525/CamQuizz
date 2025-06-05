@@ -10,7 +10,7 @@ import SettingsModal from './SettingsModal';
 import * as Clipboard from 'expo-clipboard';
 import Toast from 'react-native-toast-message';
 const Lobby = ({ navigation, route }) => {
-    const { quizId, isHost , roomCode, playerList } = route.params;
+    const { quizId, isHost , roomCode, playerList, HostId } = route.params;
     const { hubConnection } = useHubConnection();
     const [players, setPlayers] = useState(playerList);
     const [quiz, setQuiz] = useState(null);
@@ -18,7 +18,7 @@ const Lobby = ({ navigation, route }) => {
     const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
     const [userId, setUserId] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [host, setHost] = useState();
+    const [host, setHost] = useState(HostId);
     useEffect(() => {
         updatePlayerList(playerList);
     }, [playerList])
@@ -96,6 +96,7 @@ const Lobby = ({ navigation, route }) => {
         };
         const handlePlayerJoined = (room) => {
             console.log("Player joined, updated room:", room);
+            setHost(room.HostId);
             if(room.HostId === userId) {
                 navigation.setParams({ isHost: true });
             } else {

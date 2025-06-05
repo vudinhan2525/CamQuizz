@@ -24,7 +24,17 @@ public class GroupService : IGroupService
         _userRepo = userRepo ?? throw new ArgumentNullException(nameof(userRepo));
         _quizRepo = quizRepo ?? throw new ArgumentNullException(nameof(quizRepo));
     }
+    public async Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, string status = "Active", bool isOwner = true)
+    {
+        if (userId <= 0)
+            throw new ValidatorException("Invalid user ID");
 
+        var user = await _userRepo.GetUserByIdAsync(userId);
+        if (user == null)
+            throw new NotFoundException("User not found");
+
+        return await _groupRepo.GetMyGroupsAsync(userId, status, isOwner);
+    }
     public async Task<IEnumerable<GroupDto>> GetAllGroupsAsync()
     {
         return await _groupRepo.GetAllGroupsAsync();

@@ -11,6 +11,8 @@ public interface IGroupService
     Task<IEnumerable<GroupDto>> GetGroupsAsync(string? search, int page, int pageSize, string? sort); // Add this
     Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId);
     Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, string? search, int page, int pageSize, string? sort); // Add this
+    Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, String status = "Active", bool  isOwner= true );
+
     Task<GroupDto?> GetGroupByIdAsync(int id);
     Task<GroupDto> CreateGroupAsync(CreateGroupDto groupDto);
     Task DeleteGroupAsync(int id);

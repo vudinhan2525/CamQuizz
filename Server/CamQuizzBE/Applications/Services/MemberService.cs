@@ -183,6 +183,31 @@ public class MemberService : IMemberService
     public async Task RemoveMemberAsync(int groupId, int userId, int ownerId)
     {
         // We'll reuse our status update logic but enforce Rejected status
-        await UpdateMemberStatusAsync(groupId, userId, ownerId, MemberStatus.Rejected);
+        //await UpdateMemberStatusAsync(groupId, userId, ownerId, MemberStatus.Rejected);
+        await ValidateGroupAndStatus(groupId);
+        var group = await _groupRepository.GetGroupByIdAsync(groupId);
+        if (group == null)
+            throw new NotFoundException("Group not found");
+        if (group.OwnerId != ownerId)
+            throw new UnauthorizedAccessException("Only the group owner can remove members.");
+        var member = await _memberRepository.GetByIdAsync(groupId, userId);
+        if (member == null)
+            throw new NotFoundException("Member not found");
+        if (member.Status == MemberStatus.Rejected)
+        {
+            throw new InvalidOperationException("Member is already removed.");
+        }
+        if (member.Status == MemberStatus.Pending)
+        {
+            throw new InvalidOperationException("Cannot remove a member with pending status. Please reject the request first.");
+        }
+        if (member.Status != MemberStatus.Approved)
+        {
+            throw new InvalidOperationException("Only approved members can be removed.");
+        }
+
+        await _memberRepository.RemoveMemberAsync(groupId, userId);
+        await _memberRepository.SaveChangesAsync();
+
     }
 }

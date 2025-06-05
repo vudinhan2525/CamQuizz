@@ -44,6 +44,53 @@ public class GroupRepository(DataContext context, ILogger<GroupRepository> logge
             .AsNoTracking()
             .ToListAsync();
     }
+    public async Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, String status = "Active", bool isOwner= true ){
+        if (!Enum.TryParse<GroupStatus>(status, true, out var parsedStatus))
+        {
+            throw new ArgumentException($"Trạng thái không hợp lệ: {status}");
+        }
+
+        IQueryable<Group> query;
+        _logger.LogInformation("User ID: {UserId}, Status: {ParsedStatus}, IsOwner: {IsOwner}", userId, parsedStatus, isOwner);
+        if (isOwner)
+        {
+            query = _context.Groups
+                .Where(g => g.OwnerId == userId && g.Status == parsedStatus);
+        }
+        else
+        {
+            query = _context.Groups
+                .Where(g => g.Members.Any(m => m.UserId == userId) && g.Status == parsedStatus);
+        }
+
+        var groups = await query
+            .Include(g => g.Members)
+                .ThenInclude(m => m.User)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return groups.Select(g => new GroupDto
+        {
+            Id = g.Id,
+            Name = g.Name,
+            Description = g.Description,
+            OwnerId = g.OwnerId,
+            Status = g.Status,
+            CreatedAt = g.CreatedAt,
+            UpdatedAt = g.UpdatedAt,
+            Members = g.Members.Where(m => m.User != null).Select(m => new MemberDto
+            {
+                UserId = m.UserId,
+                GroupId = m.GroupId,
+                Status = m.Status,
+                JoinedAt = m.JoinedAt,
+                FirstName = m.User.FirstName,
+                LastName = m.User.LastName,
+                Email = m.User.Email
+            }).ToList()
+        }).ToList();
+    }
+
     public async Task<IEnumerable<GroupDto>> GetGroupsAsync(string? search, int page, int pageSize, string? sort)
     {
         if (page <= 0 || pageSize <= 0)

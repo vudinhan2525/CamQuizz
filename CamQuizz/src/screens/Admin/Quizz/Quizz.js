@@ -24,6 +24,8 @@ export const Quizz = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreData, setHasMoreData] = useState(true);
   const [stats, setStats] = useState({
+    totalQuizzes: 0,
+    totalAttempts: 0,
     totalReports: 0,
     pendingReports: 0,
     resolvedReports: 0
@@ -39,7 +41,25 @@ export const Quizz = () => {
 
   useEffect(() => {
     fetchReports();
+    fetchStatistics();
   }, [filterStatus, searchQuery]);
+
+  const fetchStatistics = async () => {
+    try {
+      const statisticsData = await ReportQuizzService.getStatistics();
+      console.log('Statistics data:', statisticsData);
+
+      setStats({
+        totalQuizzes: statisticsData.total_quizzes || 0,
+        totalAttempts: statisticsData.total_attempts || 0,
+        totalReports: statisticsData.total_reports || 0,
+        pendingReports: statisticsData.pending_reports || 0,
+        resolvedReports: statisticsData.resolved_reports || 0
+      });
+    } catch (error) {
+      console.error('Error fetching statistics:', error);
+    }
+  };
 
   const fetchReports = async (isLoadMore = false) => {
     try {
@@ -47,7 +67,6 @@ export const Quizz = () => {
         setLoading(true);
       }
 
-      // Map filter status to API status
       let apiStatus = null;
       if (filterStatus === 'Pending') {
         apiStatus = 'Pending';
@@ -75,17 +94,6 @@ export const Quizz = () => {
       }
 
       setHasMoreData(pagination && pagination.hasNextPage);
-
-      // Update stats
-      // const totalReports = data.length;
-      // const pendingReports = data.filter(report => report.status === 'Pending').length;
-      // const resolvedReports = data.filter(report => report.status === 'Resolved').length;
-
-      // setStats({
-      //   totalReports,
-      //   pendingReports,
-      //   resolvedReports
-      // });
 
     } catch (error) {
       console.error('Error fetching reports:', error);
@@ -145,6 +153,7 @@ export const Quizz = () => {
 
       // Refresh data
       fetchReports();
+      fetchStatistics();
 
     } catch (error) {
       console.error('Error processing report:', error);
@@ -157,7 +166,7 @@ export const Quizz = () => {
   const handleViewReportDetails = (report) => {
     Alert.alert(
       'Chi tiết báo cáo',
-      `Quiz: ${report.quizName}\nLý do: ${report.message}\nNgười báo cáo: ${report.reporterName || 'N/A'}\nTrạng thái: ${report.status === 'Pending' ? 'Chờ xử lý' : 'Đã xử lý'}\nNgày tạo: ${new Date(report.createdAt).toLocaleDateString('vi-VN')}`
+      `Quiz: ${report.quiz_name}\nLý do: ${report.message}\nNgười báo cáo: ${report.reporter_name || 'N/A'}\nTrạng thái: ${report.status === 'Pending' ? 'Chờ xử lý' : 'Đã xử lý'}\nNgày tạo: ${new Date(report.created_at).toLocaleDateString('vi-VN')}`
     );
   };
 
@@ -272,9 +281,19 @@ export const Quizz = () => {
       {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.totalQuizzes}</Text>
+          <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.totalAttempts}</Text>
+          <Text style={styles.statLabel}>Tổng lượt thi</Text>
+        </View>
+        <View style={styles.statCard}>
           <Text style={styles.statValue}>{stats.totalReports}</Text>
           <Text style={styles.statLabel}>Tổng báo cáo</Text>
         </View>
+      </View>
+      <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{stats.pendingReports}</Text>
           <Text style={styles.statLabel}>Chờ xử lý</Text>
@@ -283,19 +302,6 @@ export const Quizz = () => {
           <Text style={styles.statValue}>{stats.resolvedReports}</Text>
           <Text style={styles.statLabel}>Đã xử lý</Text>
         </View>
-      </View>
-
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.totalReports}</Text>
-          <Text style={styles.statLabel}>Tổng lượt tham gia</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.pendingReports}</Text>
-          <Text style={styles.statLabel}>Số bài kiểm tra</Text>
-        </View>
-        
       </View>
       {/* Filter */}
       <View style={styles.filterContainer}>

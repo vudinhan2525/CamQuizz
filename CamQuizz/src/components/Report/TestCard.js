@@ -1,18 +1,75 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; 
+import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import COLORS from '../../constant/colors';
+import AsyncStorageService from '../../services/AsyncStorageService';
+import ReportQuizzService from '../../services/ReportQuizzService';
 
-const TestCard = ({ 
-  test, 
-  onViewReport, 
+
+
+const TestCard = ({
+  test,
+  onViewReport,
   reportType = 'general', // 'general', 'author', 'organization', 'candidate'
   showBadges = false,
   customLabels = {}
 }) => {
   console.log('TestCard - reportType:', reportType);
   console.log('TestCard - test data:', test);
+
+  // Utility function để format ngày tháng
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
+  };
+
+  const [message, setMessage] = React.useState('');
+  const [showReportModal, setShowReportModal] = React.useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = React.useState(false);
+
+  const onReport = async (test) => {
+    console.log('TestCard - onReport:', test);
+    setShowReportModal(true);
+  };
+
+  const handleSubmitReport = async () => {
+    if (!message.trim()) {
+      Alert.alert('Lỗi', 'Vui lòng nhập lý do báo cáo');
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      const quiz_id = test.id;
+      const reporter_id = await AsyncStorageService.getUserId();
+
+      await ReportQuizzService.createReport(quiz_id, reporter_id, message.trim());
+
+      Alert.alert('Thành công', 'Báo cáo đã được gửi thành công');
+      setShowReportModal(false);
+      setMessage('');
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      Alert.alert('Lỗi', 'Không thể gửi báo cáo. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleCancelReport = () => {
+    setShowReportModal(false);
+    setMessage('');
+  };
 
   // Xử lý dữ liệu dựa trên reportType
   const getTestData = () => {
@@ -47,27 +104,23 @@ const TestCard = ({
         return candidateData;
 
       case 'author':
-        return {
-          totalAttempts: test.attempts || 0,
-          totalResults: test.results?.length || 0,
-          totalQuestions: test.questions || 0,
-          averageScore: test.results?.length > 0
-            ? Math.round(
-                test.results.reduce(
-                  (sum, result) =>
-                    sum + (result.score / result.totalQuestions) * 100,
-                  0
-                ) / test.results.length
-              )
-            : 0,
-          passRate: test.results?.length > 0
-            ? Math.round(
-                (test.results.filter(
-                  (result) => (result.score / result.totalQuestions) * 100 >= 70
-                ).length / test.results.length) * 100
-              )
-            : 0
+        const authorData = {
+          totalAttempts: test.numberOfAttended || test.attempts || 0,
+          totalResults: test.numberOfAttended || test.attempts || 0,
+          totalQuestions: test.numberOfQuestions || test.questions || 0,
+          averageScore: test.averageScore || 0, // Sẽ được cập nhật từ báo cáo chi tiết
+          passRate: test.passRate || 0 // Sẽ được cập nhật từ báo cáo chi tiết
         };
+
+        console.log('TestCard author calculation:');
+        console.log('- Test data:', test);
+        console.log('- numberOfQuestions:', test.numberOfQuestions);
+        console.log('- numberOfAttended:', test.numberOfAttended);
+        console.log('- averageScore:', test.averageScore);
+        console.log('- passRate:', test.passRate);
+        console.log('- Final author data:', authorData);
+
+        return authorData;
 
       default:
         return {
@@ -115,7 +168,7 @@ const TestCard = ({
                 <Text style={styles.statLabelText}>Ngày tạo</Text>
               </View>
               <Text style={styles.statValue}>
-                {test.createdAt ? new Date(test.createdAt).toLocaleDateString() : 'N/A'}
+                {formatDate(test.createdAt)}
               </Text>
             </View>
           </>
@@ -184,9 +237,17 @@ const TestCard = ({
             {test.title || test.name || 'Bài kiểm tra'}
           </Text>
         </View>
-        <Text style={styles.description}>
+        {/* <Text style={styles.description}>
           {test.description || `${totalQuestions} câu hỏi • ${totalAttempts} lượt làm`}
         </Text>
+        {reportType === 'author' && (
+          <Text style={[styles.description, { fontSize: 12, color: '#888', marginTop: 2 }]}>
+            ID: {test.id} • Tạo: {formatDate(test.createdAt)}
+            {test.updatedAt && test.updatedAt !== test.createdAt && (
+              <Text> • Cập nhật: {formatDate(test.updatedAt)}</Text>
+            )}
+          </Text>
+        )} */}
       </View>
 
       {/* Nội dung thống kê */}
@@ -282,6 +343,66 @@ const TestCard = ({
           <Text style={styles.viewReportText}>{labels.viewReport}</Text>
         </View>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style= {{marginTop: 8, paddingVertical: 10, backgroundColor: COLORS.WHITE, borderRadius: 8, alignItems: 'center'}}
+        onPress={() => onReport(test)}
+      >
+        <View style={{backgroundColor: COLORS.WHITE, padding: 8, borderRadius: 8}}>
+          <Text style={{color: COLORS.BLUE}}>Báo cáo bài kiểm tra</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Report Modal */}
+      <Modal
+        visible={showReportModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleCancelReport}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Báo cáo bài kiểm tra</Text>
+              <TouchableOpacity onPress={handleCancelReport}>
+                <Ionicons name="close" size={24} color={COLORS.GRAY_TEXT} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Lý do báo cáo:</Text>
+              <TextInput
+                style={styles.messageInput}
+                placeholder="Nhập lý do báo cáo (ví dụ: nội dung không phù hợp, vi phạm bản quyền...)"
+                value={message}
+                onChangeText={setMessage}
+                multiline={true}
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleCancelReport}
+              >
+                <Text style={styles.cancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleSubmitReport}
+                disabled={isSubmittingReport}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isSubmittingReport ? 'Đang gửi...' : 'Gửi báo cáo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -374,6 +495,84 @@ const styles = StyleSheet.create({
   viewReportText: {
     color: 'white',
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.BLACK,
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.BLACK,
+    marginBottom: 8,
+  },
+  messageInput: {
+    borderWidth: 1,
+    borderColor: COLORS.GRAY_LIGHT,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 100,
+    backgroundColor: COLORS.WHITE,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: COLORS.GRAY_BG,
+    borderWidth: 1,
+    borderColor: COLORS.GRAY_LIGHT,
+  },
+  submitButton: {
+    backgroundColor: COLORS.BLUE,
+  },
+  cancelButtonText: {
+    color: COLORS.GRAY_TEXT,
+    fontWeight: '500',
+  },
+  submitButtonText: {
+    color: COLORS.WHITE,
+    fontWeight: '500',
   },
 });
 

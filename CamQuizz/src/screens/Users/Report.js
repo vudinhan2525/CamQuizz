@@ -56,6 +56,33 @@ export const Report = ({ navigation }) => {
     }
   };
 
+  // Utility function để tính điểm trung bình và tỷ lệ vượt qua từ score_distribution
+  const calculateScoreStats = (scoreDistribution) => {
+    if (!scoreDistribution || Object.keys(scoreDistribution).length === 0) {
+      return { averageScore: 0, passRate: 0 };
+    }
+
+    let totalScore = 0;
+    let totalCount = 0;
+    let passCount = 0;
+
+    Object.entries(scoreDistribution).forEach(([score, count]) => {
+      const scoreNum = parseInt(score);
+      if (scoreNum >= 1 && scoreNum <= 10) {
+        totalScore += scoreNum * count;
+        totalCount += count;
+        if (scoreNum >= 7) { // Điểm vượt qua >= 7
+          passCount += count;
+        }
+      }
+    });
+
+    const averageScore = totalCount > 0 ? (totalScore / totalCount).toFixed(1) : 0;
+    const passRate = totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+
+    return { averageScore: parseFloat(averageScore), passRate };
+  };
+
   const loadAuthorData = async () => {
     try {
       const response = await ReportService.getMyQuizzesForReport(50, 1);
@@ -68,20 +95,71 @@ export const Report = ({ navigation }) => {
         return;
       }
 
-      const formattedQuizzes = response.data.map(quiz => ({
-        id: quiz.id,
-        title: quiz.name,
-        image: quiz.image,
-        attempts: quiz.numberOfAttended || 0,
-        questions: quiz.numberOfQuestions || 0,
-        passRate: 0,
-        createdAt: quiz.createdAt,
-        description: quiz.description,
-        duration: quiz.duration,
-        genreId: quiz.genreId,
-        userId: quiz.userId,
-      }));
+      const formattedQuizzes = await Promise.all(
+        response.data.map(async (quiz) => {
+          console.log('Processing quiz for author report:', quiz);
 
+          let numberOfQuestions = quiz.numberOfQuestions || 0;
+          let numberOfAttended = quiz.numberOfAttended || 0;
+          let createdAt = quiz.createdAt || quiz.created_at;
+          let updatedAt = quiz.updatedAt || quiz.updated_at;
+          let averageScore = 0;
+          let passRate = 0;
+
+          // Nếu numberOfQuestions bằng 0 hoặc numberOfAttended bằng 0, fetch dữ liệu chi tiết
+          if (numberOfQuestions === 0 || numberOfAttended === 0) {
+            try {
+              console.log(`Fetching detailed data for quiz ${quiz.id}`);
+              const detailedQuiz = await QuizzService.getQuizzById(quiz.id);
+              numberOfQuestions = detailedQuiz.number_of_questions || detailedQuiz.numberOfQuestions || 0;
+              numberOfAttended = detailedQuiz.number_of_attended || detailedQuiz.numberOfAttended || numberOfAttended;
+              // Cập nhật ngày tạo từ dữ liệu chi tiết nếu cần
+              createdAt = detailedQuiz.createdAt || detailedQuiz.created_at || createdAt;
+              updatedAt = detailedQuiz.updatedAt || detailedQuiz.updated_at || updatedAt;
+              console.log(`Quiz ${quiz.id} detailed data:`, { numberOfQuestions, numberOfAttended, createdAt, updatedAt });
+            } catch (error) {
+              console.error(`Error fetching detailed data for quiz ${quiz.id}:`, error);
+            }
+          }
+
+          // Fetch báo cáo chi tiết để tính điểm trung bình và tỷ lệ vượt qua nếu có lượt làm bài
+          if (numberOfAttended > 0) {
+            try {
+              console.log(`Fetching report data for quiz ${quiz.id}`);
+              const reportResponse = await ReportService.getAuthorReport(quiz.id);
+              if (reportResponse?.data?.score_distribution) {
+                const scoreStats = calculateScoreStats(reportResponse.data.score_distribution);
+                averageScore = scoreStats.averageScore;
+                passRate = scoreStats.passRate;
+                console.log(`Quiz ${quiz.id} score stats:`, { averageScore, passRate });
+              }
+            } catch (error) {
+              console.error(`Error fetching report data for quiz ${quiz.id}:`, error);
+            }
+          }
+
+          return {
+            id: quiz.id,
+            title: quiz.name,
+            image: quiz.image,
+            attempts: numberOfAttended,
+            questions: numberOfQuestions,
+            passRate: passRate, // Tính toán từ báo cáo chi tiết
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            description: quiz.description,
+            duration: quiz.duration,
+            genreId: quiz.genreId,
+            userId: quiz.userId,
+            // Thêm các field cần thiết cho TestCard
+            numberOfQuestions: numberOfQuestions,
+            numberOfAttended: numberOfAttended,
+            averageScore: averageScore, // Điểm trung bình từ báo cáo chi tiết
+          };
+        })
+      );
+
+      console.log('Formatted author quizzes:', formattedQuizzes);
       setAuthorQuizzes(formattedQuizzes);
     } catch (error) {
       console.error('Error loading author data:', error);

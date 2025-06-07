@@ -29,12 +29,15 @@ export default class ReportQuizzService {
             const response = await apiClient.get('/quiz-reports', { params });
             console.log('Quiz reports response:', response.data);
 
-            return {data: response.data.data.items, pagination: {
-                limit: response.data.data.limit,
-                page: response.data.data.page,
-                totalItems: response.data.data.total_items,
-                hasNextPage: true? response.data.data.page*response.data.data.limit < response.data.data.total_items : false,
-            }};
+            return {
+                data: response.data?.data?.items || [],
+                pagination: {
+                    limit: response.data?.data?.limit || 10,
+                    page: response.data?.data?.page || 1,
+                    totalItems: response.data?.data?.total_items || 0,
+                    hasNextPage: response.data?.data ? (response.data.data.page * response.data.data.limit < response.data.data.total_items) : false,
+                }
+            };
         } catch (error) {
             console.error('Error fetching quiz reports:', error);
             throw error;
@@ -83,9 +86,33 @@ export default class ReportQuizzService {
             const response = await apiClient.get('/quiz-reports/statistics');
             console.log('Statistics response:', response.data);
 
-            return response.data.data;
+            return response.data?.data || null;
         } catch (error) {
             console.error('Error fetching statistics:', error);
+            throw error;
+        }
+    }
+
+    static async getReportsForQuiz(quizId, page = 1, limit = 10) {
+        try {
+            console.log(`Getting reports for quiz ${quizId} with page=${page}, limit=${limit}`);
+
+            const response = await apiClient.get(`/quiz-reports/quiz/${quizId}`, {
+                params: { page, limit }
+            });
+            console.log('Quiz reports response:', response.data);
+
+            return {
+                data: response.data?.data?.items || [],
+                pagination: {
+                    limit: response.data?.data?.limit || 10,
+                    page: response.data?.data?.page || 1,
+                    totalItems: response.data?.data?.total_items || 0,
+                    hasNextPage: response.data?.data ? (response.data.data.page * response.data.data.limit < response.data.data.total_items) : false,
+                }
+            };
+        } catch (error) {
+            console.error('Error fetching quiz reports:', error);
             throw error;
         }
     }

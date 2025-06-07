@@ -11,12 +11,16 @@ import {
   Image,
   Modal
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import COLORS from '../../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
 import ReportQuizzService from '../../../services/ReportQuizzService';
 import AsyncStorageService from '../../../services/AsyncStorageService';
+import SCREENS from '../../index';
 
 export const Quizz = () => {
+  const navigation = useNavigation();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('Pending');
@@ -46,15 +50,22 @@ export const Quizz = () => {
 
   const fetchStatistics = async () => {
     try {
+      // Check if user is authenticated before making API call
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('No token found, skipping statistics fetch');
+        return;
+      }
+
       const statisticsData = await ReportQuizzService.getStatistics();
       console.log('Statistics data:', statisticsData);
 
       setStats({
-        totalQuizzes: statisticsData.total_quizzes || 0,
-        totalAttempts: statisticsData.total_attempts || 0,
-        totalReports: statisticsData.total_reports || 0,
-        pendingReports: statisticsData.pending_reports || 0,
-        resolvedReports: statisticsData.resolved_reports || 0
+        totalQuizzes: statisticsData?.total_quizzes || 0,
+        totalAttempts: statisticsData?.total_attempts || 0,
+        totalReports: statisticsData?.total_reports || 0,
+        pendingReports: statisticsData?.pending_reports || 0,
+        resolvedReports: statisticsData?.resolved_reports || 0
       });
     } catch (error) {
       console.error('Error fetching statistics:', error);
@@ -63,6 +74,14 @@ export const Quizz = () => {
 
   const fetchReports = async (isLoadMore = false) => {
     try {
+      // Check if user is authenticated before making API call
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        console.log('No token found, skipping reports fetch');
+        setLoading(false);
+        return;
+      }
+
       if (!isLoadMore) {
         setLoading(true);
       }
@@ -89,7 +108,7 @@ export const Quizz = () => {
         setReports(prevReports => [...prevReports, ...data]);
         setCurrentPage(page);
       } else {
-        setReports(data);
+        setReports(data || []);
         setCurrentPage(1);
       }
 
@@ -97,7 +116,10 @@ export const Quizz = () => {
 
     } catch (error) {
       console.error('Error fetching reports:', error);
-      Alert.alert('Lỗi', 'Không thể tải danh sách báo cáo. Vui lòng thử lại.');
+      const token = await AsyncStorage.getItem('userToken');
+      if (token) {
+        Alert.alert('Lỗi', 'Không thể tải danh sách báo cáo. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
@@ -132,11 +154,8 @@ export const Quizz = () => {
       };
 
       console.log('Updating report:', selectedReport.id, updateData);
-
-      // Call API to update report
       await ReportQuizzService.updateReport(selectedReport.id, updateData);
 
-      // Update local state
       setReports(prevReports =>
         prevReports.map(report =>
           report.id === selectedReport.id
@@ -151,7 +170,6 @@ export const Quizz = () => {
       setAdminNote('');
       setSelectedAction('Keep');
 
-      // Refresh data
       fetchReports();
       fetchStatistics();
 
@@ -164,10 +182,10 @@ export const Quizz = () => {
   };
 
   const handleViewReportDetails = (report) => {
-    Alert.alert(
-      'Chi tiết báo cáo',
-      `Quiz: ${report.quiz_name}\nLý do: ${report.message}\nNgười báo cáo: ${report.reporter_name || 'N/A'}\nTrạng thái: ${report.status === 'Pending' ? 'Chờ xử lý' : 'Đã xử lý'}\nNgày tạo: ${new Date(report.created_at).toLocaleDateString('vi-VN')}`
-    );
+    navigation.navigate(SCREENS.QUIZ_REPORT_DETAIL, {
+      quizId: report.quiz_id,
+      quizName: report.quiz_name
+    });
   };
 
   const getStatusColor = (status) => {

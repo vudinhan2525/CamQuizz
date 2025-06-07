@@ -106,14 +106,53 @@ public class QuizzesRepository(
             {
                 "name" => isDescending ? query.OrderByDescending(q => q.Name) : query.OrderBy(q => q.Name),
                 "created_at" => isDescending ? query.OrderByDescending(q => q.CreatedAt) : query.OrderBy(q => q.CreatedAt),
-                "question_num" => isDescending ? query.OrderByDescending(q => q.NumberOfQuestions) : query.OrderBy(q => q.NumberOfQuestions),
-                "anttend_num" => isDescending ? query.OrderByDescending(q => q.NumberOfAttended) : query.OrderBy(q => q.NumberOfAttended),
                 _ => query.OrderBy(q => q.Id)
             };
         }
 
         int totalItems = await query.CountAsync();
+        var items = await query
+            .Skip((page - 1) * limit)
+            .Take(limit)
+            .ToListAsync();
 
+        return new PagedResult<Quizzes>(items, totalItems, page, limit);
+    }
+
+    public async Task<PagedResult<Quizzes>> GetSharedWithUserAsync(int userId, string? kw, int limit, int page, string? sort)
+    {
+        var query = _context.Quizzes
+            .Include(q => q.Questions)
+                .ThenInclude(q => q.Answers)
+            .Include(q => q.SharedUsers)
+                .ThenInclude(us => us.User)
+            .Include(q => q.SharedGroups)
+                .ThenInclude(gs => gs.Group)
+                .ThenInclude(g => g.Members)
+            .Where(q => !q.IsDeleted &&
+                (q.SharedUsers.Any(us => us.UserId == userId) ||  // Directly shared with user
+                 q.SharedGroups.Any(gs => gs.Group.Members.Any(m => m.UserId == userId && m.Status == Domain.Enums.MemberStatus.Approved))))
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(kw))
+        {
+            query = query.Where(q => q.Name.Contains(kw));
+        }
+
+        if (!string.IsNullOrWhiteSpace(sort))
+        {
+            bool isDescending = sort.StartsWith("-");
+            string sortField = isDescending ? sort.Substring(1) : sort;
+
+            query = sortField.ToLower() switch
+            {
+                "name" => isDescending ? query.OrderByDescending(q => q.Name) : query.OrderBy(q => q.Name),
+                "created_at" => isDescending ? query.OrderByDescending(q => q.CreatedAt) : query.OrderBy(q => q.CreatedAt),
+                _ => query.OrderBy(q => q.Id)
+            };
+        }
+
+        int totalItems = await query.CountAsync();
         var items = await query
             .Skip((page - 1) * limit)
             .Take(limit)
@@ -125,23 +164,23 @@ public class QuizzesRepository(
     public async Task<Quizzes?> GetByIdAsync(int id)
     {
         var quiz = await _context.Quizzes
-        .Include(q => q.Questions)
-            .ThenInclude(q => q.Answers)  
-        .Include(q => q.SharedUsers)
-            .ThenInclude(us => us.User)
-        .Include(q => q.SharedUsers)
-            .ThenInclude(us => us.Owner)
-        .Include(q => q.SharedGroups)
-            .ThenInclude(gs => gs.Group)
-        .Include(q => q.SharedGroups)
-            .ThenInclude(gs => gs.Owner)
-            .AsSplitQuery() 
-            .FirstOrDefaultAsync(q => q.Id == id);  
+            .Include(q => q.Questions)
+                .ThenInclude(q => q.Answers)
+            .Include(q => q.SharedUsers)
+                .ThenInclude(us => us.User)
+            .Include(q => q.SharedUsers)
+                .ThenInclude(us => us.Owner)
+            .Include(q => q.SharedGroups)
+                .ThenInclude(gs => gs.Group)
+            .Include(q => q.SharedGroups)
+                .ThenInclude(gs => gs.Owner)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(q => q.Id == id);
 
         return quiz;
     }
 
-    public async Task<Quizzes?> AddAsync(CreateQuizBody body)
+     public async Task<Quizzes?> AddAsync(CreateQuizBody body)
     {
         if (body.GenreId is null || body.GenreId <= 0)
         {
@@ -155,26 +194,24 @@ public class QuizzesRepository(
             Image = body.Image,
             GenreId = (int)body.GenreId,
             Status = body.Status ?? QuizStatus.Public,
+            Duration = body.Duration,
+            NumberOfQuestions = body.NumberOfQuestions,
+            NumberOfAttended = body.NumberOfAttended,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             SharedUsers = new List<UserShared>(),
             SharedGroups = new List<GroupShared>()
         };
+
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            // First create and save the quiz to get an ID
-            if (quiz == null)
-            {
-                throw new ArgumentNullException(nameof(quiz));
-            }
             await _context.Quizzes.AddAsync(quiz);
             await _context.SaveChangesAsync();
 
             int totalDuration = 0;
             int questionCount = 0;
 
-            // Process questions if provided
             if (body.Questions != null && body.Questions.Any())
             {
                 foreach (var questionBody in body.Questions)
@@ -205,19 +242,32 @@ public class QuizzesRepository(
                 }
             }
 
-            // Update quiz duration and question count
-            quiz.Duration = totalDuration;
-            quiz.NumberOfQuestions = questionCount;
+            if (body.Questions != null && body.Questions.Any())
+            {
+                quiz.Duration = totalDuration;
+                quiz.NumberOfQuestions = questionCount;
+            }
+            else
+            {
+                quiz.Duration = body.Duration;
+                quiz.NumberOfQuestions = body.NumberOfQuestions;
+            }
             quiz.UpdatedAt = DateTime.UtcNow;
 
-            // Share with users
             if (body.UserEmails != null && body.UserEmails.Any())
             {
+                _logger.LogInformation("Processing {UserCount} user emails for quiz {QuizId}", body.UserEmails.Count, quiz.Id);
                 foreach (var email in body.UserEmails)
                 {
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
                     if (user != null)
                     {
+                        if (await IsQuizSharedWithUserAsync(quiz.Id, user.Id))
+                        {
+                            _logger.LogWarning("Quiz {QuizId} already shared with user {UserId} ({Email})", quiz.Id, user.Id, email);
+                            continue;
+                        }
+
                         var userShared = new UserShared
                         {
                             QuizId = quiz.Id,
@@ -227,6 +277,7 @@ public class QuizzesRepository(
                             User = user
                         };
                         quiz.SharedUsers.Add(userShared);
+                        _logger.LogInformation("Shared quiz {QuizId} with user {UserId} ({Email})", quiz.Id, user.Id, email);
                     }
                     else
                     {
@@ -234,10 +285,14 @@ public class QuizzesRepository(
                     }
                 }
             }
+            else
+            {
+                _logger.LogInformation("No user emails provided for sharing quiz {QuizId}", quiz.Id);
+            }
 
-            // Share with groups
             if (body.GroupShareIds != null && body.GroupShareIds.Any())
             {
+                _logger.LogInformation("Processing {GroupCount} group IDs for quiz {QuizId}", body.GroupShareIds.Count, quiz.Id);
                 foreach (var groupId in body.GroupShareIds)
                 {
                     if (int.TryParse(groupId, out int parsedGroupId))
@@ -245,6 +300,12 @@ public class QuizzesRepository(
                         var group = await _context.Groups.FindAsync(parsedGroupId);
                         if (group != null)
                         {
+                            if (await _context.GroupShared.AnyAsync(gs => gs.QuizId == quiz.Id && gs.GroupId == parsedGroupId))
+                            {
+                                _logger.LogWarning("Quiz {QuizId} already shared with group {GroupId}", quiz.Id, parsedGroupId);
+                                continue;
+                            }
+
                             var groupShared = new GroupShared
                             {
                                 QuizId = quiz.Id,
@@ -254,6 +315,11 @@ public class QuizzesRepository(
                                 Group = group
                             };
                             quiz.SharedGroups.Add(groupShared);
+                            _logger.LogInformation("Shared quiz {QuizId} with group {GroupId}", quiz.Id, parsedGroupId);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Group with ID {GroupId} not found for sharing quiz {QuizId}", parsedGroupId, quiz.Id);
                         }
                     }
                     else
@@ -262,18 +328,22 @@ public class QuizzesRepository(
                     }
                 }
             }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return await GetByIdAsync(quiz.Id);
-            }
-            catch (Exception ex)
+            else
             {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error occurred while creating quiz");
-                throw;
+                _logger.LogInformation("No group IDs provided for sharing quiz {QuizId}", quiz.Id);
             }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return await GetByIdAsync(quiz.Id);
         }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error occurred while creating quiz {QuizId}", quiz.Id);
+            throw;
+        }
+    }
     public async Task DeleteAsync(int id)
     {
         var quiz = await GetByIdAsync(id);

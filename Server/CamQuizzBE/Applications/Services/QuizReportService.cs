@@ -90,8 +90,10 @@ public class QuizReportService : IQuizReportService
     public async Task<PagedResult<QuizReportDto>> GetReportsAsync(string? search, ReportStatus? status, int page, int limit)
     {
         var reportedQuizzes = await _context.QuizReports
-            .GroupBy(r => r.QuizId)
-            .Where(g => !string.IsNullOrEmpty(search) ? 
+        .Include(r => r.Reporter)  // Include Reporter info
+        .Include(r => r.ResolvedBy)  // Include ResolvedBy info
+        .GroupBy(r => r.QuizId)
+        .Where(g => !string.IsNullOrEmpty(search) ?
                 g.Any(r => r.Quiz.Name.Contains(search) || 
                           r.Message.Contains(search) || 
                           r.Reporter.UserName.Contains(search)) : true)
@@ -114,8 +116,10 @@ public class QuizReportService : IQuizReportService
         
         var items = reportedQuizzes.Select(rq => new QuizReportDto
         {
+            Id = rq.LatestReport.Id,  
             QuizId = rq.QuizId,
             QuizName = rq.Quiz.Name,
+            ReporterName = rq.LatestReport.Reporter.UserName,  
             Message = rq.LatestReport.Message,
             Status = rq.LatestReport.Status,
             Action = rq.LatestReport.Action,

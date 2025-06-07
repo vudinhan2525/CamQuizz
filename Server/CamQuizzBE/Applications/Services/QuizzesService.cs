@@ -47,6 +47,11 @@ public class QuizzesService : IQuizzesService
         return await _quizzesRepo.GetByUserIdAsync(userId, kw, limit, page, sort);
     }
 
+    public async Task<PagedResult<Quizzes>> GetSharedQuizzesAsync(int userId, string? kw, int limit, int page, string? sort)
+    {
+        return await _quizzesRepo.GetSharedWithUserAsync(userId, kw, limit, page, sort);
+    }
+
     public async Task<Quizzes?> GetQuizByIdAsync(int id)
     {
         return await _quizzesRepo.GetByIdAsync(id);
@@ -64,58 +69,20 @@ public class QuizzesService : IQuizzesService
         Quizzes? quiz = null;
         try
         {
-            // First create the quiz
+            // Create quiz and handle sharing within repository
             quiz = await _quizzesRepo.AddAsync(body);
             
-            // Then decrement the quota
+            // Decrement quota after successful creation
             await _userQuotaRepo.DecrementQuizzQuotaAsync(body.UserId, 0); // 0 participants for new quiz
-
-            // Handle email-based sharing
-            if (body.UserEmails?.Any() == true)
-            {
-                foreach (var email in body.UserEmails)
-                {
-                    var targetUser = await _userRepository.GetUserByEmailAsync(email);
-                    if (targetUser != null && !await _quizzesRepo.IsQuizSharedWithUserAsync(quiz.Id, targetUser.Id))
-                    {
-                        await _quizzesRepo.ShareQuizWithUserAsync(new UserShared
-                        {
-                            QuizId = quiz.Id,
-                            OwnerId = body.UserId,
-                            UserId = targetUser.Id
-                        });
-                    }
-                }
-            }
-
-            // Handle group sharing
-            if (body.GroupShareIds?.Any() == true)
-            {
-                foreach (var groupId in body.GroupShareIds)
-                {
-                    if (int.TryParse(groupId, out int gId))
-                    {
-                        await _quizzesRepo.ShareQuizWithGroupAsync(new GroupShared
-                        {
-                            QuizId = quiz.Id,
-                            OwnerId = body.UserId,
-                            GroupId = gId
-                        });
-                    }
-                }
-            }
         }
         catch (Exception)
         {
-            // If quota decrement fails or sharing fails, we should delete the created quiz
             if (quiz != null)
             {
                 await _quizzesRepo.DeleteAsync(quiz.Id);
             }
-            throw; // Re-throw the exception after cleanup
+            throw;
         }
-        
-        // Get a fresh copy of the quiz with all relationships
         return await _quizzesRepo.GetByIdAsync(quiz.Id);
     }
 

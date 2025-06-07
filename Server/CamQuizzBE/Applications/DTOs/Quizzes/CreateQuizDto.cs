@@ -21,12 +21,21 @@ public class CreateQuizDto
     public int? UserId { get; set; }
 
     public QuizStatus Status { get; set; } = QuizStatus.Public;
+
+    [JsonPropertyName("duration")]
+    public int Duration { get; set; }
+
+    [JsonPropertyName("question_nums")]
+    public int NumberOfQuestions { get; set; }
+
+    [JsonPropertyName("attended_nums")]
+    public int NumberOfAttended { get; set; }
     
-    [JsonPropertyName("userEmails")]
-    public List<string> UserEmails = new List<string>();
+    [JsonPropertyName("shared_users")]
+    public List<string> UserEmails { get; set; } = new List<string>();
     
-    [JsonPropertyName("groupIds")]
-    public List<string> GroupShareIds = new List<string>();
+    [JsonPropertyName("shared_groups")]
+    public List<string> GroupShareIds { get; set; } = new List<string>();
 
     [JsonPropertyName("questions")]
     public List<CreateQuestionBody> Questions { get; set; } = new List<CreateQuestionBody>();

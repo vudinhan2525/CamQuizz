@@ -9,7 +9,12 @@ export default class UserService {
 
             const response = await apiClient.get('/auth', { params });
             console.log('response', response.data);
-            return response.data;
+            return {data: response.data.items, pagination: {
+                limit: response.data.limit,
+                page: response.data.page,
+                totalItems: response.data.total_items,
+                hasNextPage: true? response.data.page*response.data.limit < response.data.total_items : false,
+            }};
         } catch (error) {
                 console.error('Error fetching users:', error);
                 throw error;

@@ -83,6 +83,36 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
         return Ok(response);
     }
 
+    // GET: api/v1/quiz/shared-with-me
+    [HttpGet("shared-with-me")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<IEnumerable<QuizzesDto>>>> GetSharedQuizzes(
+        [FromQuery] string? kw,
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "created_at")
+    {
+        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        if (userId == 0)
+        {
+            return Unauthorized(new ApiResponse<IEnumerable<QuizzesDto>>(null, "User not authenticated"));
+        }
+
+        var data = await _quizzesService.GetSharedQuizzesAsync(userId, kw, limit, page, sort);
+        var quizzesDto = _mapper.Map<IEnumerable<QuizzesDto>>(data.Items);
+        
+        var pagination = new PaginationMeta
+        {
+            TotalItems = data.TotalItems,
+            TotalPages = data.TotalPages,
+            Page = page,
+            Limit = limit
+        };
+
+        var response = new ApiResponse<IEnumerable<QuizzesDto>>(quizzesDto, "success", pagination);
+        return Ok(response);
+    }
+
     // GET: api/v1/quiz/user/{userId}
     [HttpGet("user/{userId}")]
     [Authorize]
@@ -142,17 +172,12 @@ public class QuizzesController(ILogger<QuizzesController> _logger, IQuizzesServi
     [HttpPost]
     public async Task<ActionResult> CreateQuiz([FromBody] CreateQuizDto createQuizDto)
     {
-        var quizEntity = new CreateQuizBody
-        {
-            Name = createQuizDto.Name,
-            Image = !string.IsNullOrWhiteSpace(createQuizDto.Image) ? createQuizDto.Image : "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTadtxXyVjVDyg7TfbT8FJIdGSXdrT3ex9yqQ&s",
-            GenreId = createQuizDto.GenreId ?? 0,
-            UserId = createQuizDto.UserId ?? 0,
-            Status = createQuizDto.Status,
-            UserEmails = createQuizDto.UserEmails,
-            GroupShareIds = createQuizDto.GroupShareIds,
-            Questions = createQuizDto.Questions
-        };
+        _logger.LogInformation("Received CreateQuizDto: {Dto}", JsonSerializer.Serialize(createQuizDto));
+
+        var quizEntity = _mapper.Map<CreateQuizBody>(createQuizDto);
+
+        _logger.LogInformation("Mapped to CreateQuizBody: UserEmails={UserEmails}, GroupShareIds={GroupShareIds}",
+            string.Join(",", quizEntity.UserEmails), string.Join(",", quizEntity.GroupShareIds));
 
         var newQuiz = await _quizzesService.CreateQuizAsync(quizEntity);
 

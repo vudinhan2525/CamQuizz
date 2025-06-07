@@ -9,6 +9,7 @@ public interface IQuizzesRepository
     Task<PagedResult<Quizzes>> GetAllAsync(string? kw, int limit, int page, string? sort, int? genreId, bool showPrivate = false);
     Task<List<Quizzes>> GetTop5();
     Task<PagedResult<Quizzes>> GetByUserIdAsync(int userId, string? kw, int limit, int page, string? sort);
+    Task<PagedResult<Quizzes>> GetSharedWithUserAsync(int userId, string? kw, int limit, int page, string? sort);
     Task<Quizzes?> GetByIdAsync(int id);
     Task<Quizzes?> AddAsync(CreateQuizBody body);
     Task DeleteAsync(int id);

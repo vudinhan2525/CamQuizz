@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
-import { ArrowLeft, Plus, ChevronRight } from "lucide-react-native";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, TextInput, Alert } from "react-native";
+import { ArrowLeft, Plus, ChevronRight, Edit3, Trash2, Settings } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AddCardScreen from "../../../components/Flash-Card/AddCardScreen";
 import COLORS from "../../../constant/colors";
@@ -21,6 +21,12 @@ export const FlashcardSetDetail = () => {
   const [setTitle, setSetTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [studySet, setStudySet] = useState(null);
+  const [isEditSetModalOpen, setIsEditSetModalOpen] = useState(false);
+  const [editSetName, setEditSetName] = useState("");
+  const [isEditCardModalOpen, setIsEditCardModalOpen] = useState(false);
+  const [editingCard, setEditingCard] = useState(null);
+  const [editCardQuestion, setEditCardQuestion] = useState("");
+  const [editCardAnswer, setEditCardAnswer] = useState("");
 
   // Hàm kiểm tra xem flashcard có được tạo hôm nay không
   const isCreatedToday = (createdAt) => {
@@ -268,6 +274,138 @@ export const FlashcardSetDetail = () => {
     });
   };
 
+  const handleEditStudySet = () => {
+    setEditSetName(setTitle);
+    setIsEditSetModalOpen(true);
+  };
+
+  const handleSaveStudySet = async () => {
+    if (!editSetName.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Tên bộ thẻ không được để trống'
+      });
+      return;
+    }
+
+    try {
+      const updateData = {
+        id: parseInt(id),
+        user_id: studySet?.userId || studySet?.user_id,
+        name: editSetName.trim()
+      };
+
+      await StudySetService.updateStudySet(updateData);
+
+      setSetTitle(editSetName.trim());
+      setIsEditSetModalOpen(false);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: 'Đã cập nhật tên bộ thẻ thành công'
+      });
+    } catch (error) {
+      console.error('Error updating study set:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật tên bộ thẻ. Vui lòng thử lại sau.'
+      });
+    }
+  };
+
+  const handleEditCard = (card) => {
+    setEditingCard(card);
+    setEditCardQuestion(card.front);
+    setEditCardAnswer(card.back);
+    setIsEditCardModalOpen(true);
+  };
+
+  const handleSaveCard = async () => {
+    if (!editCardQuestion.trim() || !editCardAnswer.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Cả câu hỏi và câu trả lời đều phải có nội dung'
+      });
+      return;
+    }
+
+    try {
+      const updateData = {
+        study_set_id: parseInt(id),
+        id: parseInt(editingCard.id),
+        question: editCardQuestion.trim(),
+        answer: editCardAnswer.trim()
+      };
+
+      await FlashCardService.updateFlashCard(updateData);
+
+      // Update local state
+      setFlashcards(flashcards.map(card =>
+        card.id === editingCard.id
+          ? { ...card, front: editCardQuestion.trim(), back: editCardAnswer.trim() }
+          : card
+      ));
+
+      setIsEditCardModalOpen(false);
+      setEditingCard(null);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: 'Đã cập nhật thẻ học bài thành công'
+      });
+    } catch (error) {
+      console.error('Error updating flashcard:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể cập nhật thẻ học bài. Vui lòng thử lại sau.'
+      });
+    }
+  };
+
+  const handleDeleteCard = (card) => {
+    Alert.alert(
+      'Xác nhận xóa',
+      `Bạn có chắc chắn muốn xóa thẻ học bài này?`,
+      [
+        {
+          text: 'Hủy',
+          style: 'cancel',
+        },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await FlashCardService.deleteFlashCard(parseInt(card.id));
+
+              // Update local state
+              setFlashcards(flashcards.filter(c => c.id !== card.id));
+
+              Toast.show({
+                type: 'success',
+                text1: 'Thành công',
+                text2: 'Đã xóa thẻ học bài thành công'
+              });
+            } catch (error) {
+              console.error('Error deleting flashcard:', error);
+              Toast.show({
+                type: 'error',
+                text1: 'Lỗi',
+                text2: 'Không thể xóa thẻ học bài. Vui lòng thử lại sau.'
+              });
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <View style={styles.container}>
       {showAddCard ? (
@@ -286,6 +424,9 @@ export const FlashcardSetDetail = () => {
               <Text style={styles.headerTitle}>{setTitle}</Text>
             </View>
             <View style={styles.headerRight}>
+              <TouchableOpacity onPress={handleEditStudySet} style={styles.editButton}>
+                <Settings size={20} color={COLORS.BLUE} />
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowAddCard(true)}>
                 <View style={styles.plus}>
                   <Plus size={22} color={"white"} />
@@ -397,12 +538,28 @@ export const FlashcardSetDetail = () => {
               getFilteredFlashcards().map((card, index) => (
                 <View key={card.id || index} style={styles.flashcard}>
                   <View style={styles.flashcardHeader}>
-                    <Text style={styles.cardTitle}>Card {index + 1}</Text>
-                    {card.createdAt && (
-                      <Text style={styles.cardDate}>
-                        {new Date(card.createdAt).toLocaleDateString('vi-VN')}
-                      </Text>
-                    )}
+                    <View style={styles.cardTitleContainer}>
+                      <Text style={styles.cardTitle}>Card {index + 1}</Text>
+                      {card.createdAt && (
+                        <Text style={styles.cardDate}>
+                          {new Date(card.createdAt).toLocaleDateString('vi-VN')}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.cardActions}>
+                      <TouchableOpacity
+                        onPress={() => handleEditCard(card)}
+                        style={styles.cardActionButton}
+                      >
+                        <Edit3 size={16} color={COLORS.BLUE} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteCard(card)}
+                        style={styles.cardActionButton}
+                      >
+                        <Trash2 size={16} color="#dc3545" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <View style={styles.flashcardBody}>
                     <View style={styles.flashcardSide}>
@@ -431,6 +588,64 @@ export const FlashcardSetDetail = () => {
           )}
         </>
       )}
+
+      {/* Edit Study Set Modal */}
+      <Modal visible={isEditSetModalOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Chỉnh sửa tên bộ thẻ</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editSetName}
+              onChangeText={setEditSetName}
+              placeholder="Tên bộ thẻ"
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={() => setIsEditSetModalOpen(false)}>
+                <Text style={styles.modalCancel}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveStudySet}>
+                <Text style={styles.modalSave}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit FlashCard Modal */}
+      <Modal visible={isEditCardModalOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Chỉnh sửa thẻ học bài</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editCardQuestion}
+              onChangeText={setEditCardQuestion}
+              placeholder="Câu hỏi (Front)"
+              multiline
+            />
+            <TextInput
+              style={styles.modalInput}
+              value={editCardAnswer}
+              onChangeText={setEditCardAnswer}
+              placeholder="Câu trả lời (Back)"
+              multiline
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={() => {
+                setIsEditCardModalOpen(false);
+                setEditingCard(null);
+              }}>
+                <Text style={styles.modalCancel}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleSaveCard}>
+                <Text style={styles.modalSave}>Lưu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -470,7 +685,14 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: "row",
-    gap: 16
+    alignItems: "center",
+    gap: 12
+  },
+  editButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.BG,
+    marginRight: 15
   },
   plus: {
     right: 20,
@@ -478,7 +700,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.BLUE,
     backgroundColor: COLORS.BLUE,
     borderWidth: 2,
-    padding: 3,
+    padding: 5,
     alignItems: "center",
     justifyContent: "center"
   },
@@ -569,8 +791,11 @@ const styles = StyleSheet.create({
   flashcardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: 8
+  },
+  cardTitleContainer: {
+    flex: 1
   },
   cardTitle: {
     fontSize: 16,
@@ -580,6 +805,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#777",
     fontStyle: "italic"
+  },
+  cardActions: {
+    flexDirection: "row",
+    gap: 8
+  },
+  cardActionButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: "#f8f9fa"
   },
   flashcardBody: {
     flexDirection: "row",
@@ -600,5 +834,47 @@ const styles = StyleSheet.create({
   emptyMessage: {
     alignItems: "center",
     padding: 16
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    width: '100%',
+    marginBottom: 15,
+    minHeight: 40,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+  },
+  modalCancel: {
+    color: '#999',
+    fontSize: 16,
+  },
+  modalSave: {
+    color: COLORS.BLUE,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { Plus, FileText } from 'lucide-react-native';
+import { Plus, FileText, Trash2 } from 'lucide-react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import PropTypes from 'prop-types';
@@ -27,6 +27,8 @@ const FlashCardPage = () => {
   const navigation = useNavigation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isCreateMethodDialogOpen, setIsCreateMethodDialogOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [setToDelete, setSetToDelete] = useState(null);
   const [newSetName, setNewSetName] = useState('');
   const [flashcardSets, setFlashcardSets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -377,6 +379,73 @@ const FlashCardPage = () => {
     }
   };
 
+  const handleDeleteSet = async (setId, setTitle) => {
+    try {
+      if (!await validateToken()) {
+        handleAuthError(navigation);
+        return;
+      }
+
+      setSetToDelete({ id: setId, title: setTitle });
+      setIsDeleteConfirmOpen(true);
+    } catch (error) {
+      console.error('Error preparing delete:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Lỗi',
+        text2: 'Không thể xóa bộ thẻ. Vui lòng thử lại sau.'
+      });
+    }
+  };
+
+  const confirmDeleteSet = async () => {
+    if (!setToDelete) return;
+
+    try {
+      if (!await validateToken()) {
+        handleAuthError(navigation);
+        return;
+      }
+
+      await StudySetService.deleteStudySet(parseInt(setToDelete.id));
+
+      // Remove from local state
+      setFlashcardSets(flashcardSets.filter(set => set.id !== setToDelete.id));
+
+      // Close modal and reset state
+      setIsDeleteConfirmOpen(false);
+      setSetToDelete(null);
+
+      Toast.show({
+        type: 'success',
+        text1: 'Thành công',
+        text2: `Đã xóa bộ thẻ "${setToDelete.title}" thành công`
+      });
+
+    } catch (error) {
+      console.error('Lỗi khi xóa bộ thẻ:', error);
+
+      if (error.message === 'Unauthorized - Please log in again' || error.response?.status === 401) {
+        handleAuthError(navigation);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Lỗi',
+          text2: 'Không thể xóa bộ thẻ. Vui lòng thử lại sau.'
+        });
+      }
+
+      // Close modal and reset state even on error
+      setIsDeleteConfirmOpen(false);
+      setSetToDelete(null);
+    }
+  };
+
+  const cancelDeleteSet = () => {
+    setIsDeleteConfirmOpen(false);
+    setSetToDelete(null);
+  };
+
   return (
     <View style={styles.container}>
       {/* Create Set Button */}
@@ -397,9 +466,17 @@ const FlashCardPage = () => {
             <View key={set.id} style={styles.flashcardItem}>
               <View style={styles.flashcardHeader}>
                 <Text style={styles.flashcardTitle}>{set.title}</Text>
-                <TouchableOpacity style={styles.studyButton} onPress={() => handleOpenSet(set.id)}>
-                    <Text style={styles.studyButtonText}>Học</Text>
-                </TouchableOpacity>
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity style={styles.studyButton} onPress={() => handleOpenSet(set.id)}>
+                      <Text style={styles.studyButtonText}>Học</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteSet(set.id, set.title)}
+                  >
+                    <Trash2 size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
               <Text style={styles.flashcardDetail}>Tổng cộng: {set.totalCards}/{set.totalCards}</Text>
               <View style={styles.separator} />
@@ -459,6 +536,29 @@ const FlashCardPage = () => {
               </TouchableOpacity>
               <TouchableOpacity onPress={handleCreateSet}>
                 <Text style={styles.modalOk}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal visible={isDeleteConfirmOpen} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Xác nhận xóa</Text>
+            <Text style={styles.deleteConfirmText}>
+              Bạn có chắc chắn muốn xóa bộ thẻ "{setToDelete?.title}"?
+            </Text>
+            <Text style={styles.deleteWarningText}>
+              Hành động này không thể hoàn tác.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity onPress={cancelDeleteSet}>
+                <Text style={styles.modalCancel}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmDeleteSet}>
+                <Text style={styles.deleteConfirmButton}>Xóa</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -543,11 +643,17 @@ const styles = StyleSheet.create({
   flashcardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8
   },
   flashcardTitle: {
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    flex: 1
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 8
   },
   studyButton: {
     backgroundColor: COLORS.BLUE,
@@ -556,6 +662,13 @@ const styles = StyleSheet.create({
   },
   studyButtonText: {
     color: 'white'
+  },
+  deleteButton: {
+    backgroundColor: '#dc3545',
+    padding: 8,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   separator: {
     height: 1,
@@ -634,6 +747,24 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#999',
+    fontSize: 16,
+  },
+  deleteConfirmText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#333'
+  },
+  deleteWarningText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+    fontStyle: 'italic'
+  },
+  deleteConfirmButton: {
+    color: '#dc3545',
+    fontWeight: 'bold',
     fontSize: 16,
   },
 });

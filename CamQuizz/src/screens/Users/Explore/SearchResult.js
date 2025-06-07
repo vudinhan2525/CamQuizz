@@ -29,7 +29,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
       try {
         const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
         console.log('categoryId', categoryId);
-        const { data, paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, 1, pagination.limit, filters.newestSort, filters.popularSort);
+        const { data, pagination: paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, 1, pagination.limit, filters.newestSort, filters.popularSort);
         if (data) {
           setQuizzes(data);
           setPagination({

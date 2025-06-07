@@ -19,6 +19,8 @@ import QuizzService from '../../../services/QuizzService';
 import { mockPlayers, mockQuiz } from '../../../components/data/MockQuizPlayData';
 import { useHubConnection } from '../../../contexts/SignalRContext';
 import AsyncStorageService from '../../../services/AsyncStorageService';
+import PackageService from '../../../services/PackageService'
+
 import { API_URL } from '@env';
 import JoinSection from './JoinSection';
 export const Explore = ({ navigation }) => {
@@ -31,6 +33,7 @@ export const Explore = ({ navigation }) => {
   const [selectedCategory, setSelectedCategory] = useState({ id: 0, name: 'All' });
   const [quizzes, setQuizzes] = useState([]);
   const [isAll, setIsAll] = useState(false);
+  const [userId,setUserId]= useState(null)
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 5,
@@ -47,8 +50,9 @@ export const Explore = ({ navigation }) => {
     fetchCategories();
     AsyncStorageService.getUserData().then((data) => {
       if (data) {
-        setUserName(data.first_name + " " + data.last_name );
+        setUserName(data.first_name + " " + data.last_name);
         setAvatar(data.photos);
+        setUserId(data.id)
       }
     }
     ).catch((error) => {
@@ -61,15 +65,16 @@ export const Explore = ({ navigation }) => {
     const fetchQuizzes = async () => {
       try {
         console.log('Fetching quizzes for category:', selectedCategory.id);
-        const { data, paginationn } = await QuizzService.getAllQuizz(null, selectedCategory.id, 1, pagination.limit);
-
+        const { data, paginationn: serverPagination } = await QuizzService.getAllQuizz(null, selectedCategory.id, 1, pagination.limit);
         if (data) {
           setQuizzes(data);
           setPagination({
             page: 1,
             limit: 5,
           });
-          setIsAll(paginationn.total_pages === 1);
+        }
+        if (serverPagination) {
+          setIsAll(serverPagination.total_pages === 1);
         }
       } catch (error) {
         console.error('Error fetching quizzes:', error);
@@ -109,7 +114,13 @@ export const Explore = ({ navigation }) => {
       hubConnection.off("error", handleError);
     };
   }, [hubConnection]);
-
+  const handleCreateQuiz = async ()=>{
+    const quota = await PackageService.getCurrentQuota(userId);
+    if(quota.remaining_quizz>0)
+      navigation.navigate(SCREENS.QUIZ_CREATION) 
+    else 
+      Alert.alert("Thông báo", `Bạn đã sử dụng hết ${quota.remaining_quizz} bài kiểm tra được tạo\n\nCó thể mua thêm ở Gói giới hạn`)
+  }
   const handleSeeMore = async (category, navigate) => {
     // Xử lý sự kiện khi nhấn nút "Xem thêm"
     if (navigate) {
@@ -117,7 +128,7 @@ export const Explore = ({ navigation }) => {
       return;
     }
     try {
-      const { data, paginationn } = await QuizzService.getAllQuizz(null, category.id, pagination.page + 1, pagination.limit);
+      const { data, pagination: paginationn } = await QuizzService.getAllQuizz(null, category.id, pagination.page + 1, pagination.limit);
       if (data) {
         setIsAll(paginationn.total_pages === pagination.page + 1);
         setQuizzes((prev) => [...prev, ...data]);
@@ -227,11 +238,22 @@ export const Explore = ({ navigation }) => {
         roomId: joinCode
       });
     } catch (error) {
-      console.error('Error joining room:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể tham gia phòng. Vui lòng kiểm tra mã phòng và thử lại!'
-      );
+      let message = 'Không thể tham gia phòng. Vui lòng kiểm tra mã phòng và thử lại!';
+      if (error && error.message) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("permission to access") ||
+          error.message.includes("không có quyền")
+        ) {
+          message = 'Bạn không có quyền tham gia phòng này!';
+        } else if (
+          error.message.includes("Room is full") ||
+          error.message.includes("đã đủ người")
+        ) {
+          message = 'Phòng đã đủ người tham gia!';
+        }
+      }
+      Alert.alert('Lỗi', message);
       setIsJoining(false);
     }
   }, [joinCode, connectToHub]);
@@ -239,6 +261,13 @@ export const Explore = ({ navigation }) => {
     setJoinCode(text);
   }, []);
 
+  const chunkArray = (array, size) => {
+    const result = [];
+    for (let i = 0; i < array.length; i += size) {
+      result.push(array.slice(i, i + size));
+    }
+    return result;
+  };
 
   const content = () => (
     <KeyboardAvoidingView
@@ -248,13 +277,14 @@ export const Explore = ({ navigation }) => {
 
       <Text style={styles.title}>Khám phá</Text>
       {/* Categories */}
-      <FlatList
-        nestedScrollEnabled={true}
-        style={{ marginHorizontal: 10 }}
-        data={categories}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 10 }}
+      >
+        {categories.map((item) => (
           <TouchableOpacity
+            key={item.id.toString()}
             style={[
               styles.categoryCard,
               selectedCategory.id === item.id && styles.selectedCategoryCard
@@ -270,10 +300,10 @@ export const Explore = ({ navigation }) => {
               {item.name}
             </Text>
           </TouchableOpacity>
-        )}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-      />
+        ))}
+      </ScrollView>
+
+
       {selectedCategory.name === 'All' ? (
         categories.slice(1).map((category, index) => (
           <CategorySection
@@ -284,29 +314,31 @@ export const Explore = ({ navigation }) => {
             }
             }
           />
-        ))
-      ) : (
-        <FlatList
-          nestedScrollEnabled={true}
-          style={{ marginHorizontal: 10 }}
-          data={quizzes}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => <QuizCard quiz={item} onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quiz: item })} />}
-          numColumns={2}
-          contentContainerStyle={styles.gridContainer}
-          ListFooterComponent={
-            selectedCategory.name !== 'All' && !isAll && quizzes.length != 0 && (
+        )))
+        : (
+          <View style={styles.gridContainer}>
+
+            {chunkArray(quizzes, 2).map((row, rowIndex) => (
+              <View key={rowIndex} style={{ flexDirection: 'row' }}>
+                {row.map((item, colIndex) => (
+                  <View key={colIndex} style={{ flex: 1, margin: 5 }}>
+                    <QuizCard quiz={item} onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quiz: item })} />
+                  </View>
+                ))}
+                {row.length < 2 && <View style={{ flex: 1, margin: 5 }} />}
+              </View>
+            ))}
+            {selectedCategory.name !== 'All' && !isAll && quizzes.length !== 0 && (
               <TouchableOpacity style={styles.seeMoreButton}
-                onPress={() => {
-                  handleSeeMore(selectedCategory, false)
-                }}>
+                onPress={() => handleSeeMore(selectedCategory, false)}>
                 <Text style={styles.seeMoreButtonText}>Xem thêm</Text>
               </TouchableOpacity>
-            )
-          }
-        />)
+            )}
 
+          </View>
+        )
       }
+
     </KeyboardAvoidingView>
   )
 
@@ -400,7 +432,7 @@ export const Explore = ({ navigation }) => {
         ]}>
           <TouchableOpacity style={styles.button}>
             <View style={styles.iconContainer}>
-              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} onPress={() => { navigation.navigate(SCREENS.QUIZ_CREATION) }} />
+              <Ionicons name="create-outline" size={30} color={COLORS.BLUE} onPress={() => { handleCreateQuiz()}} />
             </View>
             <Text style={styles.buttonText}>Tạo quiz</Text>
           </TouchableOpacity>
@@ -434,8 +466,8 @@ export const Explore = ({ navigation }) => {
         )}
       >
         {content()}
-      </Animated.ScrollView>
 
+      </Animated.ScrollView>
 
     </View>
   );
@@ -447,7 +479,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   scrollContainer: {
-    flexGrow: 1,
   },
   header: {
     height: 250,

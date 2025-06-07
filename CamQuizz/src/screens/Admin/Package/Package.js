@@ -32,18 +32,18 @@ export const Package = ({ navigation }) => {
     price: 0,
     duration: 30,
   });
+  const fetchPackages = async () => {
+    try {
+      // Simulate fetching packages from an API
+      const packagesData = await PackageService.getAllPackages();
+      console.log('Fetched packages:', packagesData);
+      setPackages(packagesData);
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+      Alert.alert('Error', 'Không thể tải gói dịch vụ. Vui lòng thử lại sau.');
+    }
+  };
   React.useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        // Simulate fetching packages from an API
-        const packagesData = await PackageService.getAllPackages();
-        console.log('Fetched packages:', packagesData);
-        setPackages(packagesData);
-      } catch (error) {
-        console.error('Error fetching packages:', error);
-        Alert.alert('Error', 'Không thể tải gói dịch vụ. Vui lòng thử lại sau.');
-      }
-    };
     fetchPackages();
   }, []);
 
@@ -68,8 +68,8 @@ export const Package = ({ navigation }) => {
         return;
       }
 
-      if (editedPackage.price < 0) {
-        Alert.alert('Lỗi', 'Giá gói không được âm');
+      if (editedPackage.price > 50000000 ||editedPackage.price< 1000 ) {
+        Alert.alert('Lỗi', 'Giá gói không được từ 1000 đồng đến 50 triệu');
         return;
       }
 
@@ -104,16 +104,7 @@ export const Package = ({ navigation }) => {
       console.log('Saving package data:', packageData);
 
       console.log('Updated package:', updatePkt);
-      // Update local state
-      if (updatePkt) {
-        setPackages(prevPackages =>
-          prevPackages.map(pkg =>
-            pkg.id === selectedPackage.id ? {
-              updatePkt
-            } : pkg
-          )
-        );
-      }
+
 
       Alert.alert('Thành công', `Gói ${editedPackage.name} đã được cập nhật`);
       setEditModalVisible(false);
@@ -121,7 +112,7 @@ export const Package = ({ navigation }) => {
       // Refresh package list
       const updatedPackages = await PackageService.getAllPackages();
       console.log('Updated packages:', updatedPackages);
-      setPackages([updatedPackages]);
+      setPackages(updatedPackages);
 
     } catch (error) {
       console.error('Error updating package:', error);
@@ -194,7 +185,7 @@ export const Package = ({ navigation }) => {
           </View>
 
           <ScrollView style={styles.modalBody}>
-            {editedPackage?.price !== 0 ? (<View style={styles.inputGroup}>
+            {selectedPackage?.price !== 0 ? (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Tên gói:</Text>
               <TextInput
                 style={styles.input}
@@ -215,7 +206,7 @@ export const Package = ({ navigation }) => {
                 </View>
               )}
 
-            {editedPackage?.price !== 0 && <View style={styles.inputGroup}>
+            {selectedPackage?.price !== 0 && <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Giá (VNĐ):</Text>
               <TextInput
                 style={styles.input}
@@ -226,6 +217,7 @@ export const Package = ({ navigation }) => {
                 }}
                 keyboardType="numeric"
                 placeholder="Nhập giá gói"
+                
               />
             </View>}
 

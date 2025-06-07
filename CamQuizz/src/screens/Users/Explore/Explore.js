@@ -238,11 +238,22 @@ export const Explore = ({ navigation }) => {
         roomId: joinCode
       });
     } catch (error) {
-      console.error('Error joining room:', error);
-      Alert.alert(
-        'Lỗi',
-        'Không thể tham gia phòng. Vui lòng kiểm tra mã phòng và thử lại!'
-      );
+      let message = 'Không thể tham gia phòng. Vui lòng kiểm tra mã phòng và thử lại!';
+      if (error && error.message) {
+        if (
+          error.message.includes("permission") ||
+          error.message.includes("permission to access") ||
+          error.message.includes("không có quyền")
+        ) {
+          message = 'Bạn không có quyền tham gia phòng này!';
+        } else if (
+          error.message.includes("Room is full") ||
+          error.message.includes("đã đủ người")
+        ) {
+          message = 'Phòng đã đủ người tham gia!';
+        }
+      }
+      Alert.alert('Lỗi', message);
       setIsJoining(false);
     }
   }, [joinCode, connectToHub]);

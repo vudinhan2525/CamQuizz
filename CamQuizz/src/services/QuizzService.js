@@ -75,7 +75,6 @@ class QuizzService {
             };
             if (keyword !== null) params.kw = keyword;
 
-            // Kiểm tra token trước khi gọi API
             const token = await AsyncStorage.getItem('userToken');
             if (!token) {
                 throw new Error('Unauthorized - Please log in again');
@@ -108,6 +107,46 @@ class QuizzService {
             return response.data.data;
         } catch (error) {
             console.error('Error fetching top 5 quizzes:', error);
+            throw error;
+        }
+    }
+
+    // Lấy danh sách quiz được chia sẻ với user hiện tại
+    static async getSharedQuizzes(keyword = null, page = 1, limit = 10, sort = 'created_at') {
+        try {
+            const params = {
+                limit,
+                page,
+                sort,
+            };
+            if (keyword !== null) params.kw = keyword;
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            console.log('Calling getSharedQuizzes API with token:', token.substring(0, 15) + '...');
+
+            const response = await apiClient.get('/quiz/shared-with-me', { params });
+            console.log('getSharedQuizzes API response:', response.data);
+
+            if (response.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            return {
+                data: response.data.data,
+                pagination: response.data.pagination,
+            };
+
+        } catch (error) {
+            console.error('Error fetching shared quizzes:', error);
+
+            if (error.response?.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
             throw error;
         }
     }

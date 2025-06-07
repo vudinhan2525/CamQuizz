@@ -7,162 +7,272 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert
+  Alert,
+  RefreshControl
 } from 'react-native';
 import COLORS from '../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
+import UserService from '../../services/UserService';
 
 export const User = () => {
-  const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('All');
+  const [availableRoles, setAvailableRoles] = useState(['All', 'User', 'Admin']); 
 
-  // Mock data for development
-  const mockUsers = [
-    {
-      id: 1,
-      firstName: 'Nguyễn',
-      lastName: 'Văn A',
-      email: 'nguyenvana@gmail.com',
-      gender: 'Nam',
-      roles: ['User'],
-      createdAt: '2023-10-15T08:30:00Z',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      firstName: 'Trần',
-      lastName: 'Thị B',
-      email: 'tranthib@gmail.com',
-      gender: 'Nữ',
-      roles: ['User'],
-      createdAt: '2023-11-20T10:15:00Z',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      firstName: 'Lê',
-      lastName: 'Văn C',
-      email: 'levanc@gmail.com',
-      gender: 'Nam',
-      roles: ['Admin'],
-      createdAt: '2023-09-05T14:45:00Z',
-      status: 'Active'
-    },
-    {
-      id: 4,
-      firstName: 'Phạm',
-      lastName: 'Thị D',
-      email: 'phamthid@gmail.com',
-      gender: 'Nữ',
-      roles: ['User'],
-      createdAt: '2023-12-10T09:20:00Z',
-      status: 'Inactive'
-    },
-    {
-      id: 5,
-      firstName: 'Hoàng',
-      lastName: 'Văn E',
-      email: 'hoangvane@gmail.com',
-      gender: 'Nam',
-      roles: ['User'],
-      createdAt: '2024-01-25T11:30:00Z',
-      status: 'Active'
-    }
-  ];
+  const [showAllUsers, setShowAllUsers] = useState({
+    'All': false,
+    'Admin': false,
+    'Student': false,
+    'User': false,
+    'Teacher': false,
+  });
+
+  const [roleUsersData, setRoleUsersData] = useState({
+    'All': [],
+    'Admin': [],
+    'Student': [],
+    'User': [],
+    'Teacher': [],
+  });
 
   useEffect(() => {
-    fetchUsers();
-  }, [filterRole, searchQuery]);
+    fetchUsersForRole(filterRole);
+  }, []);
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  useEffect(() => {
+    setShowAllUsers(prev => ({
+      ...prev,
+      [filterRole]: false
+    }));
+    fetchUsersForRole(filterRole);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const currentRoleData = roleUsersData[filterRole];
+    if (!currentRoleData || currentRoleData.length === 0) {
+      fetchUsersForRole(filterRole);
+    } else {
+      const isShowingAll = showAllUsers[filterRole];
+      const displayData = isShowingAll ? currentRoleData : currentRoleData.slice(0, 5);
+      setFilteredUsers(displayData);
+    }
+  }, [filterRole]);
+
+  const fetchUsersForRole = async (role, isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
-      // Mock API response
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await UserService.getAllUsers(searchQuery || null, 1000, 1); 
+      console.log('Full response for role', role, ':', response);
 
-      // Filter mock data based on search query and role
-      let filteredUsers = [...mockUsers];
+      const usersData = response.items || response.data || response.users || (Array.isArray(response) ? response : []);
 
-      if (searchQuery) {
-        filteredUsers = filteredUsers.filter(user =>
-          user.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+      console.log('Processed users data for role', role, ':', usersData);
+
+      if (role === 'All') {
+        const roles = new Set(['All']);
+        usersData.forEach(user => {
+          if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
+            user.roles.forEach(userRole => {
+              // Handle both string and object role formats
+              const roleName = typeof userRole === 'string' ? userRole : userRole.name || userRole.roleName || userRole;
+              if (roleName) {
+                roles.add(roleName);
+              }
+            });
+          }
+        });
+        setAvailableRoles(Array.from(roles));
       }
 
-      if (filterRole !== 'All') {
-        filteredUsers = filteredUsers.filter(user =>
-          user.roles.includes(filterRole)
-        );
+      let filteredData = usersData;
+      if (role !== 'All') {
+        filteredData = usersData.filter(user => {
+          if (!user.roles || !Array.isArray(user.roles) || user.roles.length === 0) {
+            return false;
+          }
+          return user.roles.some(userRole => {
+            const roleName = typeof userRole === 'string' ? userRole : userRole.name || userRole.roleName || userRole;
+            return roleName && roleName.toLowerCase() === role.toLowerCase();
+          });
+        });
       }
 
-      setUsers(filteredUsers);
+      setRoleUsersData(prev => ({
+        ...prev,
+        [role]: filteredData
+      }));
+
+      setShowAllUsers(prev => ({
+        ...prev,
+        [role]: false
+      }));
+
+      const displayData = filteredData.slice(0, 5);
+      setFilteredUsers(displayData);
+
     } catch (error) {
-      console.error('Error fetching users:', error);
-      Alert.alert('Error', 'Failed to load users. Please try again.');
+      console.error('Error fetching users for role', role, ':', error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách người dùng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    if (loading) return;
+
+    const allUsersForRole = roleUsersData[filterRole] || [];
+    setFilteredUsers(allUsersForRole);
+    setShowAllUsers(prev => ({
+      ...prev,
+      [filterRole]: true
+    }));
   };
 
   const handleSearch = () => {
-    fetchUsers();
+    setShowAllUsers(prev => ({
+      ...prev,
+      [filterRole]: false
+    }));
+    fetchUsersForRole(filterRole, true);
   };
 
-  const handleStatusChange = async (userId, newStatus) => {
-    try {
-      // Update local state
-      setUsers(prevUsers =>
-        prevUsers.map(user =>
-          user.id === userId ? { ...user, status: newStatus } : user
-        )
-      );
-
-      Alert.alert('Success', `Trạng thái người dùng đã được cập nhật thành ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      Alert.alert('Error', 'Không thể cập nhật trạng thái người dùng. Vui lòng thử lại.');
-    }
+  const handleRefresh = () => {
+    setShowAllUsers(prev => ({
+      ...prev,
+      [filterRole]: false
+    }));
+    fetchUsersForRole(filterRole, true);
   };
 
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.userCard}
-      onPress={() => handleStatusChange(item.id, item.status === 'Active' ? 'Inactive' : 'Active')}
-    >
-      <View style={styles.userInfo}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatarText}>
-            {item.firstName.charAt(0)}{item.lastName.charAt(0)}
-          </Text>
-        </View>
-        <View style={styles.userDetails}>
-          <Text style={styles.userName}>{item.firstName} {item.lastName}</Text>
-          <Text style={styles.userEmail}>{item.email}</Text>
-          <View style={styles.userMeta}>
-            <Text style={styles.userGender}>{item.gender}</Text>
-            <Text style={styles.userDate}>
-              {new Date(item.createdAt).toLocaleDateString('vi-VN')}
+  const handleBanUser = async (userId, currentBanStatus) => {
+    const newBanStatus = !currentBanStatus;
+
+    Alert.alert(
+      'Xác nhận',
+      `Bạn có chắc chắn muốn ${newBanStatus ? 'khóa' : 'mở khóa'} người dùng này?`,
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xác nhận',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Before ban request:', { userId, currentBanStatus, newBanStatus });
+
+              const response = await UserService.updateUserBanStatus(userId, newBanStatus);
+              console.log('Ban request successful:', response);
+              setRoleUsersData(prevData => {
+                const updatedData = { ...prevData };
+                Object.keys(updatedData).forEach(role => {
+                  updatedData[role] = updatedData[role].map(user =>
+                    user.id === userId ? {
+                      ...user,
+                      is_banned: newBanStatus,
+                      isBanned: newBanStatus 
+                    } : user
+                  );
+                });
+                return updatedData;
+              });
+
+              // Update filtered users display
+              setFilteredUsers(prevUsers =>
+                prevUsers.map(user =>
+                  user.id === userId ? {
+                    ...user,
+                    is_banned: newBanStatus,
+                    isBanned: newBanStatus
+                  } : user
+                )
+              );
+
+              Alert.alert('Thành công', `Người dùng đã được ${newBanStatus ? 'khóa' : 'mở khóa'} thành công`);
+
+              setTimeout(() => {
+                fetchUsersForRole(filterRole, true);
+              }, 1000);
+
+            } catch (error) {
+              console.error('Lỗi khi cập nhật trạng thái người dùng:', error);
+              Alert.alert('Lỗi', 'Không thể cập nhật trạng thái người dùng. Vui lòng thử lại.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderUserItem = ({ item }) => {
+    const firstName = item.first_name || item.firstName || '';
+    const lastName = item.last_name || item.lastName || '';
+    const email = item.email || '';
+    const gender = item.gender || '';
+    const createdAt = item.created_at || item.createdAt || new Date().toISOString();
+    const isBanned = item.is_banned !== undefined ? item.is_banned : (item.isBanned || false);
+    const roles = item.roles || [];
+
+    const isActive = !isBanned;
+    const userRole = roles && roles.length > 0 ? roles[0] : 'User';
+
+    return (
+      <View style={styles.userCard}>
+        <View style={styles.userInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {firstName.charAt(0)}{lastName.charAt(0)}
             </Text>
           </View>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>{firstName} {lastName}</Text>
+            <Text style={styles.userEmail}>{email}</Text>
+            <View style={styles.userMeta}>
+              <Text style={styles.userGender}>{gender}</Text>
+              <Text style={styles.userDate}>
+                {new Date(createdAt).toLocaleDateString('vi-VN')}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.userStatus}>
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: isActive ? COLORS.GREEN : COLORS.ORANGE }
+          ]}>
+            <Text style={styles.statusText}>
+              {isActive ? 'Hoạt động' : 'Bị khóa'}
+            </Text>
+          </View>
+          <Text style={styles.roleText}>{userRole}</Text>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              { backgroundColor: isActive ? COLORS.ORANGE : COLORS.GREEN }
+            ]}
+            onPress={() => handleBanUser(item.id, isBanned)}
+          >
+            <Ionicons
+              name={isActive ? 'ban' : 'checkmark-circle'}
+              size={16}
+              color={COLORS.WHITE}
+            />
+            <Text style={styles.actionButtonText}>
+              {isActive ? 'Khóa' : 'Mở khóa'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.userStatus}>
-        <View style={[
-          styles.statusBadge,
-          { backgroundColor: item.status === 'Active' ? COLORS.GREEN : COLORS.ORANGE }
-        ]}>
-          <Text style={styles.statusText}>
-            {item.status === 'Active' ? 'Hoạt động' : 'Tạm khóa'}
-          </Text>
-        </View>
-        <Text style={styles.roleText}>{item.roles[0]}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -184,48 +294,73 @@ export const User = () => {
       <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Lọc theo vai trò:</Text>
         <View style={styles.filterOptions}>
-          <TouchableOpacity
-            style={[styles.filterOption, filterRole === 'All' && styles.activeFilterOption]}
-            onPress={() => setFilterRole('All')}
-          >
-            <Text style={[styles.filterText, filterRole === 'All' && styles.activeFilterText]}>
-              Tất cả
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterOption, filterRole === 'User' && styles.activeFilterOption]}
-            onPress={() => setFilterRole('User')}
-          >
-            <Text style={[styles.filterText, filterRole === 'User' && styles.activeFilterText]}>
-              Người dùng
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterOption, filterRole === 'Admin' && styles.activeFilterOption]}
-            onPress={() => setFilterRole('Admin')}
-          >
-            <Text style={[styles.filterText, filterRole === 'Admin' && styles.activeFilterText]}>
-              Quản trị viên
-            </Text>
-          </TouchableOpacity>
+          {availableRoles.map((role) => {
+            const roleDisplayNames = {
+              'All': 'Tất cả',
+              'User': 'Người dùng',
+              'Admin': 'Quản trị viên',
+              'Student': 'Học sinh',
+              'Teacher': 'Giáo viên'
+            };
+
+            return (
+              <TouchableOpacity
+                key={role}
+                style={[styles.filterOption, filterRole === role && styles.activeFilterOption]}
+                onPress={() => setFilterRole(role)}
+              >
+                <Text style={[styles.filterText, filterRole === role && styles.activeFilterText]}>
+                  {roleDisplayNames[role] || role}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      {loading ? (
+      {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.BLUE} />
         </View>
       ) : (
         <FlatList
-          data={users}
+          data={filteredUsers}
           renderItem={renderUserItem}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[COLORS.BLUE]}
+              tintColor={COLORS.BLUE}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="people" size={60} color={COLORS.GRAY_LIGHT} />
-              <Text style={styles.emptyText}>Không tìm thấy người dùng</Text>
+              <Text style={styles.emptyText}>
+                {searchQuery || filterRole !== 'All'
+                  ? 'Không tìm thấy người dùng phù hợp'
+                  : 'Chưa có người dùng nào'
+                }
+              </Text>
             </View>
+          }
+          ListFooterComponent={
+            !showAllUsers[filterRole] && filteredUsers.length >= 5 && !loading ? (
+              <TouchableOpacity
+                style={styles.loadMoreButton}
+                onPress={handleLoadMore}
+              >
+                <Text style={styles.loadMoreText}>Tải thêm</Text>
+              </TouchableOpacity>
+            ) : loading && filteredUsers.length > 0 ? (
+              <View style={styles.loadingMoreContainer}>
+                <ActivityIndicator size="small" color={COLORS.BLUE} />
+                <Text style={styles.loadingMoreText}>Đang tải...</Text>
+              </View>
+            ) : null
           }
         />
       )}
@@ -315,7 +450,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     shadowColor: COLORS.BLUE,
     shadowOffset: {
       width: 0,
@@ -325,7 +460,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
     borderWidth: 1,
-    borderColor: COLORS.BLUE,
+    borderColor: COLORS.BLUE + '30',
   },
   userInfo: {
     flexDirection: 'row',
@@ -390,6 +525,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.BLUE,
     fontWeight: '500',
+    marginBottom: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  actionButtonText: {
+    color: COLORS.WHITE,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -399,6 +550,32 @@ const styles = StyleSheet.create({
   emptyText: {
     marginTop: 8,
     fontSize: 16,
+    color: COLORS.GRAY_TEXT,
+    textAlign: 'center',
+  },
+  loadMoreButton: {
+    backgroundColor: COLORS.BLUE,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignSelf: 'center',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  loadMoreText: {
+    color: COLORS.WHITE,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingMoreText: {
+    marginLeft: 8,
+    fontSize: 14,
     color: COLORS.GRAY_TEXT,
   }
 });

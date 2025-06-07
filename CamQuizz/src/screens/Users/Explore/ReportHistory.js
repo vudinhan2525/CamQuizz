@@ -1,60 +1,58 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Ionicons } from '@expo/vector-icons';
 import COLORS  from '../../../constant/colors';
+import ReportQuizzService from './../../../services/ReportQuizzService'
 
-const FILTER_OPTIONS = [
-  { id: 'all', label: 'Tất cả' },
-  { id: 'resolved', label: 'Đã xử lý' },
-  { id: 'pending', label: 'Chờ xử lý' }
-];
 
 const ReportHistory = ({ navigation }) => {
-  const [selectedFilter, setSelectedFilter] = useState('all');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  // Mock data - replace with actual API data
-  const reports = [
-    {
-      id: 1,
-      quizName: 'Kiểm tra React Native',
-      reportTime: '2024-03-15 10:30',
-      status: 'pending',
-      reason: 'Nội dung không phù hợp'
-    },
-    {
-      id: 2,
-      quizName: 'Kiểm tra JavaScript',
-      reportTime: '2024-03-14 15:45',
-      status: 'resolved',
-      reason: 'Câu hỏi sai'
-    },
-  ];
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await ReportQuizzService.getMyTicket(page, 10);
+        setReports(data.items || []);
+        setHasMore((data.total || 0) > (page * 10));
+      } catch (err) {
+        setError('Lỗi khi tải dữ liệu báo cáo');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [page]);
 
-  const filteredReports = reports.filter(report => {
-    if (selectedFilter === 'all') return true;
-    return report.status === selectedFilter;
-  });
 
-  const handleReportPress = (report) => {
-    setSelectedReport(report);
-    setModalVisible(true);
-  };
 
+ 
   const renderReportItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.reportItem}
-      onPress={() => handleReportPress(item)}
     >
-      <Text style={styles.quizName}>{item.quizName}</Text>
-      <Text style={styles.reportTime}>{item.reportTime}</Text>
+      <Text style={styles.quizName}>{item.quiz_name || 'Không rõ tên quiz'}</Text>
+      <Text style={styles.reportTime}>{item.created_at ? new Date(item.created_at).toLocaleString() : item.reportTime}</Text>
       <Text style={[
         styles.status,
-        { color: item.status === 'resolved' ? COLORS.GREEN : COLORS.ORANGE }
+        { color: item.status === 'Resolved' ? COLORS.GREEN : COLORS.ORANGE }
       ]}>
-        {item.status === 'resolved' ? 'Đã xử lý' : 'Chờ xử lý'}
+        {item.status === 'Resolved' ? 'Đã xử lý' : 'Chờ xử lý'}
       </Text>
+      <Text style={{ color: COLORS.GRAY, fontSize: 13 }}>Lý do: {item.message}</Text>
+      {item.status!=='Pending' && item.action_display && item.resolved_by_name && item.resolved_at(
+        <View>
+          <Text style={{ color: COLORS.GRAY, fontSize: 13 }}>{item.resolved_by_name} đã xử lý lúc {new Date(item.resolved_at).toLocaleString()}</Text>
+          <Text style={{ color: COLORS.GRAY, fontSize: 13 }}>Ghi chú xử lý: {item.admin_note||"Không có"}</Text>
+          <Text style={{ color: COLORS.GRAY, fontSize: 13 }}>Hành động xử lý: {item.action_display||"Không có"}</Text>
+        </View>
+        
+      )}
     </TouchableOpacity>
   );
 
@@ -69,63 +67,44 @@ const ReportHistory = ({ navigation }) => {
         >
           <Ionicons name="close" size={24} color={COLORS.BLUE} />
         </TouchableOpacity>
-      </View>
-
-      {/* Filter Options */}
-      <View style={styles.filterContainer}>
-        {FILTER_OPTIONS.map(option => (
-          <TouchableOpacity
-            key={option.id}
-            style={[
-              styles.filterOption,
-              selectedFilter === option.id && styles.filterOptionSelected
-            ]}
-            onPress={() => setSelectedFilter(option.id)}
-          >
-            <Text style={[
-              styles.filterText,
-              selectedFilter === option.id && styles.filterTextSelected
-            ]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      </View>      
 
       {/* Reports List */}
-      <FlatList
-        data={filteredReports}
-        renderItem={renderReportItem}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContainer}
-      />
-
-      {/* Report Detail Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Chi tiết báo cáo</Text>
-            {selectedReport && (
-              <>
-                <Text style={styles.modalQuizName}>{selectedReport.quizName}</Text>
-                <Text style={styles.modalTime}>Thời gian: {selectedReport.reportTime}</Text>
-                <Text style={styles.modalReason}>Lý do: {selectedReport.reason}</Text>
-              </>
-            )}
+      {loading ? (
+        <Text style={{ textAlign: 'center', marginTop: 20 }}>Đang tải dữ liệu...</Text>
+      ) : error ? (
+        <Text style={{ textAlign: 'center', marginTop: 20, color: 'red' }}>{error}</Text>
+      ) : reports.length === 0 ? (
+        <View style={{ alignItems: 'center', marginTop: 40 }}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.BLUE} />
+          <Text style={{ color: COLORS.BLUE, marginTop: 10 }}>Không có báo cáo nào</Text>
+        </View>
+      ) : (
+        <>
+          <FlatList
+            data={reports}
+            renderItem={renderReportItem}
+            keyExtractor={item => item.id?.toString()}
+            contentContainerStyle={styles.listContainer}
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 16, gap: 10 }}>
             <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setModalVisible(false)}
+              style={[styles.filterOption, { opacity: page === 1 ? 0.5 : 1 }]}
+              disabled={page === 1}
+              onPress={() => setPage(page - 1)}
             >
-              <Text style={styles.modalCloseText}>Đóng</Text>
+              <Text style={styles.filterText}>Trang trước</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterOption, { opacity: !hasMore ? 0.5 : 1 }]}
+              disabled={!hasMore}
+              onPress={() => setPage(page + 1)}
+            >
+              <Text style={styles.filterText}>Trang sau</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+        </>
+      )}
     </View>
   );
 };

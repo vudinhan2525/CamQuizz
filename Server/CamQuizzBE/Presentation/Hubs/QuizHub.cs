@@ -6,6 +6,9 @@ using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Enums;
 using CamQuizzBE.Infras.Data;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -359,17 +362,70 @@ public class QuizHub : Hub
             
             await CheckQuizAccessPermissions(room.QuizId, request.UserId);
 
-            if (!room.PlayerList.Any(p => p.Id == request.UserId))
+            var existingPlayer = room.PlayerList.FirstOrDefault(p => p.Id == request.UserId);
+            if (existingPlayer != null)
             {
-                room.PlayerList.Add(new PlayerDto
-                {
-                    Id = user.Id,
-                    Name = $"{user.FirstName} {user.LastName}",
-                    Avatar = user.PhotoUrl ?? "",
-                    Score = 0,
-                    ConnectionId = Context.ConnectionId
-                });
+                existingPlayer.ConnectionId = Context.ConnectionId;
+                await Groups.AddToGroupAsync(Context.ConnectionId, request.RoomId);
+                await Clients.Group(request.RoomId).SendAsync("playerJoined", room);
+                return;
             }
+
+            // Check participant limit based on host's quota
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                try
+                {
+                    var context = scope.ServiceProvider.GetRequiredService<DataContext>();
+                    var hostQuota = await context.UserQuotas
+                        .Where(q => q.UserId == room.HostId)
+                        .Select(q => new { q.UserId, q.TotalParticipants })
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync();
+
+                    _logger.LogInformation(
+                        "Room {RoomId} participant check - HostId={HostId}, Quota={@Quota}",
+                        request.RoomId, room.HostId, hostQuota);
+
+                    if (hostQuota == null)
+                    {
+                        // Just log the warning but allow the join since we couldn't verify the quota
+                        _logger.LogWarning(
+                            "Unable to find quota for host {HostId} - allowing join",
+                            room.HostId);
+                    }
+                    else if (hostQuota.TotalParticipants > 0)
+                    {
+                        var currentParticipants = room.PlayerList.Count;
+                        if (currentParticipants >= hostQuota.TotalParticipants)
+                        {
+                            _logger.LogWarning(
+                                "Blocked user {UserId} - room {RoomId} is full: {Current}/{Total} participants",
+                                request.UserId, request.RoomId, currentParticipants, hostQuota.TotalParticipants);
+                            throw new Exception($"Room is full ({currentParticipants}/{hostQuota.TotalParticipants} participants)");
+                        }
+                        
+                        _logger.LogInformation(
+                            "Room {RoomId} has space: {Current}/{Total} participants",
+                            request.RoomId, currentParticipants, hostQuota.TotalParticipants);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error checking room capacity for host {HostId}", room.HostId);
+                    throw;
+                }
+            }
+
+            // Add player after quota check passes
+            room.PlayerList.Add(new PlayerDto
+            {
+                Id = user.Id,
+                Name = $"{user.FirstName} {user.LastName}",
+                Avatar = user.PhotoUrl ?? "",
+                Score = 0,
+                ConnectionId = Context.ConnectionId
+            });
 
             await Groups.AddToGroupAsync(Context.ConnectionId, request.RoomId);
             await Clients.Group(request.RoomId).SendAsync("playerJoined", room);

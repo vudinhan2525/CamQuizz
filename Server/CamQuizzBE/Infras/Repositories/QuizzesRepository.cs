@@ -125,17 +125,18 @@ public class QuizzesRepository(
     public async Task<Quizzes?> GetByIdAsync(int id)
     {
         var quiz = await _context.Quizzes
-            .Include(q => q.Questions)
-            .Include(q => q.SharedUsers)
-                .ThenInclude(us => us.User)
-            .Include(q => q.SharedUsers)
-                .ThenInclude(us => us.Owner)
-            .Include(q => q.SharedGroups)
-                .ThenInclude(gs => gs.Group)
-            .Include(q => q.SharedGroups)
-                .ThenInclude(gs => gs.Owner)
-            .AsSplitQuery() // Split the query to avoid cartesian explosion
-            .FirstOrDefaultAsync(q => q.Id == id);  // Remove IsDeleted filter from GetByIdAsync
+        .Include(q => q.Questions)
+            .ThenInclude(q => q.Answers)  
+        .Include(q => q.SharedUsers)
+            .ThenInclude(us => us.User)
+        .Include(q => q.SharedUsers)
+            .ThenInclude(us => us.Owner)
+        .Include(q => q.SharedGroups)
+            .ThenInclude(gs => gs.Group)
+        .Include(q => q.SharedGroups)
+            .ThenInclude(gs => gs.Owner)
+            .AsSplitQuery() 
+            .FirstOrDefaultAsync(q => q.Id == id);  
 
         return quiz;
     }

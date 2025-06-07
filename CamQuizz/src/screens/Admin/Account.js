@@ -1,54 +1,159 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  TextInput,
-  Modal,
-  Platform,
-  KeyboardAvoidingView,
-  Button
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
+import Toast from 'react-native-toast-message';
 import { useNavigation } from '@react-navigation/native';
+import ProfileAvatar from '../../components/Account/ProfileAvatar';
+import EditableSection from '../../components/Account/EditableSection';
+import PasswordSection from '../../components/Account/PasswordSection';
+import GenderSection from '../../components/Account/GenderSection';
+import DateOfBirthSection from '../../components/Account/DateOfBirthSection';
+import { logout, checkAuthStatus, updateUserProfile, changePassword } from '../../services/AuthService';
 import COLORS from '../../constant/colors';
-import { Ionicons } from 'react-native-vector-icons';
-import { checkAuthStatus, logout, updateUserProfile } from '../../services/AuthService';
 
-export const Account = () => {
+const AdminAccount = () => {
   const navigation = useNavigation();
-  const [userData, setUserData] = useState(null);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editedUser, setEditedUser] = useState({
-    firstName: '',
-    lastName: '',
-    gender: '',
-    dateOfBirth: new Date()
+  const [profile, setProfile] = useState({
+    name: '',
+    gender: 'Other',
+    email: '',
+    id: null,
+    first_name: '',
+    last_name: '',
+    dateOfBirth: '',
+    roles: [],
   });
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
+  // Fetch user data when component mounts
   useEffect(() => {
-    // Lấy thông tin người dùng khi component mount
-    const getUserData = async () => {
-      const data = await checkAuthStatus();
-      setUserData(data);
+    const fetchUserData = async () => {
+      try {
+        const userData = await checkAuthStatus();
 
-      if (data) {
-        setEditedUser({
-          firstName: data.first_name || '',
-          lastName: data.last_name || '',
-          gender: data.gender || '',
-          dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : new Date()
+        if (userData) {
+          // Backend trả về snake_case format
+          setProfile({
+            id: userData.id,
+            name: `${userData.first_name} ${userData.last_name}`,
+            email: userData.email,
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            gender: userData.gender || 'Other',
+            dateOfBirth: userData.date_of_birth || userData.dateOfBirth || '',
+            roles: userData.roles || [],
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Không thể tải thông tin người dùng',
+          text2: 'Vui lòng thử lại sau'
         });
       }
     };
 
-    getUserData();
+    fetchUserData();
   }, []);
 
+  // Update profile function
+  const updateProfile = async (field, value) => {
+    if (!profile.id) {
+      Toast.show({
+        type: 'error',
+        text1: 'Không thể cập nhật',
+        text2: 'Không tìm thấy thông tin người dùng'
+      });
+      return;
+    }
+
+    try {
+      let updateData = {};
+
+      if (field === 'name') {
+        const nameParts = value.trim().split(' ');
+        const firstName = nameParts.pop() || '';
+        const lastName = nameParts.join(' ') || '';
+
+        updateData = {
+          FirstName: firstName,
+          LastName: lastName
+        };
+      } else if (field === 'gender') {
+        updateData = { Gender: value };
+      } else if (field === 'dateOfBirth') {
+        updateData = { DateOfBirth: value };
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        try {
+          await updateUserProfile(profile.id, updateData);
+
+          // Refresh user data from server after successful update
+          const refreshedUserData = await checkAuthStatus();
+
+          if (refreshedUserData) {
+            // Backend trả về snake_case format
+            const newProfile = {
+              id: refreshedUserData.id,
+              email: refreshedUserData.email,
+              first_name: refreshedUserData.first_name,
+              last_name: refreshedUserData.last_name,
+              name: `${refreshedUserData.first_name} ${refreshedUserData.last_name}`,
+              gender: refreshedUserData.gender || 'Other',
+              dateOfBirth: refreshedUserData.date_of_birth || refreshedUserData.dateOfBirth || '',
+              roles: refreshedUserData.roles || []
+            };
+
+            setProfile(newProfile);
+          }
+
+          Toast.show({
+            type: 'success',
+            text1: 'Cập nhật tên thành công'
+          });
+        } catch (error) {
+          console.error('Error updating profile:', error);
+          Toast.show({
+            type: 'error',
+            text1: 'Cập nhật thất bại',
+            text2: error.message || 'Vui lòng thử lại sau'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error in updateProfile:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Có lỗi xảy ra',
+        text2: 'Vui lòng thử lại sau'
+      });
+    }
+  };
+
+  // Handle change password
+  const handleChangePassword = async ({ currentPassword, newPassword }) => {
+    try {
+      const result = await changePassword(currentPassword, newPassword);
+
+      if (result.success) {
+        Toast.show({
+          type: 'success',
+          text1: 'Thành công',
+          text2: result.message || 'Đổi mật khẩu thành công'
+        });
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Đổi mật khẩu thất bại',
+        text2: error.message || 'Vui lòng kiểm tra lại mật khẩu hiện tại'
+      });
+    }
+  };
+
+  // Handle logout
   const handleLogout = () => {
     Alert.alert(
       'Đăng xuất',
@@ -60,11 +165,7 @@ export const Account = () => {
           onPress: async () => {
             try {
               await logout();
-
-              // Thêm log để kiểm tra
               console.log('Admin logged out successfully');
-
-              // Chuyển về màn hình đăng nhập bằng cách reset đến Root
               navigation.reset({
                 index: 0,
                 routes: [{ name: 'Root' }],
@@ -79,239 +180,66 @@ export const Account = () => {
     );
   };
 
-  const handleEditProfile = () => {
-    setEditModalVisible(true);
-  };
-
-  const handleSaveProfile = async () => {
-    try {
-      if (!userData || !userData.id) {
-        Alert.alert('Lỗi', 'Không thể xác định người dùng');
-        return;
-      }
-
-      const updateData = {
-        firstName: editedUser.firstName,
-        lastName: editedUser.lastName,
-        gender: editedUser.gender,
-        dateOfBirth: formatDateForAPI(editedUser.dateOfBirth)
-      };
-
-      await updateUserProfile(userData.id, updateData);
-
-      // Cập nhật userData để hiển thị thông tin mới
-      const updatedUserData = {
-        ...userData,
-        first_name: editedUser.firstName,
-        last_name: editedUser.lastName,
-        gender: editedUser.gender,
-        dateOfBirth: editedUser.dateOfBirth
-      };
-
-      setUserData(updatedUserData);
-      setEditModalVisible(false);
-      Alert.alert('Thành công', 'Thông tin cá nhân đã được cập nhật');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Lỗi', 'Không thể cập nhật thông tin. Vui lòng thử lại.');
-    }
-  };
-
-  const handleDateChange = () => {
-    // Trong ứng dụng thực tế, bạn sẽ sử dụng DateTimePicker thực sự
-    // Nhưng hiện tại, chúng ta sẽ sử dụng một cách tiếp cận đơn giản hơn
-
-    // Tạo một ngày cố định trong quá khứ để mô phỏng việc chọn ngày
-    const newDate = new Date(1990, 0, 1); // 1/1/1990
-    setEditedUser(prev => ({ ...prev, dateOfBirth: newDate }));
-    setShowDatePicker(false);
-
-    Alert.alert(
-      'Thông báo',
-      'Đã chọn ngày: 01/01/1990\n\nLưu ý: Trong ứng dụng thực tế, bạn sẽ thấy một bộ chọn ngày tháng thực sự.'
-    );
-  };
-
-  const formatDateForDisplay = (date) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('vi-VN');
-  };
-
-  const formatDateForAPI = (date) => {
-    if (!date) return null;
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  };
-
-  const renderEditProfileModal = () => (
-    <Modal
-      visible={editModalVisible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={() => setEditModalVisible(false)}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalContainer}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Chỉnh sửa thông tin cá nhân</Text>
-            <TouchableOpacity onPress={() => setEditModalVisible(false)}>
-              <Ionicons name="close" size={24} color={COLORS.BLACK} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalBody}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Họ:</Text>
-              <TextInput
-                style={styles.input}
-                value={editedUser.lastName}
-                onChangeText={(text) => setEditedUser(prev => ({ ...prev, lastName: text }))}
-                placeholder="Nhập họ của bạn"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Tên:</Text>
-              <TextInput
-                style={styles.input}
-                value={editedUser.firstName}
-                onChangeText={(text) => setEditedUser(prev => ({ ...prev, firstName: text }))}
-                placeholder="Nhập tên của bạn"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Giới tính:</Text>
-              <View style={styles.genderOptions}>
-                <TouchableOpacity
-                  style={[
-                    styles.genderOption,
-                    editedUser.gender === 'Nam' && styles.activeGenderOption
-                  ]}
-                  onPress={() => setEditedUser(prev => ({ ...prev, gender: 'Nam' }))}
-                >
-                  <Text style={[
-                    styles.genderText,
-                    editedUser.gender === 'Nam' && styles.activeGenderText
-                  ]}>Nam</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.genderOption,
-                    editedUser.gender === 'Nữ' && styles.activeGenderOption
-                  ]}
-                  onPress={() => setEditedUser(prev => ({ ...prev, gender: 'Nữ' }))}
-                >
-                  <Text style={[
-                    styles.genderText,
-                    editedUser.gender === 'Nữ' && styles.activeGenderText
-                  ]}>Nữ</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.genderOption,
-                    editedUser.gender === 'Khác' && styles.activeGenderOption
-                  ]}
-                  onPress={() => setEditedUser(prev => ({ ...prev, gender: 'Khác' }))}
-                >
-                  <Text style={[
-                    styles.genderText,
-                    editedUser.gender === 'Khác' && styles.activeGenderText
-                  ]}>Khác</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Ngày sinh:</Text>
-              <TouchableOpacity
-                style={styles.dateInput}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.dateText}>
-                  {formatDateForDisplay(editedUser.dateOfBirth)}
-                </Text>
-                <Ionicons name="calendar-outline" size={20} color={COLORS.BLUE} />
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <View style={styles.datePickerButtons}>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={handleDateChange}
-                  >
-                    <Text style={styles.datePickerButtonText}>Chọn ngày</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.datePickerButton, styles.cancelButton]}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.datePickerButtonText}>Hủy</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSaveProfile}
-          >
-            <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.profileHeader}>
-        <Image
-          source={require('../../../assets/icon.png')}
-          style={styles.avatar}
-        />
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>
-            {userData ? `${userData.first_name} ${userData.last_name}` : 'Admin'}
-          </Text>
-          <Text style={styles.userEmail}>{userData?.email || 'admin@example.com'}</Text>
-          <Text style={styles.userRole}>Quản trị viên</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.profileInfo}>
+            <ProfileAvatar name={profile.name} size="lg" />
+            <View style={styles.textContainer}>
+              <Text style={styles.nameText}>{profile.name}</Text>
+              <Text style={styles.infoText}>Giới tính: {profile.gender}</Text>
+              <Text style={styles.infoText}>Ngày sinh: {profile.dateOfBirth || 'Chưa có thông tin'}</Text>
+              <Text style={styles.infoText}>Role: Admin</Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      <View style={styles.menuContainer}>
-        <TouchableOpacity style={styles.menuItem} onPress={handleEditProfile}>
-          <Ionicons name="person-outline" size={24} color={COLORS.BLUE} />
-          <Text style={styles.menuText}>Thông tin cá nhân</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.GRAY} />
-        </TouchableOpacity>
+      {/* Editable Sections */}
+      <View style={styles.sections}>
+        <View style={styles.viewOnlySection}>
+          <View style={styles.sectionHeader}>
+            <Icon name="mail" size={16} color="#666" />
+            <Text style={styles.sectionTitle}>E-mail</Text>
+            <Text style={styles.sectionValue}>{profile.email}</Text>
+          </View>
+        </View>
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="shield-outline" size={24} color={COLORS.BLUE} />
-          <Text style={styles.menuText}>Quyền quản trị</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.GRAY} />
-        </TouchableOpacity>
+        <EditableSection
+          title="Tên tài khoản"
+          value={profile.name}
+          onSave={(value) => updateProfile('name', value)}
+          icon={<Icon name="user" size={16} color="#666" />}
+        />
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={24} color={COLORS.BLUE} />
-          <Text style={styles.menuText}>Cài đặt hệ thống</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.GRAY} />
-        </TouchableOpacity>
+        <GenderSection
+          title="Giới tính"
+          value={profile.gender}
+          onSave={(value) => updateProfile('gender', value)}
+          icon={<Icon name="users" size={16} color="#666" />}
+        />
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={COLORS.RED} />
-          <Text style={[styles.menuText, { color: COLORS.RED }]}>Đăng xuất</Text>
-          <Ionicons name="chevron-forward" size={20} color={COLORS.GRAY} />
-        </TouchableOpacity>
+        <DateOfBirthSection
+          title="Ngày sinh"
+          value={profile.dateOfBirth}
+          onSave={(value) => updateProfile('dateOfBirth', value)}
+          icon={<Icon name="calendar" size={16} color="#666" />}
+        />
+
+        <PasswordSection
+          title="Mật khẩu"
+          onSave={handleChangePassword}
+          icon={<Icon name="lock" size={16} color="#666" />}
+        />
       </View>
 
-      {renderEditProfileModal()}
+      {/* Logout Button */}
+      <Pressable style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Đăng xuất</Text>
+      </Pressable>
+
+      <Toast />
     </ScrollView>
   );
 };
@@ -319,183 +247,81 @@ export const Account = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BG,
+    backgroundColor: '#fff',
+    padding: 16,
   },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: COLORS.WHITE,
-    borderRadius: 10,
-    margin: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: COLORS.BLUE,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: COLORS.BLUE,
   },
-  avatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: COLORS.LIGHT_GRAY,
-  },
-  userInfo: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.BLACK,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: COLORS.GRAY,
-    marginTop: 5,
-  },
-  userRole: {
-    fontSize: 14,
-    color: COLORS.BLUE,
-    marginTop: 5,
-    fontWeight: 'bold',
-  },
-  menuContainer: {
-    backgroundColor: COLORS.WHITE,
-    borderRadius: 10,
-    margin: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 15,
+  cardHeader: {
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.LIGHT_GRAY,
+    borderBottomColor: '#e5e5e5',
   },
-  menuText: {
-    flex: 1,
-    marginLeft: 15,
-    fontSize: 16,
-    color: COLORS.BLACK,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: '90%',
-    backgroundColor: COLORS.WHITE,
-    borderRadius: 12,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalHeader: {
+  profileInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.LIGHT_GRAY,
-    paddingBottom: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.BLACK,
-  },
-  modalBody: {
-    maxHeight: 400,
-  },
-  inputGroup: {
+    gap: 16,
     marginBottom: 16,
   },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.BLACK,
+  textContainer: {
+    flex: 1,
+  },
+  nameText: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  sections: {
+    marginTop: 24,
+  },
+  viewOnlySection: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e5e5',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
-  input: {
-    backgroundColor: COLORS.LIGHT_GRAY,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  genderOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  genderOption: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.LIGHT_GRAY,
-    alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  activeGenderOption: {
-    backgroundColor: COLORS.BLUE,
-  },
-  genderText: {
-    fontSize: 14,
-    color: COLORS.BLACK,
-  },
-  activeGenderText: {
-    color: COLORS.WHITE,
-    fontWeight: 'bold',
-  },
-  dateInput: {
-    backgroundColor: COLORS.LIGHT_GRAY,
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: COLORS.BLACK,
-  },
-  datePickerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  datePickerButton: {
-    backgroundColor: COLORS.BLUE,
-    borderRadius: 8,
-    padding: 10,
-    flex: 1,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: COLORS.GRAY,
-  },
-  datePickerButtonText: {
-    color: COLORS.WHITE,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  saveButton: {
-    backgroundColor: COLORS.BLUE,
-    borderRadius: 8,
-    padding: 12,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveButtonText: {
-    color: COLORS.WHITE,
+  sectionTitle: {
     fontSize: 16,
     fontWeight: '500',
-  }
+  },
+  sectionValue: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 24,
+  },
+  logoutButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  logoutText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
+
+export { AdminAccount as Account };

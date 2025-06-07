@@ -20,139 +20,83 @@ export const User = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState('All');
-  const [availableRoles, setAvailableRoles] = useState(['All', 'User', 'Admin']); 
-
-  const [showAllUsers, setShowAllUsers] = useState({
-    'All': false,
-    'Admin': false,
-    'Student': false,
-    'User': false,
-    'Teacher': false,
-  });
-
-  const [roleUsersData, setRoleUsersData] = useState({
-    'All': [],
-    'Admin': [],
-    'Student': [],
-    'User': [],
-    'Teacher': [],
-  });
-
-  useEffect(() => {
-    fetchUsersForRole(filterRole);
-  }, []);
-
-  useEffect(() => {
-    setShowAllUsers(prev => ({
-      ...prev,
-      [filterRole]: false
-    }));
-    fetchUsersForRole(filterRole);
-  }, [searchQuery]);
-
-  useEffect(() => {
-    const currentRoleData = roleUsersData[filterRole];
-    if (!currentRoleData || currentRoleData.length === 0) {
-      fetchUsersForRole(filterRole);
-    } else {
-      const isShowingAll = showAllUsers[filterRole];
-      const displayData = isShowingAll ? currentRoleData : currentRoleData.slice(0, 5);
-      setFilteredUsers(displayData);
-    }
-  }, [filterRole]);
-
-  const fetchUsersForRole = async (role, isRefresh = false) => {
-    if (isRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
+  const [availableRoles, setAvailableRoles] = useState(['All', 'User', 'Admin']);
+  const [stateCurrent, setStateCurrent] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
+  const [error, setError] = useState(null);
+  
+const handleFetchUsers = async (isLoadMore = false) => {
     try {
-      const response = await UserService.getAllUsers(searchQuery || null, 1000, 1); 
-      console.log('Full response for role', role, ':', response);
-
-      const usersData = response.items || response.data || response.users || (Array.isArray(response) ? response : []);
-
-      console.log('Processed users data for role', role, ':', usersData);
-
-      if (role === 'All') {
-        const roles = new Set(['All']);
-        usersData.forEach(user => {
-          if (user.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-            user.roles.forEach(userRole => {
-              // Handle both string and object role formats
-              const roleName = typeof userRole === 'string' ? userRole : userRole.name || userRole.roleName || userRole;
-              if (roleName) {
-                roles.add(roleName);
-              }
-            });
-          }
-        });
-        setAvailableRoles(Array.from(roles));
+      setError(null);
+      if (!isLoadMore) {
+        setLoading(true);
       }
 
-      let filteredData = usersData;
-      if (role !== 'All') {
-        filteredData = usersData.filter(user => {
-          if (!user.roles || !Array.isArray(user.roles) || user.roles.length === 0) {
-            return false;
-          }
-          return user.roles.some(userRole => {
-            const roleName = typeof userRole === 'string' ? userRole : userRole.name || userRole.roleName || userRole;
-            return roleName && roleName.toLowerCase() === role.toLowerCase();
-          });
-        });
+      const {data, pagination} = await UserService.getAllUsers(searchQuery || null, 10, stateCurrent);
+
+      console.log('API Response - Data:', data);
+      console.log('API Response - Pagination:', pagination);
+
+      if (data && Array.isArray(data)) {
+        if (isLoadMore) {
+          // Append new data for load more
+          setFilteredUsers(prevUsers => [...prevUsers, ...data]);
+        } else {
+          // Replace data for new search or initial load
+          setFilteredUsers(data);
+        }
+
+        // Check if there's more data
+        setHasMoreData(pagination && pagination.hasNextPage);
+      } else {
+        console.warn('Invalid data format received:', data);
+        setFilteredUsers([]);
+        setHasMoreData(false);
       }
-
-      setRoleUsersData(prev => ({
-        ...prev,
-        [role]: filteredData
-      }));
-
-      setShowAllUsers(prev => ({
-        ...prev,
-        [role]: false
-      }));
-
-      const displayData = filteredData.slice(0, 5);
-      setFilteredUsers(displayData);
 
     } catch (error) {
-      console.error('Error fetching users for role', role, ':', error);
+      console.error('Error fetching users:', error);
+      setError('Không thể tải danh sách người dùng. Vui lòng thử lại.');
+
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+      }
+
       Alert.alert('Lỗi', 'Không thể tải danh sách người dùng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
+}
+
+useEffect(() => {
+    if (stateCurrent === 1) {
+      handleFetchUsers();
+    } else {
+      handleFetchUsers(true); // Load more
+    }
+  }, [stateCurrent]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setStateCurrent(1);
+    setFilteredUsers([]);
+    handleFetchUsers();
   };
 
   const handleLoadMore = () => {
-    if (loading) return;
+    if (loading || !hasMoreData) return;
 
-    const allUsersForRole = roleUsersData[filterRole] || [];
-    setFilteredUsers(allUsersForRole);
-    setShowAllUsers(prev => ({
-      ...prev,
-      [filterRole]: true
-    }));
+    setStateCurrent(prevPage => prevPage + 1);
   };
 
   const handleSearch = () => {
-    setShowAllUsers(prev => ({
-      ...prev,
-      [filterRole]: false
-    }));
-    fetchUsersForRole(filterRole, true);
+    setStateCurrent(1);
+    setFilteredUsers([]);
+    handleFetchUsers();
   };
 
-  const handleRefresh = () => {
-    setShowAllUsers(prev => ({
-      ...prev,
-      [filterRole]: false
-    }));
-    fetchUsersForRole(filterRole, true);
-  };
 
   const handleBanUser = async (userId, currentBanStatus) => {
     const newBanStatus = !currentBanStatus;
@@ -171,19 +115,6 @@ export const User = () => {
 
               const response = await UserService.updateUserBanStatus(userId, newBanStatus);
               console.log('Ban request successful:', response);
-              setRoleUsersData(prevData => {
-                const updatedData = { ...prevData };
-                Object.keys(updatedData).forEach(role => {
-                  updatedData[role] = updatedData[role].map(user =>
-                    user.id === userId ? {
-                      ...user,
-                      is_banned: newBanStatus,
-                      isBanned: newBanStatus 
-                    } : user
-                  );
-                });
-                return updatedData;
-              });
 
               // Update filtered users display
               setFilteredUsers(prevUsers =>
@@ -198,8 +129,9 @@ export const User = () => {
 
               Alert.alert('Thành công', `Người dùng đã được ${newBanStatus ? 'khóa' : 'mở khóa'} thành công`);
 
+              // Refresh data after a short delay
               setTimeout(() => {
-                fetchUsersForRole(filterRole, true);
+                handleRefresh();
               }, 1000);
 
             } catch (error) {
@@ -219,10 +151,9 @@ export const User = () => {
     const gender = item.gender || '';
     const createdAt = item.created_at || item.createdAt || new Date().toISOString();
     const isBanned = item.is_banned !== undefined ? item.is_banned : (item.isBanned || false);
-    const roles = item.roles || [];
+    const userRole = item.role || item.user_role || 'User'; // Get user role from item data
 
     const isActive = !isBanned;
-    const userRole = roles && roles.length > 0 ? roles[0] : 'User';
 
     return (
       <View style={styles.userCard}>
@@ -252,8 +183,9 @@ export const User = () => {
               {isActive ? 'Hoạt động' : 'Bị khóa'}
             </Text>
           </View>
-          <Text style={styles.roleText}>{userRole}</Text>
-          <TouchableOpacity
+          <Text style={styles.roleText}>{userRole === 'Admin' ? 'Quản trị viên' : 'Người dùng'}</Text>
+          {userRole !== 'Admin' && isActive && (
+            <TouchableOpacity
             style={[
               styles.actionButton,
               { backgroundColor: isActive ? COLORS.ORANGE : COLORS.GREEN }
@@ -266,9 +198,9 @@ export const User = () => {
               color={COLORS.WHITE}
             />
             <Text style={styles.actionButtonText}>
-              {isActive ? 'Khóa' : 'Mở khóa'}
+               'Khóa'
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> )}
         </View>
       </View>
     );
@@ -283,7 +215,7 @@ export const User = () => {
             placeholder="Tìm kiếm người dùng..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
+            onSubmitEditing={handleFetchUsers}
           />
           <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
             <Ionicons name="search" size={20} color={COLORS.WHITE} />
@@ -291,36 +223,18 @@ export const User = () => {
         </View>
       </View>
 
-      <View style={styles.filterContainer}>
-        <Text style={styles.filterLabel}>Lọc theo vai trò:</Text>
-        <View style={styles.filterOptions}>
-          {availableRoles.map((role) => {
-            const roleDisplayNames = {
-              'All': 'Tất cả',
-              'User': 'Người dùng',
-              'Admin': 'Quản trị viên',
-              'Student': 'Học sinh',
-              'Teacher': 'Giáo viên'
-            };
-
-            return (
-              <TouchableOpacity
-                key={role}
-                style={[styles.filterOption, filterRole === role && styles.activeFilterOption]}
-                onPress={() => setFilterRole(role)}
-              >
-                <Text style={[styles.filterText, filterRole === role && styles.activeFilterText]}>
-                  {roleDisplayNames[role] || role}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {loading && !refreshing ? (
+      {loading && filteredUsers.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.BLUE} />
+          <Text style={styles.loadingText}>Đang tải danh sách người dùng...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color={COLORS.ORANGE} />
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -333,33 +247,27 @@ export const User = () => {
               refreshing={refreshing}
               onRefresh={handleRefresh}
               colors={[COLORS.BLUE]}
-              tintColor={COLORS.BLUE}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="people" size={60} color={COLORS.GRAY_LIGHT} />
-              <Text style={styles.emptyText}>
-                {searchQuery || filterRole !== 'All'
-                  ? 'Không tìm thấy người dùng phù hợp'
-                  : 'Chưa có người dùng nào'
-                }
-              </Text>
+              <Ionicons name="people-outline" size={60} color={COLORS.GRAY_LIGHT} />
+              <Text style={styles.emptyText}>Không tìm thấy người dùng nào</Text>
             </View>
           }
           ListFooterComponent={
-            !showAllUsers[filterRole] && filteredUsers.length >= 5 && !loading ? (
+            hasMoreData && filteredUsers.length > 0 ? (
               <TouchableOpacity
                 style={styles.loadMoreButton}
                 onPress={handleLoadMore}
+                disabled={loading}
               >
-                <Text style={styles.loadMoreText}>Tải thêm</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color={COLORS.WHITE} />
+                ) : (
+                  <Text style={styles.loadMoreText}>Tải thêm</Text>
+                )}
               </TouchableOpacity>
-            ) : loading && filteredUsers.length > 0 ? (
-              <View style={styles.loadingMoreContainer}>
-                <ActivityIndicator size="small" color={COLORS.BLUE} />
-                <Text style={styles.loadingMoreText}>Đang tải...</Text>
-              </View>
             ) : null
           }
         />
@@ -577,5 +485,23 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: COLORS.GRAY_TEXT,
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: COLORS.GRAY_TEXT,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: COLORS.BLUE,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  retryButtonText: {
+    color: COLORS.WHITE,
+    fontSize: 14,
+    fontWeight: '500',
   }
 });

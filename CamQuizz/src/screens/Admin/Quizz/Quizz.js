@@ -8,268 +8,302 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
-  Image
+  Image,
+  Modal
 } from 'react-native';
 import COLORS from '../../../constant/colors';
 import { Ionicons } from '@expo/vector-icons';
+import ReportQuizzService from '../../../services/ReportQuizzService';
+import AsyncStorageService from '../../../services/AsyncStorageService';
 
 export const Quizz = () => {
-  const [quizzes, setQuizzes] = useState([]);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('Pending');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(true);
   const [stats, setStats] = useState({
-    totalQuizzes:5,
-    totalParticipants: 500,
-    publicQuizzes: 3,
-    pendingQuizzes: 1,
-    processedQuizzes: 3
+    totalReports: 0,
+    pendingReports: 0,
+    resolvedReports: 0
   });
-  // Mock data for development
-  const mockQuizzes = [
-    {
-      id: 1,
-      name: 'Kiểm tra Toán học cơ bản',
-      image: 'https://placehold.co/600x400/png',
-      duration: 30, // minutes
-      status: 'Public',
-      numberOfAttended: 120,
-      numberOfQuestions: 15,
-      createdAt: '2023-10-15T08:30:00Z',
-      createdBy: 'Nguyễn Văn A'
-    },
-    {
-      id: 2,
-      name: 'Kiểm tra Tiếng Anh TOEIC',
-      image: 'https://placehold.co/600x400/png',
-      duration: 45,
-      status: 'Private',
-      numberOfAttended: 85,
-      numberOfQuestions: 20,
-      createdAt: '2023-11-20T10:15:00Z',
-      createdBy: 'Trần Thị B'
-    },
-    {
-      id: 3,
-      name: 'Kiểm tra Lịch sử Việt Nam',
-      image: 'https://placehold.co/600x400/png',
-      duration: 60,
-      status: 'Public',
-      numberOfAttended: 210,
-      numberOfQuestions: 25,
-      createdAt: '2023-09-05T14:45:00Z',
-      createdBy: 'Lê Văn C'
-    },
-    {
-      id: 4,
-      name: 'Kiểm tra Vật lý đại cương',
-      image: 'https://placehold.co/600x400/png',
-      duration: 40,
-      status: 'Private',
-      numberOfAttended: 0,
-      numberOfQuestions: 18,
-      createdAt: '2023-12-10T09:20:00Z',
-      createdBy: 'Phạm Thị D'
-    },
-    {
-      id: 5,
-      name: 'Kiểm tra Hóa học hữu cơ',
-      image: 'https://placehold.co/600x400/png',
-      duration: 50,
-      status: 'Public',
-      numberOfAttended: 95,
-      numberOfQuestions: 22,
-      createdAt: '2024-01-25T11:30:00Z',
-      createdBy: 'Hoàng Văn E'
-    }
-  ];
+
+  // Modal states
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [adminNote, setAdminNote] = useState('');
+  const [selectedAction, setSelectedAction] = useState('Keep');
+  const [isProcessing, setIsProcessing] = useState(false);
+
 
   useEffect(() => {
-    fetchQuizzes();
-  }, [filterStatus]);
+    fetchReports();
+  }, [filterStatus, searchQuery]);
 
-  const fetchQuizzes = async () => {
-    setLoading(true);
+  const fetchReports = async (isLoadMore = false) => {
     try {
-      // Mock API response
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Filter mock data based on search query and status
-      let filteredQuizzes = [...mockQuizzes];
-
-
-      if (filterStatus !== 'All') {
-        filteredQuizzes = filteredQuizzes.filter(quiz =>
-          quiz.status === filterStatus
-        );
+      if (!isLoadMore) {
+        setLoading(true);
       }
 
-      setQuizzes(filteredQuizzes);
+      // Map filter status to API status
+      let apiStatus = null;
+      if (filterStatus === 'Pending') {
+        apiStatus = 'Pending';
+      } else if (filterStatus === 'Processed') {
+        apiStatus = 'Resolved';
+      }
+
+      const page = isLoadMore ? currentPage + 1 : 1;
+      const { data, pagination } = await ReportQuizzService.getAllReports(
+        searchQuery || null,
+        apiStatus,
+        page,
+        10
+      );
+
+      console.log('Reports data:', data);
+      console.log('Pagination:', pagination);
+
+      if (isLoadMore) {
+        setReports(prevReports => [...prevReports, ...data]);
+        setCurrentPage(page);
+      } else {
+        setReports(data);
+        setCurrentPage(1);
+      }
+
+      setHasMoreData(pagination && pagination.hasNextPage);
+
+      // Update stats
+      // const totalReports = data.length;
+      // const pendingReports = data.filter(report => report.status === 'Pending').length;
+      // const resolvedReports = data.filter(report => report.status === 'Resolved').length;
+
+      // setStats({
+      //   totalReports,
+      //   pendingReports,
+      //   resolvedReports
+      // });
+
     } catch (error) {
-      console.error('Error fetching quizzes:', error);
-      Alert.alert('Error', 'Failed to load quizzes. Please try again.');
+      console.error('Error fetching reports:', error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách báo cáo. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSearch = () => {
-    fetchQuizzes();
+    setCurrentPage(1);
+    setReports([]);
+    fetchReports();
   };
 
-
-  const handleDeleteQuiz = (id) => {
-    const quiz = quizzes.find(q => q.id === id);
-    if (!quiz) return;
-
-    Alert.alert(
-      'Xác nhận xóa',
-      `Bạn có chắc chắn muốn xóa bài kiểm tra "${quiz.name}"?`,
-      [
-        {
-          text: 'Hủy',
-          style: 'cancel'
-        },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: () => {
-            setQuizzes(prevQuizzes => prevQuizzes.filter(q => q.id !== id));
-            Alert.alert('Success', `Đã xóa bài kiểm tra "${quiz.name}"`);
-          }
-        }
-      ]
-    );
+  const handleProcessReport = (report) => {
+    setSelectedReport(report);
+    setAdminNote('');
+    setSelectedAction('Keep');
+    setShowProcessModal(true);
   };
 
-  const handleViewQuizDetails = (id) => {
-    // In a real app, this would navigate to a quiz detail screen
-    const quiz = quizzes.find(q => q.id === id);
-    if (!quiz) return;
+  const handleSubmitProcess = async () => {
+    if (!selectedReport) return;
 
+    try {
+      setIsProcessing(true);
+
+      const adminId = await AsyncStorageService.getUserId();
+
+      const updateData = {
+        status: 'Resolved',
+        action: selectedAction,
+        admin_note: adminNote.trim(),
+        admin_id: adminId
+      };
+
+      console.log('Updating report:', selectedReport.id, updateData);
+
+      // Call API to update report
+      await ReportQuizzService.updateReport(selectedReport.id, updateData);
+
+      // Update local state
+      setReports(prevReports =>
+        prevReports.map(report =>
+          report.id === selectedReport.id
+            ? { ...report, status: 'Resolved', action: selectedAction, admin_note: adminNote.trim() }
+            : report
+        )
+      );
+
+      Alert.alert('Thành công', 'Báo cáo đã được xử lý thành công');
+      setShowProcessModal(false);
+      setSelectedReport(null);
+      setAdminNote('');
+      setSelectedAction('Keep');
+
+      // Refresh data
+      fetchReports();
+
+    } catch (error) {
+      console.error('Error processing report:', error);
+      Alert.alert('Lỗi', 'Không thể xử lý báo cáo. Vui lòng thử lại.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleViewReportDetails = (report) => {
     Alert.alert(
-      'Chi tiết bài kiểm tra',
-      `ID: ${quiz.id}\nTên: ${quiz.name}\nThời gian: ${quiz.duration} phút\nSố câu hỏi: ${quiz.numberOfQuestions}\nLượt tham gia: ${quiz.numberOfAttended}\nTrạng thái: ${quiz.status}\nNgười tạo: ${quiz.createdBy}\nNgày tạo: ${new Date(quiz.createdAt).toLocaleDateString('vi-VN')}`
+      'Chi tiết báo cáo',
+      `Quiz: ${report.quizName}\nLý do: ${report.message}\nNgười báo cáo: ${report.reporterName || 'N/A'}\nTrạng thái: ${report.status === 'Pending' ? 'Chờ xử lý' : 'Đã xử lý'}\nNgày tạo: ${new Date(report.createdAt).toLocaleDateString('vi-VN')}`
     );
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Public':
+      case 'Pending':
+        return COLORS.ORANGE;
+      case 'Resolved':
         return COLORS.GREEN;
-      case 'Private':
-        return COLORS.BLUE;
       default:
         return COLORS.GRAY_LIGHT;
     }
   };
 
-  const renderQuizItem = ({ item }) => (
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'Chờ xử lý';
+      case 'Resolved':
+        return 'Đã xử lý';
+      default:
+        return status;
+    }
+  };
+
+  const renderReportItem = ({ item }) => (
     <View style={styles.quizCard}>
       <TouchableOpacity
         style={styles.quizHeader}
-        onPress={() => handleViewQuizDetails(item.id)}
+        onPress={() => handleViewReportDetails(item)}
       >
-        <Image
-          source={{ uri: item.image }}
-          style={styles.quizImage}
-          defaultSource={require('../../../../assets/icon.png')}
-        />
+        <View style={styles.quizImagePlaceholder}>
+          <Ionicons name="document-text-outline" size={40} color={COLORS.BLUE} />
+        </View>
         <View style={styles.quizInfo}>
-          <Text style={styles.quizName}>{item.name}</Text>
-          <Text style={styles.quizCreator}>Người tạo: {item.createdBy}</Text>
+          <Text style={styles.quizName}>{item.quiz_name || 'Quiz không xác định'}</Text>
+          <Text style={styles.quizCreator}>Người báo cáo: {item.reporter_name || 'N/A'}</Text>
           <View style={styles.quizMeta}>
             <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={14} color={COLORS.GRAY_TEXT} />
-              <Text style={styles.metaText}>{item.duration} phút</Text>
+              <Ionicons name="calendar-outline" size={14} color={COLORS.GRAY_TEXT} />
+              <Text style={styles.metaText}>
+                {new Date(item.created_at).toLocaleDateString('vi-VN')}
+              </Text>
             </View>
             <View style={styles.metaItem}>
-              <Ionicons name="help-circle-outline" size={14} color={COLORS.GRAY_TEXT} />
-              <Text style={styles.metaText}>{item.numberOfQuestions} câu hỏi</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={14} color={COLORS.GRAY_TEXT} />
-              <Text style={styles.metaText}>{item.numberOfAttended} lượt thi</Text>
+              <Ionicons name="alert-circle-outline" size={14} color={COLORS.GRAY_TEXT} />
+              <Text style={styles.metaText}>{item.total_reports || 1} báo cáo</Text>
             </View>
           </View>
+          <Text style={styles.reportMessage} numberOfLines={2}>
+            Lý do: {item.message}
+          </Text>
         </View>
         <View style={[
           styles.statusBadge,
           { backgroundColor: getStatusColor(item.status) }
         ]}>
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.quizActions}>
         <TouchableOpacity
           style={styles.actionButton}
-        >
-          <Ionicons name="eye-outline" size={20} color={COLORS.BLUE} />
-          <Text style={styles.actionText}>Xem tố cáo</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleViewQuizDetails(item.id)}
+          onPress={() => handleViewReportDetails(item)}
         >
           <Ionicons name="eye-outline" size={20} color={COLORS.BLUE} />
           <Text style={styles.actionText}>Xem chi tiết</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteQuiz(item.id)}
-        >
-          <Ionicons name="trash-outline" size={20} color={COLORS.RED} />
-          <Text style={[styles.actionText, styles.deleteText]}>Xóa</Text>
-        </TouchableOpacity>
+        {item.status === 'Pending' && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.processButton]}
+            onPress={() => handleProcessReport(item)}
+          >
+            <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.GREEN} />
+            <Text style={[styles.actionText, styles.processText]}>Xử lý</Text>
+          </TouchableOpacity>
+        )}
+
+        {item.status === 'Resolved' && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.resolvedButton]}
+            disabled={true}
+          >
+            <Ionicons name="checkmark-done-outline" size={20} color={COLORS.GRAY_TEXT} />
+            <Text style={[styles.actionText, styles.resolvedText]}>Đã xử lý</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.totalQuizzes}</Text>
-          <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {stats.totalParticipants}
-          </Text>
-          <Text style={styles.statLabel}>Tổng lượt thi</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>
-            {stats.publicQuizzes}
-          </Text>
-          <Text style={styles.statLabel}>Bài kiểm tra công khai</Text>
+      {/* Search Header */}
+      <View style={styles.header}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm báo cáo..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+          />
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Ionicons name="search" size={20} color={COLORS.WHITE} />
+          </TouchableOpacity>
         </View>
       </View>
 
-
+      {/* Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.pendingQuizzes}</Text>
+          <Text style={styles.statValue}>{stats.totalReports}</Text>
+          <Text style={styles.statLabel}>Tổng báo cáo</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.pendingReports}</Text>
           <Text style={styles.statLabel}>Chờ xử lý</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{stats.processedQuizzes}</Text>
+          <Text style={styles.statValue}>{stats.resolvedReports}</Text>
           <Text style={styles.statLabel}>Đã xử lý</Text>
         </View>
       </View>
+
+
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.totalReports}</Text>
+          <Text style={styles.statLabel}>Tổng lượt tham gia</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{stats.pendingReports}</Text>
+          <Text style={styles.statLabel}>Số bài kiểm tra</Text>
+        </View>
+        
+      </View>
+      {/* Filter */}
       <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Lọc theo trạng thái:</Text>
         <View style={styles.filterOptions}>
-          <TouchableOpacity
-            style={[styles.filterOption, filterStatus === 'All' && styles.activeFilterOption]}
-            onPress={() => setFilterStatus('All')}
-          >
-            <Text style={[styles.filterText, filterStatus === 'All' && styles.activeFilterText]}>
-              Tất cả
-            </Text>
-          </TouchableOpacity>
+          
+          
+        
           <TouchableOpacity
             style={[styles.filterOption, filterStatus === 'Pending' && styles.activeFilterOption]}
             onPress={() => setFilterStatus('Pending')}
@@ -289,26 +323,129 @@ export const Quizz = () => {
         </View>
       </View>
 
-
-
+      {/* Reports List */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.BLUE} />
+          <Text style={styles.loadingText}>Đang tải báo cáo...</Text>
         </View>
       ) : (
         <FlatList
-          data={quizzes}
-          renderItem={renderQuizItem}
-          keyExtractor={item => item.id.toString()}
+          data={reports}
+          renderItem={renderReportItem}
+          keyExtractor={item => item.created_at.toString()}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="document" size={60} color={COLORS.GRAY_LIGHT} />
-              <Text style={styles.emptyText}>Không tìm thấy bài kiểm tra</Text>
+              <Ionicons name="document-text-outline" size={60} color={COLORS.GRAY_LIGHT} />
+              <Text style={styles.emptyText}>Không tìm thấy báo cáo nào</Text>
             </View>
           }
+          onEndReached={() => {
+            if (hasMoreData && !loading) {
+              fetchReports(true);
+            }
+          }}
+          onEndReachedThreshold={0.1}
         />
       )}
+
+      {/* Process Report Modal */}
+      <Modal
+        visible={showProcessModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowProcessModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Xử lý báo cáo</Text>
+              <TouchableOpacity onPress={() => setShowProcessModal(false)}>
+                <Ionicons name="close" size={24} color={COLORS.GRAY_TEXT} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Quiz: {selectedReport?.quizName}</Text>
+              <Text style={styles.modalLabel}>Lý do báo cáo: {selectedReport?.message}</Text>
+
+              <Text style={styles.modalLabel}>Hành động xử lý:</Text>
+              <View style={styles.actionOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionOption,
+                    selectedAction === 'Keep' && styles.activeActionOption
+                  ]}
+                  onPress={() => setSelectedAction('Keep')}
+                >
+                  <Ionicons
+                    name={selectedAction === 'Keep' ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={selectedAction === 'Keep' ? COLORS.BLUE : COLORS.GRAY_TEXT}
+                  />
+                  <Text style={[
+                    styles.actionOptionText,
+                    selectedAction === 'Keep' && styles.activeActionOptionText
+                  ]}>
+                    Giữ quiz
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.actionOption,
+                    selectedAction === 'SoftDelete' && styles.activeActionOption
+                  ]}
+                  onPress={() => setSelectedAction('SoftDelete')}
+                >
+                  <Ionicons
+                    name={selectedAction === 'SoftDelete' ? 'radio-button-on' : 'radio-button-off'}
+                    size={20}
+                    color={selectedAction === 'SoftDelete' ? COLORS.BLUE : COLORS.GRAY_TEXT}
+                  />
+                  <Text style={[
+                    styles.actionOptionText,
+                    selectedAction === 'SoftDelete' && styles.activeActionOptionText
+                  ]}>
+                    Xóa quiz
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.modalLabel}>Ghi chú admin:</Text>
+              <TextInput
+                style={styles.noteInput}
+                placeholder="Nhập ghi chú xử lý..."
+                value={adminNote}
+                onChangeText={setAdminNote}
+                multiline={true}
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowProcessModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.submitButton]}
+                onPress={handleSubmitProcess}
+                disabled={isProcessing}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isProcessing ? 'Đang xử lý...' : 'Lưu'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -519,5 +656,139 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 16,
     color: COLORS.GRAY_TEXT,
-  }
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: COLORS.GRAY_TEXT,
+    textAlign: 'center',
+  },
+  quizImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: COLORS.GRAY_BG,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportMessage: {
+    fontSize: 12,
+    color: COLORS.GRAY_TEXT,
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  processButton: {
+    borderRightWidth: 0,
+  },
+  processText: {
+    color: COLORS.GREEN,
+  },
+  resolvedButton: {
+    borderRightWidth: 0,
+  },
+  resolvedText: {
+    color: COLORS.GRAY_TEXT,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.BLACK,
+  },
+  modalBody: {
+    marginBottom: 20,
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.BLACK,
+    marginBottom: 8,
+  },
+  actionOptions: {
+    marginBottom: 16,
+  },
+  actionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activeActionOption: {
+    backgroundColor: COLORS.BLUE_LIGHT,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+  },
+  actionOptionText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: COLORS.BLACK,
+  },
+  activeActionOptionText: {
+    color: COLORS.BLUE,
+    fontWeight: '500',
+  },
+  noteInput: {
+    borderWidth: 1,
+    borderColor: COLORS.GRAY_LIGHT,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 80,
+    backgroundColor: COLORS.WHITE,
+    marginBottom: 16,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: COLORS.GRAY_BG,
+    borderWidth: 1,
+    borderColor: COLORS.GRAY_LIGHT,
+  },
+  submitButton: {
+    backgroundColor: COLORS.BLUE,
+  },
+  cancelButtonText: {
+    color: COLORS.GRAY_TEXT,
+    fontWeight: '500',
+  },
+  submitButtonText: {
+    color: COLORS.WHITE,
+    fontWeight: '500',
+  },
 });

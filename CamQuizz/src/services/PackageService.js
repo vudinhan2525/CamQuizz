@@ -89,5 +89,16 @@ class PackageService {
             throw error;
         }
     }
+    static async getCurrentQuota(userId){
+        try {
+            const response = await apiClient.get(`/auth/quota/${userId}`);
+            console.log("response", response.data)
+            return response.data;
+        }
+        catch (error) {
+            console.error('Error get quota:', error);
+            throw error;
+        }
+    }
 }
 export default PackageService;

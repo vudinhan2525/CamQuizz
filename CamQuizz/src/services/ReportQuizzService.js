@@ -75,4 +75,18 @@ export default class ReportQuizzService {
             throw error;
         }
     }
+
+    static async getStatistics() {
+        try {
+            console.log('Getting quiz report statistics...');
+
+            const response = await apiClient.get('/quiz-reports/statistics');
+            console.log('Statistics response:', response.data);
+
+            return response.data.data;
+        } catch (error) {
+            console.error('Error fetching statistics:', error);
+            throw error;
+        }
+    }
 }

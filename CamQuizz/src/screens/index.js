@@ -42,6 +42,7 @@ const SCREENS = {
     USER_PACKAGE: 'Gói',
     REVENUE: 'Doanh thu',
     CREATE_PACKAGE: 'Tạo gói',
+    QUIZ_REPORT_DETAIL: 'Chi tiết báo cáo quiz',
 };
   
   export default SCREENS;

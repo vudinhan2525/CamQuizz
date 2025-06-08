@@ -132,12 +132,32 @@ class StudySetService {
     }
 
     // Cập nhật study set
-    static async updateStudySet(id, studySetData) {
+    static async updateStudySet(studySetData) {
         try {
-            const response = await apiClient.put(`/study-sets/${id}`, studySetData);
+            // Đảm bảo dữ liệu đúng định dạng theo backend API
+            const formattedData = {
+                id: parseInt(studySetData.id),
+                user_id: parseInt(studySetData.user_id),
+                name: studySetData.name
+            };
+
+            console.log('Updating study set with data:', formattedData);
+
+            const response = await apiClient.put('/study-sets', formattedData);
+
+            if (response.status !== 200) {
+                throw new Error('Failed to update study set');
+            }
+
+            console.log('Study set updated successfully:', response.data);
             return response.data;
         } catch (error) {
-            console.error(`Error updating study set with ID ${id}:`, error);
+            console.error(`Error updating study set:`, error);
+
+            if (error.response?.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
             throw error;
         }
     }

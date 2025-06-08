@@ -125,7 +125,7 @@ public class QuizzesService : IQuizzesService
         {
             existingQuiz.GenreId = updateQuiz.GenreId.Value;
         }
-        if (updateQuiz.Status != default)
+        if (updateQuiz.Status != existingQuiz.Status)
         {
             existingQuiz.Status = updateQuiz.Status;
         }

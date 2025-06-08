@@ -32,6 +32,7 @@ const UpdateAccess = ({ navigation, route }) => {
     const fetchQuizData = async () => {
         try {
             const data = await QuizzService.getQuizzById(quizId);
+            console.log("quiz 2",data)
             setQuiz(data);
             setSelectedGroups(data.shared_groups?.map(g => g.group_id) || []);
         } catch (error) {
@@ -50,10 +51,25 @@ const UpdateAccess = ({ navigation, route }) => {
     const handleUpdateAccess = async () => {
         try {
             setLoading(true);
+            if (
+                quiz.status !== "Public" &&
+                selectedGroups.length === 0 &&
+                (!quiz.shared_users || quiz.shared_users.length === 0)
+              )              
+            {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Thiếu thông tin',
+                    text2: 'Vui lòng nhập email người dùng hoặc chọn nhóm để chia sẻ',
+                    visibilityTime: 2000,
+                  });
+                  return;
+            }
             const updateData = {
-                ...quiz,
-                shared_groups: selectedGroups,
-                shared_users: quiz.shared_users.map(u => u.email)
+                quizz_id:quizId,
+                status:quiz.status,
+                shared_groups: quiz.status!=="Public"?selectedGroups.map(g => g.toString()):[],
+                shared_users: quiz.status!=="Public"?quiz.shared_users.map(u => u.email):[]
             };
             console.log(updateData)
             await QuizzService.updateQuizz(updateData);

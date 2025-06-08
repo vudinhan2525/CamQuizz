@@ -48,6 +48,7 @@ class QuizzService {
     static async updateQuizz(updateQuizDto) {
         try {
             const response = await apiClient.put('/quiz', updateQuizDto);
+            console.log("update response",response)
             return response.data;
         } catch (error) {
             console.error(`Error updating quiz with ID ${updateQuizDto.id}:`, error);

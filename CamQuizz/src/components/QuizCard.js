@@ -21,19 +21,30 @@ const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEd
       onEdit(quiz, onDelete);
     }
   };
-  const handleEditAccess = ()=>{
+  const handleEditAccess = () => {
     if (onEdit) {
       onEditAccess(quiz);
     }
   }
+  const getStatus = (status) =>{
+    console.log("status",status)
+    if(status==="Public")
+      return "Công khai"
+    else 
+      return "Riêng tư"
+  } 
   return (
     <TouchableOpacity style={styles.quizCard} onPress={handlePress}>
-      <Image source={{ uri: quiz.image || tmpUrl }} style={styles.quizImage} />
+
       <View style={styles.quizInfo}>
+        <Image source={{ uri: quiz.image || tmpUrl }} style={styles.quizImage} />
         <Text style={styles.quizTitle}>{quiz.name}</Text>
         <Text style={styles.quizQuestions}>{quiz.number_of_questions} câu hỏi</Text>
         <View style={styles.bottomRow}>
           <Text style={styles.quizAttempts}>{quiz.number_of_attended} {attemptText}</Text>
+          {showOptions && 
+                    <Text style={[styles.quizTitle, {color:COLORS.BLUE}]}>{getStatus(quiz.status)}</Text>
+                    }
         </View>
         {showOptions && (
           <TouchableOpacity
@@ -41,13 +52,13 @@ const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEd
             onPress={handleEditPress}
           >
             <Ionicons name="create-outline" size={20} color={COLORS.WHITE} />
-            <Text style={{marginLeft:8, textAlignVertical: 'center', color: COLORS.WHITE }}>Chỉnh sửa</Text>
+            <Text style={{ marginLeft: 8, textAlignVertical: 'center', color: COLORS.WHITE }}>Chỉnh sửa</Text>
           </TouchableOpacity>
         )}
 
         {showOptions && (
           <TouchableOpacity
-            style={{  padding: 4, borderRadius: 4,backgroundColor: COLORS.WHITE }}
+            style={{ padding: 4, borderRadius: 4, backgroundColor: COLORS.WHITE }}
             onPress={handleEditAccess}
           >
             <Text style={{ textAlign: 'center', color: COLORS.BLUE }}>Thiết lập quyền truy cập</Text>
@@ -101,9 +112,9 @@ const styles = StyleSheet.create({
   editButton: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: COLORS.BLUE ,
+    backgroundColor: COLORS.BLUE,
     flexDirection: 'row',
-    marginTop:8
+    marginTop: 8
   },
 });
 

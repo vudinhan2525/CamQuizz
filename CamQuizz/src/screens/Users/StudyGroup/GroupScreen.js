@@ -193,7 +193,7 @@ const GroupScreen = ({ navigation, route }) => {
       <>
         <View style={styles.quizHeader}>
           <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
-          <TouchableOpacity
+          {!isLeader&&<TouchableOpacity
             style={styles.quitButton}
             onPress={() => {
               Alert.alert(
@@ -213,10 +213,9 @@ const GroupScreen = ({ navigation, route }) => {
                 ]
               );
             }}
-
           >
             <Text style={styles.quitText}>Rời nhóm</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
 
         <FlatList

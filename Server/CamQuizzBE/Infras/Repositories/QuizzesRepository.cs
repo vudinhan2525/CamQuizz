@@ -419,4 +419,58 @@ public class QuizzesRepository(
             }
         }
     }
+
+    public async Task RemoveSharedUserAsync(int quizId, int userId)
+    {
+        var sharedUser = await _context.UserShared
+            .FirstOrDefaultAsync(us => us.QuizId == quizId && us.UserId == userId);
+
+        if (sharedUser != null)
+        {
+            _context.UserShared.Remove(sharedUser);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Removed shared user {UserId} from quiz {QuizId}", userId, quizId);
+        }
+    }
+
+    public async Task RemoveSharedGroupAsync(int quizId, int groupId)
+    {
+        var sharedGroup = await _context.GroupShared
+            .FirstOrDefaultAsync(gs => gs.QuizId == quizId && gs.GroupId == groupId);
+
+        if (sharedGroup != null)
+        {
+            _context.GroupShared.Remove(sharedGroup);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Removed shared group {GroupId} from quiz {QuizId}", groupId, quizId);
+        }
+    }
+
+    public async Task RemoveAllSharedUsersAsync(int quizId)
+    {
+        var sharedUsers = await _context.UserShared
+            .Where(us => us.QuizId == quizId)
+            .ToListAsync();
+
+        if (sharedUsers.Any())
+        {
+            _context.UserShared.RemoveRange(sharedUsers);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Removed all shared users from quiz {QuizId}", quizId);
+        }
+    }
+
+    public async Task RemoveAllSharedGroupsAsync(int quizId)
+    {
+        var sharedGroups = await _context.GroupShared
+            .Where(gs => gs.QuizId == quizId)
+            .ToListAsync();
+
+        if (sharedGroups.Any())
+        {
+            _context.GroupShared.RemoveRange(sharedGroups);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Removed all shared groups from quiz {QuizId}", quizId);
+        }
+    }
 }

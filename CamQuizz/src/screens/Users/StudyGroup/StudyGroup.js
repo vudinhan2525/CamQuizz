@@ -288,7 +288,10 @@ export const StudyGroup = ({ navigation, route }) => {
                       visibilityTime: 2000,
                     });
                   else
+                  { 
+                    console.log("lead",userId === group.owner_id)
                     navigation.navigate(SCREENS.STUDY_GROUP_DETAIL, { group, isLeader: userId === group.owner_id })
+                  }
                 }}
                 isLeader={group.isOwn}
               />

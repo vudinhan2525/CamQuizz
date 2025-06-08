@@ -10,6 +10,7 @@ import GenreService from '../../../services/GenreService';
 import { useHubConnection } from '../../../contexts/SignalRContext';
 import AsyncStorageService from '../../../services/AsyncStorageService';
 import Toast from 'react-native-toast-message';
+import { getUserById } from '../../../services/AuthService';
 const QuizDetail = ({ navigation, route }) => {
     //const { quiz } = route.params;
     const { hubConnection, setHubConnection } = useHubConnection();
@@ -20,7 +21,7 @@ const QuizDetail = ({ navigation, route }) => {
         const fetchQuiz = async () => {
             try {
                 const quizData = await QuizzService.getQuizzById(quizId);
-                console.log('Quiz data:', quizData);
+                console.log(`Quiz data:`, quizData);
                 const quiz = {
                     id: quizData.id,
                     title: quizData.name,
@@ -34,7 +35,12 @@ const QuizDetail = ({ navigation, route }) => {
                 }
                 const genre = await GenreService.getGenreById(quizData.genre_id);
                 quiz.topic = genre.name;
+                const authData = await getUserById(quizData.user_id)
+                quiz.authorName = authData.first_name+" "+authData.last_name
+                quiz.authorAvatar = authData.photos
                 setQuiz(quiz);
+
+                return 
             } catch (error) {
                 console.error('Error fetching quiz data:', error);
             }

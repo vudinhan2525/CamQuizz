@@ -369,6 +369,117 @@ public class ReportService : IReportService
         return reports;
     }
 
+    public async Task<List<OldAttemptReportDto>> GetHostedSessionAttemptsAsync(int hostId, int limit, int page, string sort)
+    {
+        if (hostId <= 0)
+            throw new ArgumentException("Invalid host ID", nameof(hostId));
+        
+        if (limit <= 0)
+            throw new ArgumentException("Limit must be greater than 0", nameof(limit));
+        
+        if (page <= 0)
+            throw new ArgumentException("Page must be greater than 0", nameof(page));
+
+        try
+        {
+            _logger.LogInformation($"Getting hosted session attempts for host {hostId}");
+
+            var query = _context.QuizAttempts
+                .Where(a => a.RoomId != null)  // Only get attempts from hosted sessions
+                .Include(a => a.Quiz)
+                    .ThenInclude(q => q.Genre)
+                .Include(a => a.User)
+                .Where(a => a.Quiz.UserId == hostId);  // Filter by quiz host
+
+            query = sort switch
+            {
+                "attempt_date_desc" => query.OrderByDescending(x => x.StartTime),
+                "attempt_date" => query.OrderBy(x => x.StartTime),
+                "score_desc" => query.OrderByDescending(x => x.Score),
+                "score" => query.OrderBy(x => x.Score),
+                _ => query.OrderByDescending(x => x.StartTime)
+            };
+
+            var results = await query
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .Select(x => new OldAttemptReportDto
+                {
+                    AttemptNumber = x.Id,
+                    RoomId = x.RoomId,
+                    Timestamp = x.StartTime,
+                    Score = x.Score,
+                    Duration = x.EndTime.HasValue ? x.EndTime.Value - x.StartTime : null,
+                    QuizId = x.Quiz.Id,
+                    QuizName = x.Quiz.Name,
+                    QuizImage = x.Quiz.Image,
+                    GenreId = x.Quiz.GenreId,
+                    GenreName = x.Quiz.Genre.Name,
+                    TotalQuestions = x.Quiz.NumberOfQuestions,
+                    TotalCorrect = x.UserAnswers.Count(ua => ua.Answer != null && ua.Answer.IsCorrect),
+                    AccuracyRate = x.Quiz.NumberOfQuestions > 0 ?
+                        (double)x.UserAnswers.Count(ua => ua.Answer != null && ua.Answer.IsCorrect) / x.Quiz.NumberOfQuestions * 100 : 0,
+                    QuestionReviews = new List<QuestionReviewDto>()
+                })
+                .ToListAsync();
+
+            // Process additional information for each attempt
+            foreach (var report in results)
+            {
+                var userAnswers = await _context.UserAnswers
+                    .Include(ua => ua.Question)
+                        .ThenInclude(q => q.Answers)
+                    .Include(ua => ua.Answer)
+                    .Where(ua => ua.Attempt.Id == report.AttemptNumber)
+                    .ToListAsync();
+
+                report.TotalCorrect = userAnswers.Count(ua => ua.Answer?.IsCorrect == true);
+                report.AccuracyRate = report.TotalQuestions > 0
+                    ? (double)report.TotalCorrect / report.TotalQuestions * 100
+                    : 0;
+
+                foreach (var answer in userAnswers)
+                {
+                    var review = new QuestionReviewDto
+                    {
+                        QuestionId = answer.Question.Id,
+                        QuestionName = answer.Question.Name
+                    };
+
+                    if (answer.Answer != null)
+                    {
+                        review.SelectedAnswers.Add(new SelectedAnswerDto
+                        {
+                            AnswerId = answer.Answer.Id,
+                            AnswerText = answer.Answer.Answer,
+                            IsCorrect = answer.Answer.IsCorrect
+                        });
+                    }
+
+                    var correctAnswers = answer.Question.Answers.Where(a => a.IsCorrect).ToList();
+                    foreach (var correctAnswer in correctAnswers)
+                    {
+                        review.CorrectAnswers.Add(new SelectedAnswerDto
+                        {
+                            AnswerId = correctAnswer.Id,
+                            AnswerText = correctAnswer.Answer,
+                            IsCorrect = true
+                        });
+                    }
+
+                    report.QuestionReviews.Add(review);
+                }
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving hosted session attempts for host {HostId}", hostId);
+            throw;
+        }
+    }
+
     public async Task<QuizPlayReportDto> GenerateQuizPlayReportAsync(string gameId)
     {
         var attempts = await _context.QuizAttempts

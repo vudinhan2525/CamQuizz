@@ -1,22 +1,20 @@
-
+using System.Text.Json.Serialization;
 using CamQuizzBE.Domain.Enums;
 
 namespace CamQuizzBE.Applications.DTOs.Quizzes;
 
 public class UpdateQuizDto
 {
-
-    [Required]
+    [JsonPropertyName("quizz_id")]
     public int Id { get; set; }
 
+    [JsonPropertyName("status")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public QuizStatus Status { get; set; }
 
-    public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("shared_users")]
+    public List<string> SharedUsers { get; set; } = new();
 
-    public string Image { get; set; } = string.Empty;
-
-    public int? GenreId { get; set; }
-
-    public QuizStatus? Status { get; set; }
-
+    [JsonPropertyName("shared_groups")]
+    public List<string> SharedGroups { get; set; } = new();
 }
-

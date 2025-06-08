@@ -10,4 +10,5 @@ public interface IReportService
     Task<List<OldAttemptReportDto>> GetAttemptsByUserAsync(int userId, int limit, int page, string sort);
     Task<List<QuizHistoryDto>> GetMyQuizHistoryAsync(int userId, int? limit = 10, int? page = 1);
     Task<QuizPlayReportDto> GenerateQuizPlayReportAsync(string gameId);
+    Task<List<OldAttemptReportDto>> GetHostedSessionAttemptsAsync(int hostId, int limit, int page, string sort);
 }

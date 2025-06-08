@@ -104,15 +104,47 @@ public class QuizzesService : IQuizzesService
             throw new KeyNotFoundException("Quiz not found.");
         }
 
-        // Update properties
-        existingQuiz.Name = updateQuiz.Name ?? existingQuiz.Name;
-        existingQuiz.Image = updateQuiz.Image ?? existingQuiz.Image;
-        existingQuiz.GenreId = updateQuiz.GenreId ?? existingQuiz.GenreId;
-        existingQuiz.Status = updateQuiz.Status ?? existingQuiz.Status;
+        // Update status
+        existingQuiz.Status = updateQuiz.Status;
         existingQuiz.UpdatedAt = DateTime.UtcNow;
 
+        // Update quiz first
         await _quizzesRepo.UpdateAsync(existingQuiz);
-        return existingQuiz;
+
+        // Handle shared users
+        foreach (var email in updateQuiz.SharedUsers)
+        {
+            var user = await _userRepository.GetUserByEmailAsync(email);
+            if (user != null && !await _quizzesRepo.IsQuizSharedWithUserAsync(updateQuiz.Id, user.Id))
+            {
+                await _quizzesRepo.ShareQuizWithUserAsync(new UserShared
+                {
+                    QuizId = updateQuiz.Id,
+                    OwnerId = existingQuiz.UserId,
+                    UserId = user.Id
+                });
+            }
+        }
+
+        // Handle shared groups
+        foreach (var groupIdStr in updateQuiz.SharedGroups)
+        {
+            if (int.TryParse(groupIdStr, out int groupId))
+            {
+                var group = await _groupRepository.GetGroupByIdAsync(groupId);
+                if (group != null)
+                {
+                    await _quizzesRepo.ShareQuizWithGroupAsync(new GroupShared
+                    {
+                        QuizId = updateQuiz.Id,
+                        GroupId = groupId,
+                        OwnerId = existingQuiz.UserId
+                    });
+                }
+            }
+        }
+
+        return await _quizzesRepo.GetByIdAsync(updateQuiz.Id);
     }
 
     public async Task<ShareQuizByEmailResponse> ShareQuizByEmailAsync(ShareQuizByEmailDto request)

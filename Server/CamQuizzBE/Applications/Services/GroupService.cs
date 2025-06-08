@@ -14,15 +14,18 @@ public class GroupService : IGroupService
     private readonly IGroupRepository _groupRepo;
     private readonly IUserRepository _userRepo;
     private readonly IQuizzesRepository _quizRepo;
+    private readonly IUserService _userService;
 
     public GroupService(
         IGroupRepository groupRepo,
         IUserRepository userRepo,
-        IQuizzesRepository quizRepo)
+        IQuizzesRepository quizRepo,
+        IUserService userService)
     {
         _groupRepo = groupRepo ?? throw new ArgumentNullException(nameof(groupRepo));
         _userRepo = userRepo ?? throw new ArgumentNullException(nameof(userRepo));
         _quizRepo = quizRepo ?? throw new ArgumentNullException(nameof(quizRepo));
+        _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     }
     public async Task<IEnumerable<GroupDto>> GetMyGroupsAsync(int userId, string status = "Active", bool isOwner = true)
     {
@@ -92,17 +95,17 @@ public class GroupService : IGroupService
         var sharedQuizzes = await GetSharedQuizzesAsync(id);
 
         group.OwnerName = $"{owner?.FirstName} {owner?.LastName}".Trim();
-        group.SharedQuizzes = sharedQuizzes.Select(sq => new SharedQuizDto
+        group.SharedQuizzes = sharedQuizzes.Where(sq => sq.Quiz != null).Select(sq => new SharedQuizDto
         {
             QuizId = sq.QuizId,
-            QuizName = sq.Quiz.Name,
-            Image = sq.Quiz.Image,
-            Duration = sq.Quiz.Duration,
-            NumberOfQuestions = sq.Quiz.NumberOfQuestions,
+            QuizName = sq.Quiz?.Name ?? string.Empty,
+            Image = sq.Quiz?.Image ?? string.Empty,
+            Duration = sq.Quiz?.Duration ?? 0,
+            NumberOfQuestions = sq.Quiz?.NumberOfQuestions ?? 0,
             SharedById = sq.SharedById,
-            SharedByName = $"{sq.SharedBy.FirstName} {sq.SharedBy.LastName}",
+            SharedByName = string.Empty,
             SharedAt = sq.SharedAt,
-            Status = sq.Quiz.Status
+            Status = sq.Quiz?.Status ?? QuizStatus.Public
         }).ToList();
 
         return group;
@@ -398,21 +401,30 @@ public class GroupService : IGroupService
         if (quiz == null)
             throw new NotFoundException("Quiz not found");
 
-        var existingShare = await _groupRepo.GetSharedQuizAsync(groupId, quizId);
+        // Check for existing share in GroupShared
+        var existingShare = await _quizRepo.GetSharedQuizWithGroupAsync(quizId, groupId);
         if (existingShare != null)
             throw new ValidatorException("Quiz is already shared with this group");
 
-        var sharedQuiz = new GroupQuiz
+        // Create entry in GroupShared table
+        var groupShared = new GroupShared
+        {
+            QuizId = quizId,
+            GroupId = groupId,
+            OwnerId = sharerId
+        };
+
+        await _quizRepo.ShareQuizWithGroupAsync(groupShared);
+
+
+        // Return GroupQuiz object with essential properties
+        return new GroupQuiz
         {
             GroupId = groupId,
             QuizId = quizId,
-            SharedById = sharerId
+            SharedById = sharerId,
+            SharedAt = DateTime.UtcNow
         };
-
-        await _groupRepo.AddSharedQuizAsync(sharedQuiz);
-        await _groupRepo.SaveChangesAsync();
-
-        return sharedQuiz;
     }
 
     public async Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(int groupId)
@@ -463,12 +475,11 @@ public class GroupService : IGroupService
                 Duration = gq.Quiz?.Duration ?? 0,
                 NumberOfQuestions = gq.Quiz?.NumberOfQuestions ?? 0,
                 SharedById = gq.SharedById,
-                SharedByName = gq.SharedBy != null ?
-                    $"{gq.SharedBy.FirstName} {gq.SharedBy.LastName}".Trim() : "",
+                SharedByName = string.Empty, // Remove SharedByName since we don't need user info
                 SharedAt = gq.SharedAt,
                 Status = gq.Quiz?.Status ?? QuizStatus.Public,
                 GroupId = gq.GroupId,
-                GroupName = gq.Group?.Name ?? ""
+                GroupName = string.Empty // Remove GroupName since we don't need it
             })
             .ToList();
     }

@@ -7,7 +7,7 @@ import PackageService from '../../../services/PackageService'
 import AsyncStorageService from '../../../services/AsyncStorageService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Toast from 'react-native-toast-message';
-
+import * as Linking from 'expo-linking';
 const UserPackage = ({ navigation }) => {
   const [currentQuota, setCurrentQuota] = useState(null);
   const [packages, setPackages] = useState();
@@ -61,6 +61,29 @@ const UserPackage = ({ navigation }) => {
       subscription.remove();
     };
   }, [paymentRequestId, isProcessingPayment]);
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      const data = Linking.parse(url);
+      if (data.path === 'payment-result') {
+        // Force kiểm tra lại quota
+        setIsProcessingPayment(true);
+        AsyncStorageService.getUserId().then(userId => {
+          PackageService.getCurrentQuota(userId).then(updatedQuota => {
+            setCurrentQuota(updatedQuota);
+            setIsProcessingPayment(false);
+            setPaymentRequestId(null);
+            Toast.show({
+              type: 'success',
+              text1: `Thanh toán thành công lúc ${new Date(updatedQuota.updated_at).toLocaleString('vi-VN')}`,
+              text2: 'Đã cập nhật số lượng quiz',
+            });
+          });
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   const handlePackagePress = async (pkg) => {
     try {
@@ -103,13 +126,13 @@ const UserPackage = ({ navigation }) => {
           </Text>
         </View>
         {
-        item.price !== 0 &&
-        <TouchableOpacity
-          style={styles.upgradeButton}
-          onPress={() => handlePackagePress(item)}
-        >
-          <Text style={styles.upgradeButtonText}>Mua gói</Text>
-        </TouchableOpacity>
+          item.price !== 0 &&
+          <TouchableOpacity
+            style={styles.upgradeButton}
+            onPress={() => handlePackagePress(item)}
+          >
+            <Text style={styles.upgradeButtonText}>Mua gói</Text>
+          </TouchableOpacity>
         }
       </View>
     );
@@ -227,7 +250,7 @@ const styles = StyleSheet.create({
   },
   packageDetails: {
     gap: 4,
-    flex:1
+    flex: 1
   },
   detailText: {
     fontSize: 14,

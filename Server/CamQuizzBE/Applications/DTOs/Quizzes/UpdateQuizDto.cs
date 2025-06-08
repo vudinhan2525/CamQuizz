@@ -8,10 +8,9 @@ public class UpdateQuizDto
     [JsonPropertyName("quizz_id")]
     public int Id { get; set; }
 
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
-    public string Image { get; set; } = string.Empty;
-
+    public string? Image { get; set; }
 
     public int? GenreId { get; set; }
 
@@ -20,8 +19,8 @@ public class UpdateQuizDto
     public QuizStatus Status { get; set; }
 
     [JsonPropertyName("shared_users")]
-    public List<string> SharedUsers { get; set; } = new();
+    public List<string>? SharedUsers { get; set; }
 
     [JsonPropertyName("shared_groups")]
-    public List<string> SharedGroups { get; set; } = new();
+    public List<string>? SharedGroups { get; set; }
 }

@@ -111,6 +111,15 @@ class QuizzService {
             throw error;
         }
     }
+    static async updateQuizAccess(quizId, updateData){
+        try {
+            const response = await apiClient.put('/quiz/access', updateData);
+            return response.data;
+        } catch (error) {
+            console.log(`Error updating quiz with ID ${updateData.quizId}:`, error);
+            throw error;
+        }
+    }
 }
 
 export default QuizzService;

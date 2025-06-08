@@ -19,7 +19,7 @@ const QuizCreation = () => {
     const bottomSheetRef = useRef();
     const [quizInfo, setQuizInfo] = useState({
         categoryId: "Khác",
-        name: "Bài kiểm tra ZZZ",
+        name: "Tên bài kiểm tra",
         access: 'Công khai',
         amount: 0,
         selectedGroups: [],
@@ -129,9 +129,10 @@ const QuizCreation = () => {
                 genre_id: parseInt(quizInfo.categoryId),
                 user_id: userId,
                 status: quizInfo.access === 'Công khai' ? 'Public' : 'Private',
-                userShareIds,
-                groupShareIds,
-                questions: formattedQuestions
+                userEmails:userShareIds,
+                shared_groups:groupShareIds,
+                questions: formattedQuestions,
+                shared_users:userShareIds
             };
         } catch (error) {
             console.error('Error creating quiz DTO:', error);

@@ -42,6 +42,7 @@ const SCREENS = {
     USER_PACKAGE: 'Gói',
     REVENUE: 'Doanh thu',
     CREATE_PACKAGE: 'Tạo gói',
+    UPDATE_ACCESS:'Cập nhật quyền truy cập'
 };
   
   export default SCREENS;

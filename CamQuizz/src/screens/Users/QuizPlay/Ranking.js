@@ -27,7 +27,7 @@ const Ranking = ({ users }) => {
             <Text style={styles.title}>Bảng Xếp Hạng</Text>
             {users.map((user, index) => (
                 <RankingItem
-                    key={user.index}
+                    key={index}
                     user={user}
                     newScore={user.newScore}
                     isCorrect={user.isCorrect}

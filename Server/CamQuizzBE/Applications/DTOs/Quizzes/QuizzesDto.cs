@@ -16,7 +16,8 @@ public class QuizzesDto
     public int UserId { get; set; }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public QuizStatus Status { get; set; } = QuizStatus.Public;
+    //public QuizStatus Status { get; set; } = QuizStatus.Public;
+    public QuizStatus Status { get; set; } 
 
     [JsonPropertyName("is_deleted")]
     public bool IsDeleted { get; set; }

@@ -35,13 +35,7 @@ export const Library = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
 
-  const filteredQuizzes = allQuizzes.filter(quiz => {
-    if (visibility === "public") {
-      return quiz.status === "Public";
-    } else {
-      return quiz.status === "Private";
-    }
-  });
+  const filteredQuizzes = allQuizzes
 
   console.log(' Current state:', {
     activeTab,
@@ -130,7 +124,6 @@ export const Library = () => {
 
       const quizzesWithStatus = allMyQuizzes.map((quiz, index) => ({
         ...quiz,
-        status: index % 2 === 0 ? 'Public' : 'Private' 
       }));
 
       setAllQuizzes(quizzesWithStatus);
@@ -160,7 +153,9 @@ export const Library = () => {
     setSelectedQuiz({ ...quiz, deleteCallback });
     setShowEditModal(true);
   };
-
+  const handleEditAccess = (quiz)=>{
+    navigation.navigate(SCREENS.UPDATE_ACCESS,{quizId:quiz.id})
+  }
   const handleDeleteQuiz = async (quizId) => {
     try {
       console.log(' Deleting quiz:', quizId);
@@ -191,7 +186,7 @@ export const Library = () => {
         name: updatedQuizData.name,
         image: updatedQuizData.image,
         genreId: updatedQuizData.genreId,
-        status: updatedQuizData.status
+        //status: updatedQuizData.status
       };
 
       const response = await QuizzService.updateQuizz(updateDto);
@@ -234,7 +229,7 @@ export const Library = () => {
       {activeTab === "myLibrary" && (
         <View style={styles.content}>
           {/* Filter Row */}
-          <View style={styles.filterRow}>
+          {/* <View style={styles.filterRow}>
             <TouchableOpacity style={styles.createButton} activeOpacity={0.7} onPress={() => navigation.navigate(SCREENS.QUIZ_CREATION)}>
               <Plus size={18} color="black" />
               <Text style={styles.createButtonText}>Tạo mới</Text>
@@ -254,7 +249,7 @@ export const Library = () => {
                 }}
               />
             </View>
-          </View>
+          </View> */}
 
           {/* Loading indicator */}
           {loading ? (
@@ -275,6 +270,7 @@ export const Library = () => {
                   showOptions={true}
                   onEdit={handleEditQuiz}
                   onDelete={handleDeleteQuiz}
+                  onEditAccess={handleEditAccess}
                 />
               )}
               contentContainerStyle={styles.quizListContainer}

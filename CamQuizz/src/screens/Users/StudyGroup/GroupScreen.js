@@ -82,13 +82,13 @@ const GroupScreen = ({ navigation, route }) => {
       console.log(`Fetching shared quizzes for group ${group.id}`);
       const quizzesData = await StudyGroupService.getGroupQuizzes(group.id);
 
-      console.log('Shared quizzes response:', quizzesData);
+
+      const quizzes = quizzesData.map(item => item.quiz);
 
 
-
-      const transformedQuizzes = quizzesData.map((item) => ({
-        id: item.quiz_id,
-        title: item.quiz_name,
+      const transformedQuizzes = quizzes.map((item) => ({
+        id: item.id,
+        title: item.name,
         image: item.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
         duration: item.duration,
         questions: item.number_of_questions,
@@ -116,35 +116,63 @@ const GroupScreen = ({ navigation, route }) => {
 
 
   const renderQuizItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id })}
-    >
-      <Image source={{ uri: item.image }} style={styles.image} />
-      <View style={styles.infoContainer}>
-        <Text style={styles.title}>{item.title}</Text>
-        <View style={styles.row}>
-          <Text style={styles.questions}>{item.questions} câu hỏi</Text>
-          <Entypo name="dot-single" size={20} color={COLORS.GRAY} />
-          <Text style={styles.duration}>{item.duration} giây</Text>
+    <View style={[styles.card, { position: 'relative' }]}> 
+      {isLeader 
+      &&false //api is failing
+      &&
+      (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => {
+            Alert.alert(
+              'Xác nhận',
+              'Bạn có chắc chắn muốn xóa quiz này khỏi nhóm?',
+              [
+                { text: 'Hủy', style: 'cancel' },
+                {
+                  text: 'Xóa',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await StudyGroupService.deleteQuizFromGroup(group.id, item.id);
+                      loadSharedQuizzes();
+                    } catch (error) {
+                      Alert.alert('Lỗi', 'Không thể xóa quiz. Vui lòng thử lại.');
+                    }
+                  }
+                }
+              ]
+            );
+          }}
+        >
+          <Ionicons name="trash" size={22} color={COLORS.RED} />
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: 'row' }}
+        onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id })}
+        activeOpacity={0.8}
+      >
+        <Image source={{ uri: item.image }} style={styles.image} />
+        <View style={styles.infoContainer}>
+          <Text style={styles.title}>{item.title}</Text>
+          <View style={styles.row}>
+            <Text style={styles.questions}>{item.questions} câu hỏi</Text>
+            <Entypo name="dot-single" size={20} color={COLORS.GRAY} />
+            <Text style={styles.duration}>{item.duration} giây</Text>
+          </View>
+          <View style={styles.categoryContainer}>
+            <Text style={styles.category}>{item.status === 'Public' ? 'Công khai' : 'Riêng tư'}</Text>
+          </View>
         </View>
-        <View style={styles.categoryContainer}>
-          <Text style={styles.category}>{item.status === 'Public' ? 'Công khai' : 'Riêng tư'}</Text>
-        </View>
-        <View style={styles.sharedInfoContainer}>
-          <Text style={styles.sharedBy}>Chia sẻ bởi: {item.sharedBy}</Text>
-          <Text style={styles.sharedAt}>
-            {new Date(item.sharedAt).toLocaleDateString('vi-VN')}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Ionicons name="library-outline" size={64} color={COLORS.GRAY} />
-      <Text style={styles.emptyTitle}>Chưa có quiz nào được chia sẻ</Text>
+      <Text style={styles.emptyTitle}>Chưa có quiz nào được chủ nhóm chia sẻ</Text>
     </View>
   );
 
@@ -193,7 +221,8 @@ const GroupScreen = ({ navigation, route }) => {
       <>
         <View style={styles.quizHeader}>
           <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
-          <TouchableOpacity
+          {!isLeader
+          &&<TouchableOpacity
             style={styles.quitButton}
             onPress={() => {
               Alert.alert(
@@ -213,10 +242,9 @@ const GroupScreen = ({ navigation, route }) => {
                 ]
               );
             }}
-
           >
             <Text style={styles.quitText}>Rời nhóm</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
 
         <FlatList
@@ -436,7 +464,17 @@ const styles = StyleSheet.create({
   sharedAt: {
     fontSize: 12,
     color: COLORS.GRAY,
-  }
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 2,
+    backgroundColor: COLORS.WHITE,
+    borderRadius: 16,
+    padding: 4,
+    elevation: 2,
+  },
 });
 
 export default GroupScreen;

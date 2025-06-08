@@ -84,7 +84,7 @@ const CreateQuestion = () => {
 
     const toggleCorrectAnswer = (index) => {
         const option = questionData.options[index];
-        
+
         if (!option.text.trim()) {
             alert('Vui lòng nhập nội dung đáp án trước khi chọn đáp án đúng');
             return;
@@ -169,7 +169,7 @@ const CreateQuestion = () => {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [16, 9],
             quality: 1,
@@ -221,7 +221,7 @@ const CreateQuestion = () => {
                 <Text style={styles.headerTitle}>
                     {isEditing ? 'Chỉnh sửa câu hỏi' : 'Tạo câu hỏi mới'}
                 </Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={handleSave}
                     disabled={!isQuestionValid()}
                 >
@@ -266,24 +266,24 @@ const CreateQuestion = () => {
                             placeholderTextColor={COLORS.WHITE + '80'}
                         />
                     </View>
-                    
+
                     {/* Image Section */}
                     <View style={styles.imageSection}>
                         {questionImage ? (
                             <View style={styles.imageContainer}>
-                                <Image 
-                                    source={{ uri: questionImage }} 
-                                    style={styles.questionImage} 
+                                <Image
+                                    source={{ uri: questionImage }}
+                                    style={styles.questionImage}
                                 />
                                 <View style={styles.imageActions}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.imageActionButton}
                                         onPress={handleRemoveImage}
                                     >
                                         <Ionicons name="trash-outline" size={20} color={COLORS.WHITE} />
                                         <Text style={styles.imageActionText}>Xóa</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.imageActionButton}
                                         onPress={handleImagePicker}
                                     >
@@ -293,7 +293,7 @@ const CreateQuestion = () => {
                                 </View>
                             </View>
                         ) : (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.addImageButton}
                                 onPress={handleImagePicker}
                             >
@@ -306,7 +306,7 @@ const CreateQuestion = () => {
 
                 {/* Question Settings Card */}
                 <View style={styles.questionSettingsCard}>
-                    <View style={styles.questionSettingsRow}>
+                    {/* <View style={styles.questionSettingsRow}>
                         <View style={styles.switchContainer}>
                             <Switch
                                 value={hasMultipleAnswers}
@@ -325,8 +325,15 @@ const CreateQuestion = () => {
                                 {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
                             </Text>
                         </TouchableOpacity>
-                    </View>
-
+                    </View> */}
+                    <TouchableOpacity
+                        style={styles.explanationButton}
+                        onPress={handleOpenExplanation}
+                    >
+                        <Text style={styles.explanationButtonText}>
+                            {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
+                        </Text>
+                    </TouchableOpacity>
                     {explanation !== '' && (
                         <View style={styles.explanationContainer}>
                             <Text style={styles.explanationLabel}>Giải thích:</Text>
@@ -334,16 +341,16 @@ const CreateQuestion = () => {
                         </View>
                     )}
                 </View>
-                <View style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:16}}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                     <Ionicons name="information-circle-outline" size={24} color={COLORS.BLUE} />
-                    <Text style={{color:COLORS.GRAY_DARK}}>Bấm vào tùy chọn để thiết lập đáp án đúng</Text>
+                    <Text style={{ color: COLORS.GRAY_DARK }}>Bấm vào tùy chọn để thiết lập đáp án đúng</Text>
                 </View>
                 <View style={styles.optionsContainer}>
                     {questionData.options.map((option, index) => (
                         <View key={option.id} style={[styles.optionItem, option.isCorrect && styles.correctOption]}>
                             <View style={styles.optionHeader}>
                                 <Text style={styles.optionLabel}>Tùy chọn {option.id}</Text>
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[
                                         styles.correctIndicator,
                                         !option.text.trim() && styles.correctIndicatorDisabled
@@ -351,20 +358,20 @@ const CreateQuestion = () => {
                                     onPress={() => toggleCorrectAnswer(index)}
                                     disabled={!option.text.trim()}
                                 >
-                                    <Ionicons 
-                                        name={option.isCorrect ? "checkmark-circle" : "checkmark-circle-outline"} 
-                                        size={24} 
+                                    <Ionicons
+                                        name={option.isCorrect ? "checkmark-circle" : "checkmark-circle-outline"}
+                                        size={24}
                                         color={
-                                            !option.text.trim() 
-                                                ? COLORS.GRAY_LIGHT 
-                                                : option.isCorrect 
-                                                    ? COLORS.GREEN 
+                                            !option.text.trim()
+                                                ? COLORS.GRAY_LIGHT
+                                                : option.isCorrect
+                                                    ? COLORS.GREEN
                                                     : COLORS.GRAY_DARK
-                                        } 
+                                        }
                                     />
                                 </TouchableOpacity>
                             </View>
-                            
+
                             <View style={styles.optionContentContainer}>
                                 <View style={styles.optionInputContainer}>
                                     <TextInput
@@ -373,25 +380,25 @@ const CreateQuestion = () => {
                                         value={option.text}
                                         onChangeText={(text) => updateOption(index, text)}
                                     />
-                                    <TouchableOpacity 
+                                    {/* <TouchableOpacity
                                         style={styles.imageButton}
                                         onPress={() => handleOptionImagePicker(index)}
                                     >
-                                        <Ionicons 
-                                            name="image-outline" 
-                                            size={24} 
-                                            color={option.image ? COLORS.BLUE : COLORS.GRAY_DARK} 
+                                        <Ionicons
+                                            name="image-outline"
+                                            size={24}
+                                            color={option.image ? COLORS.BLUE : COLORS.GRAY_DARK}
                                         />
-                                    </TouchableOpacity>
+                                    </TouchableOpacity> */}
                                 </View>
 
                                 {option.image && (
                                     <View style={styles.optionImageContainer}>
-                                        <Image 
-                                            source={{ uri: option.image }} 
-                                            style={styles.optionImage} 
+                                        <Image
+                                            source={{ uri: option.image }}
+                                            style={styles.optionImage}
                                         />
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={styles.removeImageButton}
                                             onPress={() => handleRemoveOptionImage(index)}
                                         >
@@ -404,7 +411,7 @@ const CreateQuestion = () => {
                     ))}
 
                     {/* Nút thêm tùy chọn mới */}
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.addOptionButton}
                         onPress={handleAddOption}
                     >
@@ -426,7 +433,7 @@ const CreateQuestion = () => {
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Cài đặt câu hỏi</Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setShowSettingsModal(false)}
                                 style={styles.closeButton}
                             >
@@ -438,16 +445,16 @@ const CreateQuestion = () => {
                             <View style={styles.settingField}>
                                 <Text style={styles.fieldLabel}>Thời gian (giây)</Text>
                                 <View style={styles.inputContainer}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.adjustButton}
                                         onPress={() => setTempSettings(prev => ({
                                             ...prev,
-                                            duration: Math.max(0, prev.duration - 5)
+                                            duration: Math.max(1, prev.duration - 5)
                                         }))}
                                     >
                                         <Ionicons name="remove" size={24} color={COLORS.BLUE} />
                                     </TouchableOpacity>
-                                    
+
                                     <TextInput
                                         style={styles.fieldInput}
                                         value={tempSettings.duration.toString()}
@@ -457,8 +464,8 @@ const CreateQuestion = () => {
                                         }))}
                                         keyboardType="numeric"
                                     />
-                                    
-                                    <TouchableOpacity 
+
+                                    <TouchableOpacity
                                         style={styles.adjustButton}
                                         onPress={() => setTempSettings(prev => ({
                                             ...prev,
@@ -473,7 +480,7 @@ const CreateQuestion = () => {
                             <View style={styles.settingField}>
                                 <Text style={styles.fieldLabel}>Điểm số</Text>
                                 <View style={styles.inputContainer}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.adjustButton}
                                         onPress={() => setTempSettings(prev => ({
                                             ...prev,
@@ -482,7 +489,7 @@ const CreateQuestion = () => {
                                     >
                                         <Ionicons name="remove" size={24} color={COLORS.BLUE} />
                                     </TouchableOpacity>
-                                    
+
                                     <TextInput
                                         style={styles.fieldInput}
                                         value={tempSettings.points.toString()}
@@ -492,8 +499,8 @@ const CreateQuestion = () => {
                                         }))}
                                         keyboardType="numeric"
                                     />
-                                    
-                                    <TouchableOpacity 
+
+                                    <TouchableOpacity
                                         style={styles.adjustButton}
                                         onPress={() => setTempSettings(prev => ({
                                             ...prev,
@@ -506,7 +513,7 @@ const CreateQuestion = () => {
                             </View>
                         </View>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.saveSettingsButton}
                             onPress={handleSaveSettings}
                         >
@@ -528,7 +535,7 @@ const CreateQuestion = () => {
                             <Text style={styles.modalTitle}>
                                 {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
                             </Text>
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => setShowExplanationModal(false)}
                                 style={styles.closeButton}
                             >
@@ -547,7 +554,7 @@ const CreateQuestion = () => {
 
                         <View style={styles.modalFooter}>
                             {explanation !== '' && (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={styles.clearButton}
                                     onPress={() => {
                                         setTempExplanation('');
@@ -559,7 +566,7 @@ const CreateQuestion = () => {
                                 </TouchableOpacity>
                             )}
 
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={styles.saveButton}
                                 onPress={handleSaveExplanation}
                             >
@@ -576,11 +583,11 @@ const CreateQuestion = () => {
 const getOptionColor = (index) => {
     const colors = [
         COLORS.WHITE,
-        COLORS.WHITE,  
-        COLORS.WHITE,  
-        COLORS.WHITE,  
+        COLORS.WHITE,
+        COLORS.WHITE,
+        COLORS.WHITE,
     ];
-    return colors[index] + '40'; 
+    return colors[index] + '40';
 };
 
 const styles = StyleSheet.create({
@@ -627,16 +634,16 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         marginRight: 8,
     },
-    infoDisplay:{
-        backgroundColor:COLORS.GRAY_BG,
-        padding:8,
-        borderRadius:16,
-        flexDirection:'row',
-        marginRight:8
+    infoDisplay: {
+        backgroundColor: COLORS.GRAY_BG,
+        padding: 8,
+        borderRadius: 16,
+        flexDirection: 'row',
+        marginRight: 8
     },
-    infoText:{
-        marginHorizontal:4,
-        textAlignVertical:'center',
+    infoText: {
+        marginHorizontal: 4,
+        textAlignVertical: 'center',
     },
     optionInput: {
         textAlign: 'center',
@@ -668,7 +675,7 @@ const styles = StyleSheet.create({
     },
     optionsContainer: {
         gap: 12,
-        paddingHorizontal:10
+        paddingHorizontal: 10
     },
     optionItem: {
         borderRadius: 10,
@@ -698,7 +705,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.WHITE,
         padding: 8,
         borderRadius: 8,
-        flex:1
+        flex: 1
     },
     correctOption: {
         borderWidth: 2,
@@ -727,16 +734,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    fieldContainer:{
-        flexDirection:'row'
+    fieldContainer: {
+        flexDirection: 'row'
     },
-    inputContainer:{
-        flexDirection:'row'
+    inputContainer: {
+        flexDirection: 'row'
     },
-    fieldInput:{
-        textAlignVertical:'center',
-        height:'100%',
-        textAlign:'center'
+    fieldInput: {
+        textAlignVertical: 'center',
+        height: '100%',
+        textAlign: 'center'
     },
     modalOverlay: {
         flex: 1,
@@ -947,15 +954,17 @@ const styles = StyleSheet.create({
     explanationButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.BLUE ,
+        backgroundColor: COLORS.BLUE,
         padding: 12,
         borderRadius: 8,
         gap: 4,
+        textAlign:'center'
     },
     explanationButtonText: {
         color: COLORS.WHITE,
         fontSize: 14,
         fontWeight: '500',
+        textAlign:'center'
     },
     addOptionButton: {
         borderRadius: 10,
@@ -963,7 +972,7 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
         borderColor: COLORS.BLUE,
         padding: 16,
-        marginBottom:26
+        marginBottom: 26
     },
     addOptionContent: {
         flexDirection: 'row',

@@ -3,8 +3,10 @@ import { View, Text, Image, FlatList, StyleSheet, TouchableOpacity } from 'react
 import COLORS from '../../../constant/colors';
 import Entypo from 'react-native-vector-icons/Entypo';
 import QuizzService from '../../../services/QuizzService';
-
+import { useNavigation } from '@react-navigation/native';
+import SCREENS from '../..';
 export const SearchResult = ({ searchQuery, filters , categories}) => {
+  const navigation = useNavigation()
   const [quizzes, setQuizzes] = React.useState([]);
   const [pagination, setPagination] = React.useState({
     page: 1,
@@ -29,7 +31,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
       try {
         const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
         console.log('categoryId', categoryId);
-        const { data, pagination: paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, 1, pagination.limit, filters.newestSort, filters.popularSort);
+        const { data, pagination: serverPagination } = await QuizzService.getAllQuizz(searchQuery, categoryId, 1, pagination.limit, filters.newestSort, filters.popularSort);
         if (data) {
           setQuizzes(data);
           setPagination({
@@ -39,7 +41,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
         }
         else
           setQuizzes([]);
-        setIsAll(paginationn.total_pages === 1);
+        setIsAll(serverPagination.total_pages === 1);
 
       } catch (error) {
         console.error('Error fetching quizzes:', error);
@@ -50,9 +52,9 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
   const handleSeeMore = async () => {
     try {
       const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
-      const { data, paginationn } = await QuizzService.getAllQuizz(searchQuery, categoryId, pagination.page + 1, pagination.limit, filters.newestSort, filters.popularSort);
+      const { data, pagination:serverPagination } = await QuizzService.getAllQuizz(searchQuery, categoryId, pagination.page + 1, pagination.limit, filters.newestSort, filters.popularSort);
       if (data) {
-        setIsAll(paginationn.total_pages === pagination.page + 1);
+        setIsAll(serverPagination.total_pages === pagination.page + 1);
         setQuizzes((prev) => [...prev, ...data]);
         setPagination((prev) => ({ ...prev, page: prev.page + 1 }));
       }
@@ -68,7 +70,11 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
     return category ? category.label : 'Unknown';
   };
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card}
+      onPress={()=>{
+        navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id });
+      }}
+    >
       <Image source={{ uri: item.image|| 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'  }} style={styles.image} />
       <View style={styles.infoContainer}>
         <Text style={styles.title}>{item.name}</Text>
@@ -81,7 +87,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
           <Text style={styles.category}>{getCategoryName(item.genre_id)}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderFooter = () => (
@@ -99,6 +105,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       ListFooterComponent={renderFooter}
+    
     />
   );
 };

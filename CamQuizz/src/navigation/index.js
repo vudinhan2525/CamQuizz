@@ -33,7 +33,7 @@ import UserPackage from '../screens/Users/Explore/UserPackage';
 import ReportHistory from '../screens/Users/Explore/ReportHistory';
 import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
-
+import UpdateAccess from '../screens/Users/Quiz/UpdateAccess';
 import { Quizz } from '../screens/Admin/Quizz/Quizz';
 import { QuizReportDetail } from '../screens/Admin/Quizz/QuizReportDetail';
 import { Package } from '../screens/Admin/Package/Package';
@@ -166,6 +166,11 @@ function UsersStackNavigation() {
             <Stack.Screen
                 name={SCREENS.USER_PACKAGE}
                 component={UserPackage}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.UPDATE_ACCESS}
+                component={UpdateAccess}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

@@ -35,6 +35,7 @@ import QuestionPlaySetting from '../screens/Users/QuizPlay/QuestionPlaySetting';
 import Ranking from '../screens/Users/QuizPlay/Ranking';
 import UpdateAccess from '../screens/Users/Quiz/UpdateAccess';
 import { Quizz } from '../screens/Admin/Quizz/Quizz';
+import { QuizReportDetail } from '../screens/Admin/Quizz/QuizReportDetail';
 import { Package } from '../screens/Admin/Package/Package';
 import { User } from '../screens/Admin/User';
 import { Account as AdminAccount } from '../screens/Admin/Account';
@@ -393,6 +394,11 @@ function AdminStackNavigation() {
             <Stack.Screen
                 name={SCREENS.CREATE_PACKAGE}
                 component={CreatePackage}
+                options={{ headerShown: false }}
+            />
+            <Stack.Screen
+                name={SCREENS.QUIZ_REPORT_DETAIL}
+                component={QuizReportDetail}
                 options={{ headerShown: false }}
             />
         </Stack.Navigator>

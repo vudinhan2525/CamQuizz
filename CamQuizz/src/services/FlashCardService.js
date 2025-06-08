@@ -70,12 +70,33 @@ class FlashCardService {
     }
 
     // Cập nhật flashcard
-    static async updateFlashCard(id, flashCardData) {
+    static async updateFlashCard(flashCardData) {
         try {
-            const response = await apiClient.put(`/flashcards/${id}`, flashCardData);
+            // Đảm bảo dữ liệu đúng định dạng theo backend API
+            const formattedData = {
+                study_set_id: parseInt(flashCardData.study_set_id),
+                id: parseInt(flashCardData.id),
+                question: flashCardData.question,
+                answer: flashCardData.answer
+            };
+
+            console.log('Updating flashcard with data:', formattedData);
+
+            const response = await apiClient.put('/flashcards', formattedData);
+
+            if (response.status !== 200) {
+                throw new Error('Failed to update flashcard');
+            }
+
+            console.log('Flashcard updated successfully:', response.data);
             return response.data;
         } catch (error) {
-            console.error(`Error updating flashcard with ID ${id}:`, error);
+            console.error(`Error updating flashcard:`, error);
+
+            if (error.response?.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
             throw error;
         }
     }
@@ -83,10 +104,23 @@ class FlashCardService {
     // Xóa flashcard
     static async deleteFlashCard(id) {
         try {
+            console.log('Deleting flashcard with ID:', id);
+
             const response = await apiClient.delete(`/flashcards/${id}`);
+
+            if (response.status !== 204 && response.status !== 200) {
+                throw new Error('Failed to delete flashcard');
+            }
+
+            console.log('Flashcard deleted successfully');
             return response.data;
         } catch (error) {
             console.error(`Error deleting flashcard with ID ${id}:`, error);
+
+            if (error.response?.status === 401) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
             throw error;
         }
     }

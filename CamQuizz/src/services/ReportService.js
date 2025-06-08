@@ -207,6 +207,7 @@ class ReportService {
 
             const response = await apiClient.get('/quiz/my-quizzes', { params });
             console.log('getMyQuizzesForReport API response:', response.data);
+            console.log('getMyQuizzesForReport API response.data.data:', response.data.data);
 
             if (response.data && response.data.data) {
                 return {

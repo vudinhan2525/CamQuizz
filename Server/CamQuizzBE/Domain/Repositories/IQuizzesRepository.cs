@@ -19,6 +19,7 @@ public interface IQuizzesRepository
     Task<bool> IsQuizSharedWithUserAsync(int quizId, int userId);
     Task ShareQuizWithUserAsync(UserShared userShared);
     Task ShareQuizWithGroupAsync(GroupShared groupShared);
+    Task<GroupShared?> GetSharedQuizWithGroupAsync(int quizId, int groupId);
     Task RemoveAllSharedUsersAsync(int quizId);
     Task RemoveAllSharedGroupsAsync(int quizId);
     Task RemoveSharedUserAsync(int quizId, int userId);

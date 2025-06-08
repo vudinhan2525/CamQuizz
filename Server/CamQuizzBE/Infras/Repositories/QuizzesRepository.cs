@@ -172,6 +172,7 @@ public class QuizzesRepository(
                 .ThenInclude(us => us.Owner)
             .Include(q => q.SharedGroups)
                 .ThenInclude(gs => gs.Group)
+                .ThenInclude(g => g.Members)
             .Include(q => q.SharedGroups)
                 .ThenInclude(gs => gs.Owner)
             .AsSplitQuery()
@@ -370,6 +371,15 @@ public class QuizzesRepository(
     {
         return await _context.UserShared
             .AnyAsync(us => us.QuizId == quizId && us.UserId == userId);
+    }
+
+    public async Task<GroupShared?> GetSharedQuizWithGroupAsync(int quizId, int groupId)
+    {
+        return await _context.GroupShared
+            .Include(gs => gs.Quiz)
+            .Include(gs => gs.Owner)
+            .Include(gs => gs.Group)
+            .FirstOrDefaultAsync(gs => gs.QuizId == quizId && gs.GroupId == groupId);
     }
 
     public async Task ShareQuizWithUserAsync(UserShared userShared)

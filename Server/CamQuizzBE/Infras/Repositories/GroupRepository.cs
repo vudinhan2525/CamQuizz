@@ -382,27 +382,40 @@ public class GroupRepository(DataContext context, ILogger<GroupRepository> logge
 
     public async Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(int groupId)
     {
-        var result = await _context.GroupQuizzes
-            .Include(gq => gq.Quiz)
-            .Include(gq => gq.SharedBy)
-            .Where(gq => gq.GroupId == groupId)
+        var sharedQuizzes = await _context.GroupShared
+            .Include(gs => gs.Quiz)
+            .Where(gs => gs.GroupId == groupId)
+            .Select(gs => new GroupQuiz
+            {
+                GroupId = gs.GroupId,
+                QuizId = gs.QuizId,
+                Quiz = gs.Quiz,
+                SharedById = gs.OwnerId,
+                SharedAt = DateTime.UtcNow
+            })
             .OrderByDescending(gq => gq.SharedAt)
             .ToListAsync();
 
-        return result.Where(gq => gq.Quiz != null && gq.SharedBy != null).ToList();
+        return sharedQuizzes.Where(gq => gq.Quiz != null).ToList();
     }
 
     public async Task<IEnumerable<GroupQuiz>> GetSharedQuizzesAsync(List<int> groupIds)
     {
-        var result = await _context.GroupQuizzes
-            .Include(gq => gq.Quiz)
-            .Include(gq => gq.SharedBy)
-            .Include(gq => gq.Group)
-            .Where(gq => groupIds.Contains(gq.GroupId))
+        var sharedQuizzes = await _context.GroupShared
+            .Include(gs => gs.Quiz)
+            .Where(gs => groupIds.Contains(gs.GroupId))
+            .Select(gs => new GroupQuiz
+            {
+                GroupId = gs.GroupId,
+                QuizId = gs.QuizId,
+                Quiz = gs.Quiz,
+                SharedById = gs.OwnerId,
+                SharedAt = DateTime.UtcNow
+            })
             .OrderByDescending(gq => gq.SharedAt)
             .ToListAsync();
 
-        return result.Where(gq => gq.Quiz != null && gq.SharedBy != null && gq.Group != null).ToList();
+        return sharedQuizzes.Where(gq => gq.Quiz != null).ToList();
     }
 
     public async Task AddSharedQuizAsync(GroupQuiz sharedQuiz)

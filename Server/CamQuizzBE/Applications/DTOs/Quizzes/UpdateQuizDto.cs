@@ -8,6 +8,13 @@ public class UpdateQuizDto
     [JsonPropertyName("quizz_id")]
     public int Id { get; set; }
 
+    public string Name { get; set; } = string.Empty;
+
+    public string Image { get; set; } = string.Empty;
+
+
+    public int? GenreId { get; set; }
+
     [JsonPropertyName("status")]
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public QuizStatus Status { get; set; }

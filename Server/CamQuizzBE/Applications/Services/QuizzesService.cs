@@ -104,11 +104,14 @@ public class QuizzesService : IQuizzesService
             throw new KeyNotFoundException("Quiz not found.");
         }
 
-        // Update status
+        // Update quiz properties
+        existingQuiz.Name = updateQuiz.Name;
+        existingQuiz.Image = updateQuiz.Image;
         existingQuiz.Status = updateQuiz.Status;
+        existingQuiz.GenreId = updateQuiz.GenreId ?? existingQuiz.GenreId;
         existingQuiz.UpdatedAt = DateTime.UtcNow;
 
-        // Update quiz first
+        // Update quiz in database
         await _quizzesRepo.UpdateAsync(existingQuiz);
 
         // Handle shared users

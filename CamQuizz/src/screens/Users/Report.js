@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Modal, ScrollView, SafeAreaView, StyleShe
 import { Ionicons } from '@expo/vector-icons';
 import TestCard from '../../components/Report/TestCard';
 import TestFilter from '../../components/Report/TestFilter';
-import { getCurrentUserTests, getOrganizationTests, getCandidateAttemptedTests } from '../../components/data/MocTests';
+
 import ReportService from '../../services/ReportService';
 import QuizzService from '../../services/QuizzService';
 import COLORS from '../../constant/colors';
@@ -16,6 +16,7 @@ export const Report = ({ navigation }) => {
   const [selectedView, setSelectedView] = useState('author');
   const [loading, setLoading] = useState(false);
   const [authorQuizzes, setAuthorQuizzes] = useState([]);
+  const [organizationQuizzes, setOrganizationQuizzes] = useState([]);
   const [candidateAttempts, setCandidateAttempts] = useState([]);
   const [quizHistory, setQuizHistory] = useState([]);
   const insets = useSafeAreaInsets();
@@ -32,16 +33,13 @@ export const Report = ({ navigation }) => {
           await loadAuthorData();
           break;
         case 'organization':
-          // Tạm thời sử dụng mock data cho organization
+          await loadOrganizationData();
           break;
         case 'candidate':
           await loadCandidateData();
           break;
       }
     } catch (error) {
-      console.error('Error loading data:', error);
-
-      // Handle 401 errors specifically
       if (error.message && error.message.includes('Unauthorized')) {
         Alert.alert(
           'Phiên đăng nhập hết hạn',
@@ -55,50 +53,43 @@ export const Report = ({ navigation }) => {
       setLoading(false);
     }
   };
-
-  // Utility function để tính điểm trung bình và tỷ lệ vượt qua từ score_distribution
-  const calculateScoreStats = (scoreDistribution) => {
+  const calculateScoreStats = (scoreDistribution, quiz) => {
     if (!scoreDistribution || Object.keys(scoreDistribution).length === 0) {
       return { averageScore: 0, passRate: 0 };
     }
 
+    const totalQuestions = quiz?.numberOfQuestions || quiz?.questions?.length || 1;
     let totalScore = 0;
     let totalCount = 0;
     let passCount = 0;
 
     Object.entries(scoreDistribution).forEach(([score, count]) => {
       const scoreNum = parseInt(score);
-      if (scoreNum >= 1 && scoreNum <= 10) {
-        totalScore += scoreNum * count;
-        totalCount += count;
-        if (scoreNum >= 7) { // Điểm vượt qua >= 7
-          passCount += count;
-        }
+      const percentage = (scoreNum / totalQuestions) * 100;
+      totalScore += percentage * count;
+      totalCount += count;
+      if (percentage >= 70) { 
+        passCount += count;
       }
     });
 
-    const averageScore = totalCount > 0 ? (totalScore / totalCount).toFixed(1) : 0;
+    const averageScore = totalCount > 0 ? Math.round(totalScore / totalCount) : 0;
     const passRate = totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
 
-    return { averageScore: parseFloat(averageScore), passRate };
+    return { averageScore, passRate };
   };
 
   const loadAuthorData = async () => {
     try {
       const response = await ReportService.getMyQuizzesForReport(50, 1);
-      console.log('Author quizzes loaded:', response);
 
-      // Check if response and response.data exist and is an array
       if (!response || !response.data || !Array.isArray(response.data)) {
-        console.log('No quiz data found or invalid response format');
         setAuthorQuizzes([]);
         return;
       }
 
       const formattedQuizzes = await Promise.all(
         response.data.map(async (quiz) => {
-          console.log('Processing quiz for author report:', quiz);
-
           let numberOfQuestions = quiz.numberOfQuestions || 0;
           let numberOfAttended = quiz.numberOfAttended || 0;
           let createdAt = quiz.createdAt || quiz.created_at;
@@ -106,35 +97,28 @@ export const Report = ({ navigation }) => {
           let averageScore = 0;
           let passRate = 0;
 
-          // Nếu numberOfQuestions bằng 0 hoặc numberOfAttended bằng 0, fetch dữ liệu chi tiết
           if (numberOfQuestions === 0 || numberOfAttended === 0) {
             try {
-              console.log(`Fetching detailed data for quiz ${quiz.id}`);
               const detailedQuiz = await QuizzService.getQuizzById(quiz.id);
               numberOfQuestions = detailedQuiz.number_of_questions || detailedQuiz.numberOfQuestions || 0;
               numberOfAttended = detailedQuiz.number_of_attended || detailedQuiz.numberOfAttended || numberOfAttended;
-              // Cập nhật ngày tạo từ dữ liệu chi tiết nếu cần
               createdAt = detailedQuiz.createdAt || detailedQuiz.created_at || createdAt;
               updatedAt = detailedQuiz.updatedAt || detailedQuiz.updated_at || updatedAt;
-              console.log(`Quiz ${quiz.id} detailed data:`, { numberOfQuestions, numberOfAttended, createdAt, updatedAt });
             } catch (error) {
-              console.error(`Error fetching detailed data for quiz ${quiz.id}:`, error);
+              // Error handled silently
             }
           }
 
-          // Fetch báo cáo chi tiết để tính điểm trung bình và tỷ lệ vượt qua nếu có lượt làm bài
           if (numberOfAttended > 0) {
             try {
-              console.log(`Fetching report data for quiz ${quiz.id}`);
               const reportResponse = await ReportService.getAuthorReport(quiz.id);
               if (reportResponse?.data?.score_distribution) {
-                const scoreStats = calculateScoreStats(reportResponse.data.score_distribution);
+                const scoreStats = calculateScoreStats(reportResponse.data.score_distribution, quiz);
                 averageScore = scoreStats.averageScore;
                 passRate = scoreStats.passRate;
-                console.log(`Quiz ${quiz.id} score stats:`, { averageScore, passRate });
               }
             } catch (error) {
-              console.error(`Error fetching report data for quiz ${quiz.id}:`, error);
+              // Error handled silently
             }
           }
 
@@ -144,26 +128,111 @@ export const Report = ({ navigation }) => {
             image: quiz.image,
             attempts: numberOfAttended,
             questions: numberOfQuestions,
-            passRate: passRate, // Tính toán từ báo cáo chi tiết
+            passRate: passRate, 
             createdAt: createdAt,
             updatedAt: updatedAt,
             description: quiz.description,
             duration: quiz.duration,
             genreId: quiz.genreId,
             userId: quiz.userId,
-            // Thêm các field cần thiết cho TestCard
+
             numberOfQuestions: numberOfQuestions,
             numberOfAttended: numberOfAttended,
-            averageScore: averageScore, // Điểm trung bình từ báo cáo chi tiết
+            averageScore: averageScore,
           };
         })
       );
 
-      console.log('Formatted author quizzes:', formattedQuizzes);
       setAuthorQuizzes(formattedQuizzes);
     } catch (error) {
-      console.error('Error loading author data:', error);
-      setAuthorQuizzes([]); // Set empty array on error
+      setAuthorQuizzes([]);
+      throw error;
+    }
+  };
+
+  const loadOrganizationData = async () => {
+    try {
+      const response = await ReportService.getHostedSessions(100, 1, 'attempt_date');
+      if (!response || !response.data || !Array.isArray(response.data)) {
+        setOrganizationQuizzes([]);
+        return;
+      }
+
+      const quizGroups = {};
+      response.data.forEach(session => {
+        const quizId = session.quiz_id;
+        if (!quizGroups[quizId]) {
+          quizGroups[quizId] = {
+            quiz_id: quizId,
+            quiz_name: session.quiz_name,
+            quiz_image: session.quiz_image,
+            genre_name: session.genre_name,
+            sessions: [],
+            total_questions: session.total_questions,
+          };
+        }
+        quizGroups[quizId].sessions.push(session);
+      });
+
+      const formattedQuizzes = Object.values(quizGroups).map(quizGroup => {
+        const sessions = quizGroup.sessions;
+        const totalSessions = sessions.length;
+
+        const uniqueParticipants = new Set();
+        sessions.forEach(session => {
+          uniqueParticipants.add(session.attempt_number);
+        });
+        const totalParticipants = uniqueParticipants.size;
+
+        let totalScore = 0;
+        let validSessions = 0;
+
+        sessions.forEach(session => {
+          if (session.score !== undefined && session.total_questions > 0) {
+            const percentage = (session.score / session.total_questions) * 100;
+            totalScore += percentage;
+            validSessions++;
+          }
+        });
+
+        const averageScore = validSessions > 0 ? Math.round(totalScore / validSessions) : 0;
+
+        const passedSessions = sessions.filter(session => {
+          const percentage = (session.score / session.total_questions) * 100;
+          return percentage >= 70;
+        });
+        const passRate = totalSessions > 0 ? Math.round((passedSessions.length / totalSessions) * 100) : 0;
+
+        const latestSession = sessions.reduce((latest, current) => {
+          return new Date(current.timestamp) > new Date(latest.timestamp) ? current : latest;
+        });
+
+        return {
+          id: quizGroup.quiz_id,
+          title: quizGroup.quiz_name,
+          name: quizGroup.quiz_name, 
+          image: quizGroup.quiz_image,
+          description: `${quizGroup.total_questions} câu hỏi • ${totalSessions} phiên • ${totalParticipants} người tham gia`,
+          numberOfQuestions: quizGroup.total_questions,
+          numberOfAttended: totalSessions, 
+          totalResults: totalParticipants,
+          attempts: totalSessions,
+          questions: quizGroup.total_questions, 
+          createdAt: latestSession.timestamp,
+          organizationDate: latestSession.timestamp, 
+          averageScore: averageScore,
+          passRate: passRate,
+         
+          sessions: sessions,
+          totalSessions: totalSessions,
+          totalParticipants: totalParticipants,
+          genre_name: quizGroup.genre_name,
+        };
+      });
+
+      setOrganizationQuizzes(formattedQuizzes);
+    } catch (error) {
+      setOrganizationQuizzes([]);
       throw error;
     }
   };
@@ -171,11 +240,8 @@ export const Report = ({ navigation }) => {
   const loadCandidateData = async () => {
     try {
       const historyResponse = await ReportService.getMyQuizHistory(50, 1);
-      console.log('Quiz history loaded:', historyResponse);
 
-      // Check if response and response.data exist and is an array
       if (!historyResponse || !historyResponse.data || !Array.isArray(historyResponse.data)) {
-        console.log('No quiz history data found or invalid response format');
         setQuizHistory([]);
         return;
       }
@@ -187,9 +253,8 @@ export const Report = ({ navigation }) => {
           try {
             const quizDetails = await QuizzService.getQuizzById(item.quiz_id || item.quizId);
             numberOfQuestions = quizDetails.number_of_questions || 0;
-            console.log(`Quiz ${item.quiz_id} has ${numberOfQuestions} questions`);
           } catch (error) {
-            console.error(`Error fetching quiz details for quiz ${item.quiz_id}:`, error);
+            // Error handled silently
           }
 
           return {
@@ -207,11 +272,9 @@ export const Report = ({ navigation }) => {
         })
       );
 
-      console.log('Formatted history with quiz details:', formattedHistory);
       setQuizHistory(formattedHistory);
     } catch (error) {
-      console.error('Error loading candidate data:', error);
-      setQuizHistory([]); // Set empty array on error
+      setQuizHistory([]);
       throw error;
     }
   };
@@ -221,7 +284,7 @@ export const Report = ({ navigation }) => {
       case 'author':
         return authorQuizzes;
       case 'organization':
-        return getOrganizationTests(); // Tạm thời sử dụng mock data
+        return organizationQuizzes; 
       case 'candidate':
         return quizHistory;
       default:
@@ -229,7 +292,7 @@ export const Report = ({ navigation }) => {
     }
   };
 
-  const allTests = useMemo(() => getTests(), [activeView, authorQuizzes, quizHistory]);
+  const allTests = useMemo(() => getTests(), [activeView, authorQuizzes, organizationQuizzes, quizHistory]);
 
   const filteredTests = useMemo(() => {
     if (!searchFilter) return allTests;
@@ -239,20 +302,12 @@ export const Report = ({ navigation }) => {
   const handleViewReport = (test) => {
     navigation.navigate('ReportDetail', {
       test: test,
-      viewType: activeView
+      viewType: activeView,
+      sessionsData: activeView === 'organization' ? test.sessions : null
     });
   };
 
-  const handleFilterSelect = (test) => {
-    setSearchFilter(test);
-  };
-
   const handleClearFilter = () => {
-    setSearchFilter(null);
-  };
-
-  const handleViewChange = (value) => {
-    setActiveView(value);
     setSearchFilter(null);
   };
 
@@ -272,7 +327,7 @@ export const Report = ({ navigation }) => {
       case 'organization':
         return {
           viewReport: 'Xem báo cáo tổ chức',
-          attempts: 'Số lượt làm bài',
+          attempts: 'Số phiên tổ chức',
           questions: 'Số câu hỏi',
           passRate: 'Tỉ lệ đạt'
         };
@@ -328,7 +383,7 @@ export const Report = ({ navigation }) => {
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Chọn kiểu báo cáo</Text>
                 
-                {/* Danh sách tùy chọn */}
+
                 {options.map((option) => (
                   <TouchableOpacity
                     key={option.value}
@@ -341,7 +396,7 @@ export const Report = ({ navigation }) => {
                   >
                     <Text style={styles.optionText}>{option.label}</Text>
 
-                    {/* Checkbox nằm bên phải */}
+
                     <Ionicons 
                       name={selectedView === option.value ? "radio-button-on" : "radio-button-off"} 
                       size={20} 
@@ -354,24 +409,7 @@ export const Report = ({ navigation }) => {
           </Modal>
         </View>
 
-        {/* <View style={styles.searchSection}>
-          <View style={styles.searchContainer}>
-            <TestFilter
-              tests={allTests}
-              onSelect={handleFilterSelect}
-              placeholder={"Tìm kiếm bài thi"}
-            />
-          </View>
-          {searchFilter && (
-            <TouchableOpacity 
-              onPress={handleClearFilter} 
-              style={styles.refreshButton}
-            >
-              <Ionicons name="refresh" size={16} color={COLORS.BLUE} />
-              <Text style={styles.refreshText}>Làm mới</Text>
-            </TouchableOpacity>
-          )}
-        </View> */}
+
 
         <View style={styles.testListContainer}>
           {loading ? (

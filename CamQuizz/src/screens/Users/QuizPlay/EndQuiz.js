@@ -47,7 +47,7 @@ const EndQuiz = ({ navigation, route }) => {
                 ))}
             </ScrollView>
             <View style={styles.buttonContainer}>
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={[styles.button, styles.reportButton]}
                     onPress={() => navigation.navigate(SCREENS.QUIZ_REPORT, {
                         roomId: 2,
@@ -55,7 +55,7 @@ const EndQuiz = ({ navigation, route }) => {
                     })}  
                 >
                     <Text style={styles.buttonText}>Xem báo cáo Chi tiết</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
                 <TouchableOpacity
                     style={[styles.button, styles.exitButton]}
                     onPress={() => {

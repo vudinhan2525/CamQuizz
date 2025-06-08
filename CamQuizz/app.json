@@ -1,5 +1,9 @@
 {
   "expo": {
+    "scheme": "camquizz",
+    "deepLinks": [
+      "camquizz://"
+    ],
     "name": "CamQuizz",
     "slug": "CamQuizz",
     "version": "1.0.0",

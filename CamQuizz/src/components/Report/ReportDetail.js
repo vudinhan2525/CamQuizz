@@ -20,7 +20,6 @@ export const ReportDetail = ({ route, navigation }) => {
     console.log('ReportDetail - viewType:', viewType);
   }, [params, test, viewType]);
 
-  // Load detailed report data khi cần
   useEffect(() => {
     if (test && viewType === 'author') {
       loadAuthorReportData();
@@ -40,7 +39,6 @@ export const ReportDetail = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error loading author report:', error);
 
-      // Kiểm tra loại lỗi để hiển thị thông báo phù hợp
       if (error.message && error.message.includes('Network Error')) {
         Alert.alert('Lỗi kết nối', 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
       } else if (error.response && error.response.status === 404) {
@@ -150,7 +148,11 @@ export const ReportDetail = ({ route, navigation }) => {
         />
       )}
       {viewType === 'organization' && (
-        <OrganizationTestReport tests={[safeTest]} onGoBack={handleGoBack} />
+        <OrganizationTestReport
+          tests={[safeTest]}
+          onGoBack={handleGoBack}
+          sessionsData={route.params?.sessionsData}
+        />
       )}
       {viewType === 'candidate' && (
         <CandidateTestReport

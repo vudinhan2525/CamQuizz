@@ -62,6 +62,21 @@ export default class StudyGroupService {
             throw error;
         }
     }
+    static async deleteQuizFromGroup(groupId, quizId) {
+        try {
+            const response = await apiClient.delete(`/groups/${groupId}/quizzes/${quizId}`);
+            if (response.status !== 200) {
+                throw new Error(`Failed to delete quiz ${quizId} from group ${groupId}`);
+            }
+    
+            console.log(`Quiz ${quizId} deleted from group ${groupId} successfully`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error deleting quiz ${quizId} from group ${groupId}:`, error);
+            throw error;
+        }
+    }
+    
     static async updateGroup(groupId, groupData) {
         try {
             const formattedData = {

@@ -13,13 +13,15 @@ import ImageService from '../../../services/ImageService';
 import QuizzService from '../../../services/QuizzService';
 import AsyncStorageService from '../../../services/AsyncStorageService';
 import GenreService from '../../../services/GenreService';
+import StudyGroupService from '../../../services/StudyGroupService';
+
 const QuizCreation = () => {
     const navigation = useNavigation();
     const [imageUri, setImageUri] = useState(null);
     const bottomSheetRef = useRef();
     const [quizInfo, setQuizInfo] = useState({
         categoryId: "Khác",
-        name: "Bài kiểm tra ZZZ",
+        name: "Tên bài kiểm tra",
         access: 'Công khai',
         amount: 0,
         selectedGroups: [],
@@ -27,7 +29,7 @@ const QuizCreation = () => {
     });
     const [tmpQuizInfo, setTmpQuizInfo] = useState({
         categoryId: "Khác",
-        name: "Bài kiểm tra ZZZ",
+        name: "",
         access: 'Public',
         amount: 0,
         selectedGroups: [],
@@ -49,8 +51,15 @@ const QuizCreation = () => {
         { id: '6', name: 'Nhóm Sinh học' },
     ];
     const [questions, setQuestions] = useState([]);
+    const [myGroups, setMyGroups] = useState([]);
     const questionsRef = useRef(questions);
     useEffect(() => {
+        const fetchMyGroups = async () => {
+            const userId = await AsyncStorageService.getUserId();
+            const groups = await StudyGroupService.getGroups(userId, 'Active', true);
+            setMyGroups(groups)
+            console.log("my groups",groups)
+        }
         const fetchCategories = async () => {
             try {
                 const response = await GenreService.getAllGenres();
@@ -64,6 +73,7 @@ const QuizCreation = () => {
             }
         };
         fetchCategories();
+        fetchMyGroups()
     }, []);
 
     useEffect(() => {
@@ -129,9 +139,10 @@ const QuizCreation = () => {
                 genre_id: parseInt(quizInfo.categoryId),
                 user_id: userId,
                 status: quizInfo.access === 'Công khai' ? 'Public' : 'Private',
-                userShareIds,
-                groupShareIds,
-                questions: formattedQuestions
+                userEmails:userShareIds,
+                shared_groups:groupShareIds,
+                questions: formattedQuestions,
+                shared_users:userShareIds
             };
         } catch (error) {
             console.error('Error creating quiz DTO:', error);
@@ -170,7 +181,6 @@ const QuizCreation = () => {
             const uploadResult = await ImageService.uploadImage(imageParam);
             return uploadResult;
         } catch (error) {
-            console.error('Error uploading image:', error);
             throw error;
         }
     };
@@ -188,8 +198,8 @@ const QuizCreation = () => {
     const saveQuizInfo = () => {
         setQuizInfo({
             ...tmpQuizInfo,
-            selectedGroups: tmpQuizInfo.access === 'Option' ? selectedGroups : [],
-            invitedEmails: tmpQuizInfo.access === 'Option' ? tmpQuizInfo.invitedEmails : [],
+            selectedGroups: tmpQuizInfo.access === 'Private' ? selectedGroups : [],
+            invitedEmails: tmpQuizInfo.access === 'Private' ? tmpQuizInfo.invitedEmails : [],
             access: getAccessLabel(tmpQuizInfo.access)
         });
         bottomSheetRef.current.close();
@@ -355,7 +365,7 @@ const QuizCreation = () => {
                                 {quizInfo.access === 'Riêng tư' && <Text style={styles.quizInfoText}>Chia sẻ với:</Text>}
                                 <View style={styles.flowContainer}>
                                     {quizInfo.selectedGroups.map(groupId => {
-                                        const group = mockGroups.find(g => g.id === groupId);
+                                        const group = myGroups.find(g => g.id === groupId);
                                         return (
                                             <View key={`group-${groupId}`} style={styles.itemTag}>
                                                 <Ionicons name="people" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
@@ -386,17 +396,14 @@ const QuizCreation = () => {
                 </View>
             </ScrollView>
             <View style={styles.footer}>
-                <TouchableOpacity style={styles.footerButton} onPress={() => { handleUploadImage() }}>
-                    <Ionicons name="cloud-upload-outline" color={COLORS.WHITE} size={24} />
-                    <Text style={[styles.buttonText, styles.footerButtonText]}> Upload image</Text>
-                </TouchableOpacity>
+
                 <TouchableOpacity
                     style={styles.footerButton}
                     onPress={handleCreateQuestion}
                 >
                     <Ionicons name="create-outline" color={COLORS.WHITE} size={24} />
                     <Text style={[styles.buttonText, styles.footerButtonText]}>
-                        Tạo câu hỏi
+                        Thêm câu hỏi
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -438,7 +445,7 @@ const QuizCreation = () => {
                 </View>
                 <View style={styles.accessContainer}>
 
-                    {tmpQuizInfo.access === 'Option' && (
+                    {tmpQuizInfo.access === 'Private' && (
                         <View style={styles.selectedItemsContainer}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
@@ -459,7 +466,7 @@ const QuizCreation = () => {
                                         style={styles.groupsScrollView}
                                     >
                                         {tmpQuizInfo.selectedGroups.map(groupId => {
-                                            const group = mockGroups.find(g => g.id === groupId);
+                                            const group = myGroups.find(g => g.id === groupId);
                                             return (
                                                 <View key={groupId} style={styles.groupTag}>
                                                     <Text style={styles.groupTagText}>{group?.name}</Text>
@@ -505,7 +512,7 @@ const QuizCreation = () => {
                 onSave={handleSaveOptionalAccess}
                 selectedGroups={selectedGroups}
                 initialInvitedEmails={tmpQuizInfo.invitedEmails}
-                myGroups={mockGroups}
+                myGroups={myGroups}
             />
         </View>
     );

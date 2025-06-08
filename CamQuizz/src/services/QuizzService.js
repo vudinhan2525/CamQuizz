@@ -48,6 +48,7 @@ class QuizzService {
     static async updateQuizz(updateQuizDto) {
         try {
             const response = await apiClient.put('/quiz', updateQuizDto);
+            console.log("update response",response)
             return response.data;
         } catch (error) {
             console.error(`Error updating quiz with ID ${updateQuizDto.id}:`, error);
@@ -147,6 +148,15 @@ class QuizzService {
                 throw new Error('Unauthorized - Please log in again');
             }
 
+            throw error;
+        }
+    }
+    static async updateQuizAccess(quizId, updateData){
+        try {
+            const response = await apiClient.put('/quiz/access', updateData);
+            return response.data;
+        } catch (error) {
+            console.log(`Error updating quiz with ID ${updateData.quizId}:`, error);
             throw error;
         }
     }

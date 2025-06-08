@@ -349,7 +349,15 @@ export const validateToken = async () => {
     return false;
   }
 };
-
+export const getUserById= async (id)=>{
+  try {
+    const response = await apiClient.get(`/auth/${id}`);
+    return response.data;
+} catch (error) {
+    console.error(`Error fetching genre with id ${id}:`, error);
+    throw error;
+}
+}
 
 // Kiểm tra trạng thái đăng nhập
 export const checkAuthStatus = async () => {

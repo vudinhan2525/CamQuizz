@@ -5,10 +5,10 @@ import COLORS from '../constant/colors';
 import { useNavigation } from '@react-navigation/native';
 
 import SCREENS from '../screens';
-const tmpUrl='https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
+const tmpUrl = 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'
 const { width } = Dimensions.get('window');
 
-const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEdit, onDelete }) => {
+const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEdit, onDelete, onEditAccess }) => {
   const navigation = useNavigation();
 
   const handlePress = () => {
@@ -18,27 +18,52 @@ const QuizCard = ({ quiz, attemptText = "lượt thi", showOptions = false, onEd
   const handleEditPress = (e) => {
     e.stopPropagation();
     if (onEdit) {
-      onEdit(quiz, onDelete); 
+      onEdit(quiz, onDelete);
     }
   };
-
+  const handleEditAccess = () => {
+    if (onEdit) {
+      onEditAccess(quiz);
+    }
+  }
+  const getStatus = (status) =>{
+    console.log("status",status)
+    if(status==="Public")
+      return "Công khai"
+    else 
+      return "Riêng tư"
+  } 
   return (
     <TouchableOpacity style={styles.quizCard} onPress={handlePress}>
-      <Image source={{ uri: quiz.image || tmpUrl }} style={styles.quizImage} />
+
       <View style={styles.quizInfo}>
+        <Image source={{ uri: quiz.image || tmpUrl }} style={styles.quizImage} />
         <Text style={styles.quizTitle}>{quiz.name}</Text>
         <Text style={styles.quizQuestions}>{quiz.number_of_questions} câu hỏi</Text>
         <View style={styles.bottomRow}>
           <Text style={styles.quizAttempts}>{quiz.number_of_attended} {attemptText}</Text>
-          {showOptions && (
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={handleEditPress}
-            >
-              <Ionicons name="create-outline" size={20} color={COLORS.BLUE} />
-            </TouchableOpacity>
-          )}
+          {showOptions && 
+                    <Text style={[styles.quizTitle, {color:COLORS.BLUE}]}>{getStatus(quiz.status)}</Text>
+                    }
         </View>
+        {showOptions && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={handleEditPress}
+          >
+            <Ionicons name="create-outline" size={20} color={COLORS.WHITE} />
+            <Text style={{ marginLeft: 8, textAlignVertical: 'center', color: COLORS.WHITE }}>Chỉnh sửa</Text>
+          </TouchableOpacity>
+        )}
+
+        {showOptions && (
+          <TouchableOpacity
+            style={{ padding: 4, borderRadius: 4, backgroundColor: COLORS.WHITE }}
+            onPress={handleEditAccess}
+          >
+            <Text style={{ textAlign: 'center', color: COLORS.BLUE }}>Thiết lập quyền truy cập</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -49,7 +74,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     padding: 10,
-    marginRight:10,
+    marginRight: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
@@ -87,8 +112,9 @@ const styles = StyleSheet.create({
   editButton: {
     padding: 4,
     borderRadius: 4,
-    backgroundColor: COLORS.BLUE + '10',
-    marginLeft: 8,
+    backgroundColor: COLORS.BLUE,
+    flexDirection: 'row',
+    marginTop: 8
   },
 });
 

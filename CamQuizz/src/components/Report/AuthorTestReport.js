@@ -10,9 +10,6 @@ const screenWidth = Dimensions.get('window').width;
 const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
   const [selectedTest, setSelectedTest] = useState(tests.length > 0 ? tests[0] : null);
 
-  console.log('AuthorTestReport - reportData:', reportData);
-  console.log('AuthorTestReport - selectedTest:', selectedTest);
-
   if (tests.length === 0) {
     return (
       <View style={styles.centered}>
@@ -29,84 +26,141 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
     );
   }
 
-  // Tính toán thống kê từ dữ liệu quiz và reportData
   const totalAttempts = reportData?.total_attempts || reportData?.TotalAttempts || selectedTest.numberOfAttended || selectedTest.attempts || 0;
-  const uniqueParticipants = totalAttempts; // Số lượt làm bài
-  
+  const uniqueParticipants = totalAttempts;
 
-      
-  // Tạo dữ liệu cho biểu đồ phân bố điểm số thực tế từ 1-10
   const generateScoreDistribution = () => {
-    // Tạo mảng cho điểm từ 1-10 (index 0 = điểm 1, index 9 = điểm 10)
-    const distribution = Array(10).fill(0);
+    const ranges = [
+      { name: '0-20%', count: 0 },
+      { name: '21-40%', count: 0 },
+      { name: '41-60%', count: 0 },
+      { name: '61-80%', count: 0 },
+      { name: '81-100%', count: 0 }
+    ];
 
     if (reportData?.score_distribution || reportData?.ScoreDistribution) {
-      // reportData.score_distribution là object với key là điểm số và value là số lượng
       const scoreData = reportData.score_distribution || reportData.ScoreDistribution;
+      const totalQuestions = selectedTest.numberOfQuestions || selectedTest.questions?.length || 1;
+
       Object.entries(scoreData).forEach(([score, count]) => {
         const scoreNum = parseInt(score);
-        // scoreNum là điểm thực tế từ backend (1-10)
-        if (scoreNum >= 1 && scoreNum <= 10) {
-          const index = scoreNum - 1; // Chuyển điểm 1-10 thành index 0-9
-          distribution[index] = count;
+        const percentage = (scoreNum / totalQuestions) * 100;
+
+        if (percentage <= 20) {
+          ranges[0].count += count;
+        } else if (percentage <= 40) {
+          ranges[1].count += count;
+        } else if (percentage <= 60) {
+          ranges[2].count += count;
+        } else if (percentage <= 80) {
+          ranges[3].count += count;
+        } else {
+          ranges[4].count += count;
         }
       });
     } else if (selectedTest.results && selectedTest.results.length > 0) {
-      // Fallback to old logic if no reportData
-      selectedTest.results.forEach(result => {
+      selectedTest.results.forEach((result) => {
         if (result && result.score !== undefined && result.totalQuestions) {
-          // Tính điểm thực tế từ 1-10
-          const actualScore = Math.round((result.score / result.totalQuestions) * 10);
-          const clampedScore = Math.max(1, Math.min(10, actualScore)); // Đảm bảo trong khoảng 1-10
-          const index = clampedScore - 1;
-          distribution[index]++;
+          const scorePercentage = (result.score / result.totalQuestions) * 100;
+
+          if (scorePercentage <= 20) {
+            ranges[0].count++;
+          } else if (scorePercentage <= 40) {
+            ranges[1].count++;
+          } else if (scorePercentage <= 60) {
+            ranges[2].count++;
+          } else if (scorePercentage <= 80) {
+            ranges[3].count++;
+          } else {
+            ranges[4].count++;
+          }
         }
       });
     }
 
-    return distribution;
+    return ranges;
   };
 
-  // Labels cho trục X của biểu đồ (điểm số thực tế)
   const getScoreLabels = () => {
-    return ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    return ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'];
   };
 
-  // Tính điểm trung bình từ phân bố điểm
+  const getChartData = () => {
+    const ranges = generateScoreDistribution();
+    return ranges.map(range => Math.round(Math.max(0, range.count)));
+  };
+
   const calculateAverageScore = () => {
-    const distribution = generateScoreDistribution();
-    let totalScore = 0;
-    let totalCount = 0;
+    if (reportData?.score_distribution || reportData?.ScoreDistribution) {
+      const scoreData = reportData.score_distribution || reportData.ScoreDistribution;
+      const totalQuestions = selectedTest.numberOfQuestions || selectedTest.questions?.length || 1;
+      let totalScore = 0;
+      let totalCount = 0;
 
-    distribution.forEach((count, index) => {
-      const score = index + 1; // Chuyển index 0-9 thành điểm 1-10
-      totalScore += score * count;
-      totalCount += count;
-    });
+      Object.entries(scoreData).forEach(([score, count]) => {
+        const scoreNum = parseInt(score);
+        const percentage = (scoreNum / totalQuestions) * 100;
+        totalScore += percentage * count;
+        totalCount += count;
+      });
 
-    return totalCount > 0 ? (totalScore / totalCount).toFixed(1) : 0;
+      return totalCount > 0 ? Math.round(totalScore / totalCount) : 0;
+    } else if (selectedTest.results && selectedTest.results.length > 0) {
+      let totalScore = 0;
+      let totalCount = 0;
+
+      selectedTest.results.forEach(result => {
+        if (result && result.score !== undefined && result.totalQuestions) {
+          const scorePercentage = (result.score / result.totalQuestions) * 100;
+          totalScore += scorePercentage;
+          totalCount++;
+        }
+      });
+
+      return totalCount > 0 ? Math.round(totalScore / totalCount) : 0;
+    }
+
+    return 0;
   };
 
-  // Tính tỷ lệ vượt qua (điểm >= 7)
   const calculatePassRate = () => {
-    const distribution = generateScoreDistribution();
-    let totalCount = 0;
-    let passCount = 0;
+    if (reportData?.score_distribution || reportData?.ScoreDistribution) {
+      const scoreData = reportData.score_distribution || reportData.ScoreDistribution;
+      const totalQuestions = selectedTest.numberOfQuestions || selectedTest.questions?.length || 1;
+      let totalCount = 0;
+      let passCount = 0;
 
-    distribution.forEach((count, index) => {
-      const score = index + 1; // Chuyển index 0-9 thành điểm 1-10
-      totalCount += count;
-      if (score >= 7) { // Điểm vượt qua >= 7
-        passCount += count;
-      }
-    });
+      Object.entries(scoreData).forEach(([score, count]) => {
+        const scoreNum = parseInt(score);
+        totalCount += count;
+        const percentage = (scoreNum / totalQuestions) * 100;
+        if (percentage >= 70) {
+          passCount += count;
+        }
+      });
 
-    return totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+      return totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+    } else if (selectedTest.results && selectedTest.results.length > 0) {
+      let totalCount = 0;
+      let passCount = 0;
+
+      selectedTest.results.forEach(result => {
+        if (result && result.score !== undefined && result.totalQuestions) {
+          totalCount++;
+          const percentage = (result.score / result.totalQuestions) * 100;
+          if (percentage >= 70) {
+            passCount++;
+          }
+        }
+      });
+
+      return totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+    }
+
+    return 0;
   };
 
-  // Tính tỷ lệ chọn mỗi đáp án cho từng câu hỏi từ reportData
   const calculateAnswerDistribution = (questionId) => {
-    // Tìm thống kê câu hỏi từ reportData
     if (reportData?.question_stats || reportData?.QuestionStats) {
       const questionStatsArray = reportData.question_stats || reportData.QuestionStats;
       const questionStats = questionStatsArray.find(q =>
@@ -117,25 +171,22 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
         return optionStats.map(option => ({
           text: option.answer_text || option.AnswerText,
           percentage: Math.round(option.selection_rate || option.SelectionRate),
-          isCorrect: false, // Sẽ cần thêm thông tin này từ API nếu cần
-          count: 0 // Không có thông tin count từ API
+          isCorrect: false,
+          count: 0
         }));
       }
     }
 
-    // Fallback to old logic if no reportData
     const question = selectedTest.questions ? selectedTest.questions.find(q => q.id === questionId) : null;
     if (!question || !question.options) return [];
 
     const answerCounts = {};
     let totalAnswers = 0;
 
-    // Khởi tạo đếm cho mỗi đáp án
     question.options.forEach(option => {
       answerCounts[option.id] = { count: 0, text: option.text, isCorrect: option.isCorrect };
     });
 
-    // Đếm số lần chọn mỗi đáp án
     if (selectedTest.results && selectedTest.results.length > 0) {
       selectedTest.results.forEach(result => {
         if (result && result.answers) {
@@ -150,16 +201,13 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
       });
     }
 
-    // Tính phần trăm
     return Object.values(answerCounts).map(item => ({
       ...item,
       percentage: totalAnswers > 0 ? Math.round((item.count / totalAnswers) * 100) : 0
     }));
   };
 
-  // Tính thời gian trung bình trả lời mỗi câu hỏi từ reportData
   const calculateAverageTime = (questionId) => {
-    // Tìm thống kê câu hỏi từ reportData
     if (reportData?.question_stats || reportData?.QuestionStats) {
       const questionStatsArray = reportData.question_stats || reportData.QuestionStats;
       const questionStats = questionStatsArray.find(q =>
@@ -170,7 +218,6 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
       }
     }
 
-    // Fallback to old logic if no reportData
     let totalTime = 0;
     let count = 0;
 
@@ -195,10 +242,12 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
     color: (opacity = 1) => `rgba(0, 99, 255, ${opacity})`,
     strokeWidth: 2,
     barPercentage: 0.7,
-    useShadowColorFromDataset: false
+    useShadowColorFromDataset: false,
+    propsForLabels: {
+      fontSize: 12,
+    }
   };
 
-  // Render header và thống kê
   const renderHeader = () => (
     <View>
       <TouchableOpacity style={styles.backButton} onPress={() => onGoBack && onGoBack()}>
@@ -230,13 +279,13 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
       {/* Score Distribution Chart */}
       <Text style={styles.sectionTitle}>Phân bố điểm số</Text>
       <Text style={styles.chartDescription}>
-        Biểu đồ hiển thị số lượng người đạt từng điểm số (1-10). Điểm trung bình: {calculateAverageScore()}, Tỷ lệ vượt qua (≥7): {calculatePassRate()}%
+        Biểu đồ hiển thị số lượng người đạt từng khoảng điểm. Điểm trung bình: {calculateAverageScore()}%, Tỷ lệ vượt qua (≥70%): {calculatePassRate()}%
       </Text>
       <View style={styles.chartContainer}>
         <BarChart
           data={{
             labels: getScoreLabels(),
-            datasets: [{ data: generateScoreDistribution() }],
+            datasets: [{ data: getChartData() }],
           }}
           width={screenWidth - 48}
           height={250}
@@ -244,7 +293,7 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
           verticalLabelRotation={0}
           fromZero={true}
           showValuesOnTopOfBars={true}
-          yAxisLabel="Số người"
+          yAxisLabel=""
           yAxisSuffix=""
           style={{
             marginLeft: -20,
@@ -257,7 +306,6 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
     </View>
   );
 
-  // Render mỗi câu hỏi
   const renderQuestion = ({ item, index }) => {
     const answerDistribution = calculateAnswerDistribution(item.id);
     const avgTime = calculateAverageTime(item.id);
@@ -297,7 +345,6 @@ const AuthorTestReport = ({ tests, onGoBack, reportData }) => {
     );
   };
 
-  // Lấy danh sách câu hỏi từ reportData hoặc selectedTest
   const getQuestionsList = () => {
     if (reportData?.question_stats || reportData?.QuestionStats) {
       const questionStatsArray = reportData.question_stats || reportData.QuestionStats;

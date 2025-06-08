@@ -19,7 +19,7 @@ const EditQuizModal = ({ visible, quiz, onClose, onSave, onDelete }) => {
     name: '',
     image: '',
     genreId: null,
-    status: 'Public'
+    //status: 'Public'
   });
   const [imageUri, setImageUri] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -61,7 +61,7 @@ const EditQuizModal = ({ visible, quiz, onClose, onSave, onDelete }) => {
         name: quiz.name || '',
         image: quiz.image || '',
         genreId: quiz.genre_id || quiz.genreId || null,
-        status: quiz.status || 'Public'
+        //status: quiz.status || 'Public'
       });
       setImageUri(quiz.image ? { uri: quiz.image } : null);
 
@@ -525,7 +525,7 @@ const EditQuizModal = ({ visible, quiz, onClose, onSave, onDelete }) => {
                 </View>
 
                 {/* Status */}
-                <View style={styles.inputGroup}>
+                {/* <View style={styles.inputGroup}>
                   <Text style={styles.label}>Trạng thái</Text>
                   <Dropdown
                     style={styles.dropdown}
@@ -544,8 +544,8 @@ const EditQuizModal = ({ visible, quiz, onClose, onSave, onDelete }) => {
                       />
                     )}
                   />
-                </View>
-              </View>
+                </View>*/}
+              </View> 
             </ScrollView>
           ) : (
             /* Questions Tab */
@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.GRAY_LIGHT,
+    borderBottomColor: COLORS.GRAY_BG,
   },
   headerTitle: {
     fontSize: 18,

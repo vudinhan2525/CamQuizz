@@ -160,7 +160,9 @@ export const Library = () => {
     setSelectedQuiz({ ...quiz, deleteCallback });
     setShowEditModal(true);
   };
-
+  const handleEditAccess = (quiz)=>{
+    navigation.navigate(SCREENS.UPDATE_ACCESS,{quizId:quiz.id})
+  }
   const handleDeleteQuiz = async (quizId) => {
     try {
       console.log(' Deleting quiz:', quizId);
@@ -191,7 +193,7 @@ export const Library = () => {
         name: updatedQuizData.name,
         image: updatedQuizData.image,
         genreId: updatedQuizData.genreId,
-        status: updatedQuizData.status
+        //status: updatedQuizData.status
       };
 
       const response = await QuizzService.updateQuizz(updateDto);
@@ -275,6 +277,7 @@ export const Library = () => {
                   showOptions={true}
                   onEdit={handleEditQuiz}
                   onDelete={handleDeleteQuiz}
+                  onEditAccess={handleEditAccess}
                 />
               )}
               contentContainerStyle={styles.quizListContainer}

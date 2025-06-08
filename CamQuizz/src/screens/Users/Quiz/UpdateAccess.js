@@ -32,11 +32,7 @@ const UpdateAccess = ({ navigation, route }) => {
     const fetchQuizData = async () => {
         try {
             const data = await QuizzService.getQuizzById(quizId);
-            setQuiz({
-                status: data.status,
-                shared_users: data.shared_users || [],
-                shared_groups: data.shared_groups || []
-            });
+            setQuiz(data);
             setSelectedGroups(data.shared_groups?.map(g => g.group_id) || []);
         } catch (error) {
             Toast.show({
@@ -55,13 +51,12 @@ const UpdateAccess = ({ navigation, route }) => {
         try {
             setLoading(true);
             const updateData = {
-                quizId,
-                status: quiz.status,
+                ...quiz,
                 shared_groups: selectedGroups,
                 shared_users: quiz.shared_users.map(u => u.email)
             };
-
-            await QuizzService.updateQuizAccess(quizId,updateData);
+            console.log(updateData)
+            await QuizzService.updateQuizz(updateData);
             Toast.show({
                 type: 'success',
                 text1: 'Thành công',
@@ -237,7 +232,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.GRAY_LIGHT,
+        borderBottomColor: COLORS.GRAY_BG,
     },
     headerTitle: {
         fontSize: 18,

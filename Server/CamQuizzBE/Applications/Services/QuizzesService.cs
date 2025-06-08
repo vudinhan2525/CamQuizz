@@ -3,6 +3,7 @@ using CamQuizzBE.Applications.DTOs.Quizzes;
 using CamQuizzBE.Domain.Entities;
 using CamQuizzBE.Domain.Interfaces;
 using CamQuizzBE.Domain.Repositories;
+using CamQuizzBE.Domain.Enums;
 
 namespace CamQuizzBE.Applications.Services;
 
@@ -104,45 +105,93 @@ public class QuizzesService : IQuizzesService
             throw new KeyNotFoundException("Quiz not found.");
         }
 
-        // Update quiz properties
-        existingQuiz.Name = updateQuiz.Name;
-        existingQuiz.Image = updateQuiz.Image;
-        existingQuiz.Status = updateQuiz.Status;
-        existingQuiz.GenreId = updateQuiz.GenreId ?? existingQuiz.GenreId;
+        // Check if status is being changed to Private
+        if (existingQuiz.Status != QuizStatus.Private && updateQuiz.Status == QuizStatus.Private)
+        {
+            await _quizzesRepo.RemoveAllSharedUsersAsync(updateQuiz.Id);
+            await _quizzesRepo.RemoveAllSharedGroupsAsync(updateQuiz.Id);
+        }
+
+        // Only update properties if they are provided in the request
+        if (!string.IsNullOrEmpty(updateQuiz.Name))
+        {
+            existingQuiz.Name = updateQuiz.Name;
+        }
+        if (!string.IsNullOrEmpty(updateQuiz.Image))
+        {
+            existingQuiz.Image = updateQuiz.Image;
+        }
+        if (updateQuiz.GenreId.HasValue)
+        {
+            existingQuiz.GenreId = updateQuiz.GenreId.Value;
+        }
+        if (updateQuiz.Status != default)
+        {
+            existingQuiz.Status = updateQuiz.Status;
+        }
         existingQuiz.UpdatedAt = DateTime.UtcNow;
 
         // Update quiz in database
         await _quizzesRepo.UpdateAsync(existingQuiz);
 
-        // Handle shared users
-        foreach (var email in updateQuiz.SharedUsers)
+        // Only update shared users if they are provided in the request
+        if (updateQuiz.SharedUsers != null)
         {
-            var user = await _userRepository.GetUserByEmailAsync(email);
-            if (user != null && !await _quizzesRepo.IsQuizSharedWithUserAsync(updateQuiz.Id, user.Id))
+            // Remove users that are no longer in the shared list
+            var currentSharedUsers = existingQuiz.SharedUsers.ToList();
+            foreach (var sharedUser in currentSharedUsers)
             {
-                await _quizzesRepo.ShareQuizWithUserAsync(new UserShared
+                var user = await _userService.GetUserByIdAsync(sharedUser.UserId);
+                if (user?.Email != null && !updateQuiz.SharedUsers.Contains(user.Email))
                 {
-                    QuizId = updateQuiz.Id,
-                    OwnerId = existingQuiz.UserId,
-                    UserId = user.Id
-                });
+                    await _quizzesRepo.RemoveSharedUserAsync(updateQuiz.Id, sharedUser.UserId);
+                }
+            }
+
+            // Add new shared users
+            foreach (var email in updateQuiz.SharedUsers)
+            {
+                var user = await _userRepository.GetUserByEmailAsync(email);
+                if (user != null && !await _quizzesRepo.IsQuizSharedWithUserAsync(updateQuiz.Id, user.Id))
+                {
+                    await _quizzesRepo.ShareQuizWithUserAsync(new UserShared
+                    {
+                        QuizId = updateQuiz.Id,
+                        OwnerId = existingQuiz.UserId,
+                        UserId = user.Id
+                    });
+                }
             }
         }
 
-        // Handle shared groups
-        foreach (var groupIdStr in updateQuiz.SharedGroups)
+        // Only update shared groups if they are provided in the request
+        if (updateQuiz.SharedGroups != null)
         {
-            if (int.TryParse(groupIdStr, out int groupId))
+            // Remove groups that are no longer in the shared list
+            var currentSharedGroups = existingQuiz.SharedGroups.ToList();
+            foreach (var sharedGroup in currentSharedGroups)
             {
-                var group = await _groupRepository.GetGroupByIdAsync(groupId);
-                if (group != null)
+                if (!updateQuiz.SharedGroups.Contains(sharedGroup.GroupId.ToString()))
                 {
-                    await _quizzesRepo.ShareQuizWithGroupAsync(new GroupShared
+                    await _quizzesRepo.RemoveSharedGroupAsync(updateQuiz.Id, sharedGroup.GroupId);
+                }
+            }
+
+            // Add new shared groups
+            foreach (var groupIdStr in updateQuiz.SharedGroups)
+            {
+                if (int.TryParse(groupIdStr, out int groupId))
+                {
+                    var group = await _groupRepository.GetGroupByIdAsync(groupId);
+                    if (group != null && !existingQuiz.SharedGroups.Any(g => g.GroupId == groupId))
                     {
-                        QuizId = updateQuiz.Id,
-                        GroupId = groupId,
-                        OwnerId = existingQuiz.UserId
-                    });
+                        await _quizzesRepo.ShareQuizWithGroupAsync(new GroupShared
+                        {
+                            QuizId = updateQuiz.Id,
+                            GroupId = groupId,
+                            OwnerId = existingQuiz.UserId
+                        });
+                    }
                 }
             }
         }

@@ -178,6 +178,26 @@ public class ReportController : ControllerBase
         }
     }
 
+    // GET: api/v1/reports/hosted-sessions
+    [HttpGet("hosted-sessions")]
+    public async Task<ActionResult<ApiResponse<List<OldAttemptReportDto>>>> GetHostedSessionAttempts(
+        [FromQuery] int limit = 10,
+        [FromQuery] int page = 1,
+        [FromQuery] string? sort = "attempt_date")
+    {
+        try
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var attempts = await _reportService.GetHostedSessionAttemptsAsync(userId, limit, page, sort);
+            return Ok(new ApiResponse<List<OldAttemptReportDto>>(attempts, "Hosted session attempts retrieved successfully."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting hosted session attempts");
+            throw;
+        }
+    }
+
     // GET: api/v1/reports/game/{gameId}
     [HttpGet("game/{gameId}")]
     public async Task<ActionResult<ApiResponse<QuizPlayReportDto>>> GetQuizPlayReport(string gameId)

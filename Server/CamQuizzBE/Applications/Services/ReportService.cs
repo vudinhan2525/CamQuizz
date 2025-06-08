@@ -406,6 +406,7 @@ public class ReportService : IReportService
                 .Select(x => new OldAttemptReportDto
                 {
                     AttemptNumber = x.Id,
+                    RoomId = x.RoomId,
                     Timestamp = x.StartTime,
                     Score = x.Score,
                     Duration = x.EndTime.HasValue ? x.EndTime.Value - x.StartTime : null,

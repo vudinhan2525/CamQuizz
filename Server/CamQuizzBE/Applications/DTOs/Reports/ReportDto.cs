@@ -29,6 +29,7 @@ public class OldAttemptReportDto
     public DateTime Timestamp { get; set; }
     public int Score { get; set; }
     public TimeSpan? Duration { get; set; }
+    public string? RoomId { get; set; }  // For hosted sessions
     
     // Quiz information
     public int QuizId { get; set; }

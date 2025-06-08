@@ -6,19 +6,14 @@ import COLORS from '../../constant/colors';
 import AsyncStorageService from '../../services/AsyncStorageService';
 import ReportQuizzService from '../../services/ReportQuizzService';
 
-
-
 const TestCard = ({
   test,
   onViewReport,
-  reportType = 'general', // 'general', 'author', 'organization', 'candidate'
+  reportType = 'general',
   showBadges = false,
   customLabels = {}
 }) => {
-  console.log('TestCard - reportType:', reportType);
-  console.log('TestCard - test data:', test);
 
-  // Utility function để format ngày tháng
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
@@ -37,8 +32,7 @@ const TestCard = ({
   const [showReportModal, setShowReportModal] = React.useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = React.useState(false);
 
-  const onReport = async (test) => {
-    console.log('TestCard - onReport:', test);
+  const onReport = async () => {
     setShowReportModal(true);
   };
 
@@ -59,7 +53,6 @@ const TestCard = ({
       setShowReportModal(false);
       setMessage('');
     } catch (error) {
-      console.error('Error submitting report:', error);
       Alert.alert('Lỗi', 'Không thể gửi báo cáo. Vui lòng thử lại.');
     } finally {
       setIsSubmittingReport(false);
@@ -71,7 +64,6 @@ const TestCard = ({
     setMessage('');
   };
 
-  // Xử lý dữ liệu dựa trên reportType
   const getTestData = () => {
     switch (reportType) {
       case 'candidate':
@@ -95,12 +87,6 @@ const TestCard = ({
           lastAttemptDate: test.lastAttempt || test.last_attempt_date
         };
 
-        console.log('TestCard candidate calculation:');
-        console.log('- Raw score:', rawScore);
-        console.log('- Total questions:', totalQuestions);
-        console.log('- Calculated percentage:', scorePercentage);
-        console.log('- Final candidate data:', candidateData);
-
         return candidateData;
 
       case 'author':
@@ -108,19 +94,22 @@ const TestCard = ({
           totalAttempts: test.numberOfAttended || test.attempts || 0,
           totalResults: test.numberOfAttended || test.attempts || 0,
           totalQuestions: test.numberOfQuestions || test.questions || 0,
-          averageScore: test.averageScore || 0, // Sẽ được cập nhật từ báo cáo chi tiết
-          passRate: test.passRate || 0 // Sẽ được cập nhật từ báo cáo chi tiết
+          averageScore: test.averageScore || 0,
+          passRate: test.passRate || 0 
         };
 
-        console.log('TestCard author calculation:');
-        console.log('- Test data:', test);
-        console.log('- numberOfQuestions:', test.numberOfQuestions);
-        console.log('- numberOfAttended:', test.numberOfAttended);
-        console.log('- averageScore:', test.averageScore);
-        console.log('- passRate:', test.passRate);
-        console.log('- Final author data:', authorData);
-
         return authorData;
+
+      case 'organization':
+        const organizationData = {
+          totalAttempts: test.numberOfAttended || test.attempts || test.totalResults || 0, 
+          totalResults: test.numberOfAttended || test.attempts || test.totalResults || 0,
+          totalQuestions: test.numberOfQuestions || test.questions || 0,
+          averageScore: test.averageScore || 0,
+          passRate: test.passRate || 0
+        };
+
+        return organizationData;
 
       default:
         return {
@@ -136,15 +125,40 @@ const TestCard = ({
   const { totalAttempts, totalResults, totalQuestions, averageScore, passRate, latestScore, lastAttemptDate } = getTestData();
 
   const getLabels = () => {
-    const baseLabels = {
-      attempts: reportType === 'candidate' ? 'Số lần làm bài' : 'Số lượt làm bài',
-      averageScore: reportType === 'candidate' ? 'Điểm cao nhất' : 'Điểm trung bình',
-      questions: 'Số câu hỏi',
-      passRate: reportType === 'candidate' ? 'Trạng thái' : 'Tỉ lệ vượt qua',
-      viewReport: 'Xem báo cáo',
-      ...customLabels
-    };
-    return baseLabels;
+    let baseLabels = {};
+
+    switch (reportType) {
+      case 'candidate':
+        baseLabels = {
+          attempts: 'Số lần làm bài',
+          averageScore: 'Điểm cao nhất',
+          questions: 'Số câu hỏi',
+          passRate: 'Trạng thái',
+          viewReport: 'Xem báo cáo'
+        };
+        break;
+      case 'organization':
+        baseLabels = {
+          attempts: 'Số phiên tổ chức',
+          averageScore: 'Điểm trung bình',
+          questions: 'Số câu hỏi',
+          passRate: 'Tỉ lệ đạt',
+          viewReport: 'Xem báo cáo'
+        };
+        break;
+      case 'author':
+      default:
+        baseLabels = {
+          attempts: 'Số lượt làm bài',
+          averageScore: 'Điểm trung bình',
+          questions: 'Số câu hỏi',
+          passRate: 'Tỉ lệ vượt qua',
+          viewReport: 'Xem báo cáo'
+        };
+        break;
+    }
+
+    return { ...baseLabels, ...customLabels };
   };
 
   const labels = getLabels();
@@ -180,18 +194,18 @@ const TestCard = ({
             <View style={styles.statRow}>
               <View style={styles.statLabel}>
                 <Ionicons name="people-outline" size={16} color={COLORS.BLUE} />
-                <Text style={styles.statLabelText}>Số người tham gia</Text>
+                <Text style={styles.statLabelText}>Tổng người tham gia</Text>
               </View>
-              <Text style={styles.statValue}>{totalResults}</Text>
+              <Text style={styles.statValue}>{totalAttempts}</Text>
             </View>
-            
+
             <View style={styles.statRow}>
               <View style={styles.statLabel}>
                 <Ionicons name="time-outline" size={16} color={COLORS.BLUE} />
-                <Text style={styles.statLabelText}>Thời gian tổ chức</Text>
+                <Text style={styles.statLabelText}>Thời gian gần nhất</Text>
               </View>
               <Text style={styles.statValue}>
-                {test.organizationDate ? new Date(test.organizationDate).toLocaleDateString() : 'N/A'}
+                {test.organizationDate ? formatDate(test.organizationDate) : 'N/A'}
               </Text>
             </View>
           </>
@@ -229,7 +243,7 @@ const TestCard = ({
 
   return (
     <View style={styles.card}>
-      {/* Header */}
+
       <View style={styles.header}>
         <View style={styles.titleContainer}>
           <Ionicons name="documents-outline" size={20} color={COLORS.BLUE} />
@@ -237,20 +251,9 @@ const TestCard = ({
             {test.title || test.name || 'Bài kiểm tra'}
           </Text>
         </View>
-        {/* <Text style={styles.description}>
-          {test.description || `${totalQuestions} câu hỏi • ${totalAttempts} lượt làm`}
-        </Text>
-        {reportType === 'author' && (
-          <Text style={[styles.description, { fontSize: 12, color: '#888', marginTop: 2 }]}>
-            ID: {test.id} • Tạo: {formatDate(test.createdAt)}
-            {test.updatedAt && test.updatedAt !== test.createdAt && (
-              <Text> • Cập nhật: {formatDate(test.updatedAt)}</Text>
-            )}
-          </Text>
-        )} */}
       </View>
 
-      {/* Nội dung thống kê */}
+
       <View style={styles.statsContainer}>
         <View style={styles.statRow}>
           <View style={styles.statLabel}>
@@ -308,7 +311,7 @@ const TestCard = ({
         {renderReportTypeSpecificInfo()}
       </View>
 
-      {/* Badges */}
+
       {showBadges && (
         <View style={styles.badgesContainer}>
           {test.organizationName && (
@@ -333,7 +336,7 @@ const TestCard = ({
         </View>
       )}
 
-      {/* Nút View Report */}
+
       <TouchableOpacity
         style={styles.viewReportButton}
         onPress={() => onViewReport(test)}
@@ -344,16 +347,18 @@ const TestCard = ({
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity
-        style= {{marginTop: 8, paddingVertical: 10, backgroundColor: COLORS.WHITE, borderRadius: 8, alignItems: 'center'}}
-        onPress={() => onReport(test)}
-      >
-        <View style={{backgroundColor: COLORS.WHITE, padding: 8, borderRadius: 8}}>
-          <Text style={{color: COLORS.BLUE}}>Báo cáo bài kiểm tra</Text>
-        </View>
-      </TouchableOpacity>
+      {reportType === 'candidate' && (
+        <TouchableOpacity
+          style= {{marginTop: 8, paddingVertical: 10, backgroundColor: COLORS.WHITE, borderRadius: 8, alignItems: 'center'}}
+          onPress={() => onReport()}
+        >
+          <View style={{backgroundColor: COLORS.WHITE, padding: 8, borderRadius: 8}}>
+            <Text style={{color: COLORS.BLUE}}>Báo cáo bài kiểm tra</Text>
+          </View>
+        </TouchableOpacity>
+      )}
 
-      {/* Report Modal */}
+
       <Modal
         visible={showReportModal}
         transparent={true}

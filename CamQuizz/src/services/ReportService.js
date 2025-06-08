@@ -150,6 +150,91 @@ class ReportService {
         }
     }
 
+    // Lấy báo cáo game/phòng chơi cụ thể
+    static async getGameReport(gameId) {
+        try {
+            if (!gameId) {
+                throw new Error('Game ID is required');
+            }
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            console.log('Calling getGameReport API for game:', gameId);
+
+            const response = await apiClient.get(`/reports/game/${gameId}`);
+            console.log('getGameReport API response:', response.data);
+
+            return {
+                data: response.data.data,
+                message: response.data.message,
+                pagination: response.data.pagination,
+            };
+        } catch (error) {
+            console.error(`Error fetching game report ${gameId}:`, error);
+            throw error;
+        }
+    }
+
+    // Lấy báo cáo tác giả cho quiz cụ thể
+    static async getAuthorReport(quizId) {
+        try {
+            if (!quizId) {
+                throw new Error('Quiz ID is required');
+            }
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            console.log('Calling getAuthorReport API for quiz:', quizId);
+
+            const response = await apiClient.get(`/reports/author/${quizId}`);
+            console.log('getAuthorReport API response:', response.data);
+
+            return {
+                data: response.data.data,
+                message: response.data.message,
+            };
+        } catch (error) {
+            console.error(`Error fetching author report ${quizId}:`, error);
+            throw error;
+        }
+    }
+
+    // Lấy danh sách các phiên tổ chức (hosted sessions)
+    static async getHostedSessions(limit = 10, page = 1, sort = 'attempt_date') {
+        try {
+            const params = {
+                limit,
+                page,
+                sort,
+            };
+
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) {
+                throw new Error('Unauthorized - Please log in again');
+            }
+
+            console.log('Calling getHostedSessions API with params:', params);
+
+            const response = await apiClient.get('/reports/hosted-sessions', { params });
+            console.log('getHostedSessions API response:', response.data);
+
+            return {
+                data: response.data.data || [],
+                message: response.data.message,
+                pagination: response.data.pagination,
+            };
+        } catch (error) {
+            console.error('Error fetching hosted sessions:', error);
+            throw error;
+        }
+    }
+
     // Lấy báo cáo tác giả cho quiz cụ thể
     static async getAuthorReport(quizId) {
         try {

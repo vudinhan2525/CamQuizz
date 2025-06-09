@@ -1,12 +1,7 @@
 # Requirements
-<<<<<<< Updated upstream
- - .NET SDK 9.0 (https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
- - ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
-=======
 
-- .NET SDK 9.0
-- ngrok must be installed and available in PATH.
->>>>>>> Stashed changes
+- .NET SDK 9.0 (https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+- ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
 
 # 1. Change directory to BE
 

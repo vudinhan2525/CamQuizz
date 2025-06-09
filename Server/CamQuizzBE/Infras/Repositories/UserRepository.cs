@@ -41,6 +41,35 @@ public class UserRepository(
 
         var result = await userManager.CreateAsync(registerUser, password);
 
+        if (result.Succeeded)
+        {
+            // Get default package for new user quota
+            var defaultPackage = await context.Packages
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+
+            if (defaultPackage != null)
+            {
+                var userQuota = new UserQuota
+                {
+                    UserId = registerUser.Id,
+                    TotalQuizz = defaultPackage.MaxNumberOfQuizz,
+                    RemainingQuizz = defaultPackage.MaxNumberOfQuizz,
+                    TotalParticipants = defaultPackage.MaxNumberOfAttended,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await context.UserQuotas.AddAsync(userQuota);
+                await context.SaveChangesAsync();
+                logger.LogInformation("Created default quota for new user {UserId} with package {PackageId}",
+                    registerUser.Id, defaultPackage.Id);
+            }
+            else
+            {
+                logger.LogWarning("No default package found when creating user {UserId}", registerUser.Id);
+            }
+        }
+
         return result;
     }
 

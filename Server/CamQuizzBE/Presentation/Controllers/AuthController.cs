@@ -61,18 +61,21 @@ public class AuthController(
             return BadRequest("Email already exists.");
         }
 
-        var user = mapper.Map<AppUser>(registerDto);
-
-        var result = await userManager.CreateAsync(user, registerDto.Password);
+        // Use userService to create user - this will also create default quota
+        var result = await userService.CreateUserAsync(registerDto);
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
         }
-        else
+
+        // Get the created user for role assignment
+        var user = await userManager.FindByEmailAsync(registerDto.Email);
+        if (user == null)
         {
-            await userManager.AddToRoleAsync(user, registerDto.Role ?? "Student");
+            return BadRequest("User creation succeeded but user not found");
         }
 
+        await userManager.AddToRoleAsync(user, registerDto.Role ?? "Student");
         return mapper.Map<UserDto>(user);
     }
 

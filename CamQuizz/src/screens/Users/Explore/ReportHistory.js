@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal } from 'react-native'
 import React, { useState, useEffect } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS  from '../../../constant/colors';
 import ReportQuizzService from './../../../services/ReportQuizzService'
@@ -57,7 +58,7 @@ const ReportHistory = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Lịch sử báo cáo</Text>
@@ -105,7 +106,7 @@ const ReportHistory = ({ navigation }) => {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 

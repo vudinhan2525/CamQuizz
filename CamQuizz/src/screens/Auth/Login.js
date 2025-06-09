@@ -23,24 +23,33 @@ export const Login = () => {
       // Gọi API đăng nhập
       const userData = await login(email, password);
 
-      // Kiểm tra vai trò để điều hướng
-      console.log('Login successful, user data:', userData);
-
-      // Xử lý roles một cách an toàn
-      const roles = userData.roles || [];
-      console.log('User roles:', roles);
-
       // Điều hướng đến màn hình chính dựa trên vai trò
       navigation.reset({
         index: 0,
         routes: [{ name: 'Root' }], // Điều hướng đến Root navigator
       });
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert(
-        'Đăng nhập thất bại',
-        error.message || 'Có lỗi xảy ra khi đăng nhập'
-      );
+      // Xử lý lỗi và hiển thị thông báo thân thiện
+      let errorMessage = 'Có lỗi xảy ra khi đăng nhập';
+
+      if (error.message) {
+        // Kiểm tra các loại lỗi phổ biến và hiển thị thông báo phù hợp
+        if (error.message.includes('User with this email does not exist') ||
+            error.message.includes('Email hoặc mật khẩu không đúng')) {
+          errorMessage = 'Email hoặc mật khẩu không đúng';
+        } else if (error.message.includes('Invalid password')) {
+          errorMessage = 'Mật khẩu không đúng';
+        } else if (error.message.includes('kết nối') || error.message.includes('network')) {
+          errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet';
+        } else if (error.message.includes('máy chủ') || error.message.includes('server')) {
+          errorMessage = 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau';
+        } else {
+          // Chỉ hiển thị thông báo lỗi đơn giản, không hiển thị chi tiết kỹ thuật
+          errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin';
+        }
+      }
+
+      Alert.alert('Đăng nhập thất bại', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -87,10 +96,6 @@ export const Login = () => {
             <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={COLORS.GRAY} />
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.forgotPassword}>
-          <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.loginButton}

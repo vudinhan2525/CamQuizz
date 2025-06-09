@@ -1,5 +1,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../..';
@@ -116,10 +117,10 @@ const GroupScreen = ({ navigation, route }) => {
       const quizzesData = await StudyGroupService.getGroupQuizzes(group.id);
 
 
-      const quizzes = quizzesData.map(item => item.quiz);
+      const quizzes = quizzesData?.map(item => item.quiz);
 
 
-      const transformedQuizzes = quizzes.map((item) => ({
+      const transformedQuizzes = quizzes?.map((item) => ({
         id: item.id,
         title: item.name,
         image: item.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg',
@@ -211,7 +212,7 @@ const GroupScreen = ({ navigation, route }) => {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
@@ -291,7 +292,7 @@ const GroupScreen = ({ navigation, route }) => {
         />
       </>
 
-    </View>
+    </SafeAreaView>
   );
 };
 

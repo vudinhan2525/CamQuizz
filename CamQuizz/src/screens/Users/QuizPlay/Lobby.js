@@ -1,5 +1,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Modal, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
@@ -289,9 +290,9 @@ const Lobby = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
 
-                
+
             {/* Existing UI components */}
             <View style={styles.headerWithBack}>
                 <Text style={styles.title}>Phòng chờ</Text>
@@ -379,7 +380,7 @@ const Lobby = ({ navigation, route }) => {
                 settings={showRankObj}
                 onSettingsChange={handleSettingsChange}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 

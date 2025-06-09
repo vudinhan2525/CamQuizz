@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, FlatList, ActivityIndicator, Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, Plus, MoreVertical } from "lucide-react-native";
 import LibraryTab from "../../components/Library/LibraryTab";
 import FlashCardPage from "../Users/FlashCard/FlashCardPage";
@@ -221,7 +222,7 @@ export const Library = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -324,7 +325,7 @@ export const Library = () => {
         onSave={handleSaveQuiz}
         onDelete={selectedQuiz?.deleteCallback || handleDeleteQuiz}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

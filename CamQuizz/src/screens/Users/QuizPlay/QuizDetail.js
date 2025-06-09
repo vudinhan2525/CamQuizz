@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../../screens';
@@ -139,7 +140,7 @@ const QuizDetail = ({ navigation, route }) => {
 
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Quiz Image with Back Button */}
                 <View style={styles.imageContainer}>
@@ -210,7 +211,7 @@ const QuizDetail = ({ navigation, route }) => {
                     <Text style={styles.playButtonText}>Bắt đầu</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 
@@ -218,7 +219,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.WHITE,
-        paddingTop: StatusBar.currentHeight || 0,
     },
     imageContainer: {
         position: 'relative',

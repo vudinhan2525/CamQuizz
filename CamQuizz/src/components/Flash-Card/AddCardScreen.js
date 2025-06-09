@@ -56,11 +56,6 @@ const AddCardScreen = ({ onClose, onSave }) => {
             onChangeText={setFrontText}
             multiline
           />
-          <View style={styles.iconRow}>
-            <TouchableOpacity>
-              <Image size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-          </View>
         </View>
 
         {/* Back Card */}
@@ -73,12 +68,6 @@ const AddCardScreen = ({ onClose, onSave }) => {
             onChangeText={setBackText}
             multiline
           />
-          <View style={styles.iconRow}>
-          
-            <TouchableOpacity>
-              <Image size={24} color={COLORS.BLUE} />
-            </TouchableOpacity>
-          </View>
         </View>
 
 

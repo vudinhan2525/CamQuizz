@@ -1,6 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import apiClient from './ApiClient';
 
+// Utility functions để log chỉ trong terminal, không hiển thị trên UI
+const debugLog = (...args) => {
+  // Chỉ log trong development mode và chỉ trong terminal
+  if (__DEV__) {
+    // Sử dụng setTimeout để đảm bảo log không hiển thị trên UI
+    setTimeout(() => {
+      console.log(...args);
+    }, 0);
+  }
+};
+
+const debugError = (...args) => {
+  // Chỉ log trong development mode và chỉ trong terminal
+  if (__DEV__) {
+    // Sử dụng setTimeout để đảm bảo log không hiển thị trên UI
+    setTimeout(() => {
+      console.error(...args);
+    }, 0);
+  }
+};
 
 const MOCK_USERS = [
   {
@@ -77,14 +97,35 @@ export const login = async (email, password) => {
         console.log('Login response status:', response.status);
         console.log('Login response data:', response.data);
 
+        // Kiểm tra status code thủ công vì validateStatus trong apiClient cho phép 400-499
+        if (response.status >= 400) {
+          // Xử lý lỗi từ server
+          const responseData = response.data;
+          if (typeof responseData === 'string') {
+            throw new Error(responseData);
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
+          } else if (responseData && responseData.message) {
+            throw new Error(responseData.message);
+          } else {
+            throw new Error('Đăng nhập thất bại. Vui lòng thử lại sau.');
+          }
+        }
+
         // Process the response data
         if (typeof response.data === 'string') {
-          console.error('API returned string instead of user data:', response.data);
+          debugError('API returned string instead of user data:', response.data);
           throw new Error(response.data || 'Đăng nhập thất bại');
         }
 
         if (!response.data || typeof response.data !== 'object') {
-          console.error('API returned invalid data format:', response.data);
+          debugError('API returned invalid data format:', response.data);
           throw new Error('Định dạng dữ liệu không hợp lệ từ máy chủ');
         }
 
@@ -155,34 +196,46 @@ export const login = async (email, password) => {
 
         return userData;
       } catch (axiosError) {
-        console.error('Axios error:', axiosError);
+        debugError('Axios error:', axiosError);
 
         // Handle axios error response
         if (axiosError.response) {
           // The request was made and the server responded with a status code
           // that falls out of the range of 2xx
-          console.log('Error response status:', axiosError.response.status);
-          console.log('Error response data:', axiosError.response.data);
+          debugLog('Error response status:', axiosError.response.status);
+          debugLog('Error response data:', axiosError.response.data);
 
-          const errorMessage =
-            typeof axiosError.response.data === 'string'
-              ? axiosError.response.data
-              : axiosError.response.data?.message || 'Đăng nhập thất bại';
+          const responseData = axiosError.response.data;
+          let errorMessage = 'Đăng nhập thất bại';
+
+          if (typeof responseData === 'string') {
+            errorMessage = responseData;
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            errorMessage = errorMessages.join(', ');
+          } else if (responseData && responseData.message) {
+            errorMessage = responseData.message;
+          }
 
           throw new Error(errorMessage);
         } else if (axiosError.request) {
           // The request was made but no response was received
-          console.log('No response received:', axiosError.request);
+          debugLog('No response received:', axiosError.request);
           throw new Error('Không nhận được phản hồi từ máy chủ. Vui lòng kiểm tra kết nối mạng.');
         } else {
           // Something happened in setting up the request that triggered an Error
-          console.log('Error setting up request:', axiosError.message);
+          debugLog('Error setting up request:', axiosError.message);
           throw new Error(`Lỗi kết nối: ${axiosError.message}`);
         }
       }
     }
   } catch (error) {
-    console.log('Login error details:', error);
+    debugLog('Login error details:', error);
     throw error;
   }
 };
@@ -240,6 +293,27 @@ export const validateSignup = async (registerData) => {
         console.log('Validate response status:', response.status);
         console.log('Validate response data:', response.data);
 
+        // Kiểm tra status code thủ công vì validateStatus trong apiClient cho phép 400-499
+        if (response.status >= 400) {
+          // Xử lý lỗi từ server
+          const responseData = response.data;
+          if (typeof responseData === 'string') {
+            throw new Error(responseData);
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
+          } else if (responseData && responseData.message) {
+            throw new Error(responseData.message);
+          } else {
+            throw new Error('Kiểm tra thông tin đăng ký thất bại');
+          }
+        }
+
         return { isValid: true, data: response.data };
       } catch (axiosError) {
         console.error('API validation error:', axiosError);
@@ -249,6 +323,14 @@ export const validateSignup = async (registerData) => {
 
           if (typeof responseData === 'string') {
             throw new Error(responseData);
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
           } else if (responseData && responseData.message) {
             throw new Error(responseData.message);
           } else if (responseData && responseData.errors) {
@@ -507,6 +589,27 @@ export const signup = async (userData) => {
         console.log('Signup response status:', response.status);
         console.log('Signup response data:', response.data);
 
+        // Kiểm tra status code thủ công vì validateStatus trong apiClient cho phép 400-499
+        if (response.status >= 400) {
+          // Xử lý lỗi từ server
+          const responseData = response.data;
+          if (typeof responseData === 'string') {
+            throw new Error(responseData);
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
+          } else if (responseData && responseData.message) {
+            throw new Error(responseData.message);
+          } else {
+            throw new Error('Đăng ký thất bại. Vui lòng thử lại sau.');
+          }
+        }
+
         return {
           success: true,
           message: 'Đăng ký thành công',
@@ -521,6 +624,14 @@ export const signup = async (userData) => {
 
           if (typeof responseData === 'string') {
             throw new Error(responseData);
+          } else if (Array.isArray(responseData)) {
+            // Xử lý lỗi validation dạng array từ ASP.NET Identity
+            const errorMessages = responseData.map(err => {
+              if (err.description) return err.description;
+              if (err.code) return `Lỗi ${err.code}`;
+              return 'Lỗi validation';
+            });
+            throw new Error(errorMessages.join(', '));
           } else if (responseData && responseData.message) {
             throw new Error(responseData.message);
           } else if (responseData && responseData.errors) {

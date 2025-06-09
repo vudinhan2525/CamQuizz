@@ -1,5 +1,6 @@
 import React, { useState, useEffect, use } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useHubConnection } from '../../../contexts/SignalRContext';
 import COLORS from '../../../constant/colors';
@@ -520,7 +521,7 @@ const QuestionPlay = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {showRanking ? (
                 <Ranking
                     users={players}
@@ -598,7 +599,7 @@ const QuestionPlay = ({ navigation, route }) => {
                 settings={showRankObj}
                 onSettingsChange={handleSettingsChange}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 

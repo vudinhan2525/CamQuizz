@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Modal, TextInput, Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Plus, ChevronRight, Edit3, Trash2, Settings } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import AddCardScreen from "../../../components/Flash-Card/AddCardScreen";
@@ -407,7 +408,7 @@ export const FlashcardSetDetail = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {showAddCard ? (
         <AddCardScreen
           onClose={() => setShowAddCard(false)}
@@ -646,7 +647,7 @@ export const FlashcardSetDetail = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

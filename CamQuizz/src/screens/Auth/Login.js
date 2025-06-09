@@ -110,13 +110,6 @@ export const Login = () => {
             <Text style={styles.signupLink}>Đăng ký</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Thêm thông tin tài khoản test */}
-        <View style={styles.testAccountsContainer}>
-          <Text style={styles.testAccountsTitle}>Tài khoản test:</Text>
-          <Text style={styles.testAccount}>Admin: admin@gmail.com / admin123</Text>
-          <Text style={styles.testAccount}>User: user@gmail.com / user123</Text>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

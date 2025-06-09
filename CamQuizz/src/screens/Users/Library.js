@@ -6,13 +6,14 @@ import FlashCardPage from "../Users/FlashCard/FlashCardPage";
 import SharedQuizz from "../Users/Library/SharedQuizz";
 import COLORS from '../../constant/colors';
 import DropdownFilter from "../../components/Library/DropdownFilter";
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import SCREENS from '../../screens/index';
 import QuizCard from "../../components/QuizCard";
 import QuizzService from "../../services/QuizzService";
 import EditQuizModal from "../../components/EditQuizModal";
 import AsyncStorageService from "../../services/AsyncStorageService";
 import { checkAuthStatus } from "../../services/AuthService";
+import React from "react";
 
 export const navigateToFlashcardTab = (navigation, params = {}) => {
   navigation.navigate(SCREENS.LIBRARY, {
@@ -87,6 +88,18 @@ export const Library = () => {
 
     initializeData();
   }, []);
+
+  // Add useFocusEffect to refresh data when user returns to this tab
+  useFocusEffect(
+    React.useCallback(() => {
+      // Only refresh if we're on the "myLibrary" tab and have userId
+      if (activeTab === "myLibrary" && userId) {
+        console.log('useFocusEffect triggered - refreshing my quizzes');
+        fetchMyQuizzes();
+      }
+      return () => {};
+    }, [activeTab, userId])
+  );
 
   const fetchMyQuizzes = async () => {
     try {

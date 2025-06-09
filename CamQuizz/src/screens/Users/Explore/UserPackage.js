@@ -65,20 +65,29 @@ const UserPackage = ({ navigation }) => {
     const subscription = Linking.addEventListener('url', ({ url }) => {
       const data = Linking.parse(url);
       if (data.path === 'payment-result') {
-        // Force kiểm tra lại quota
-        setIsProcessingPayment(true);
-        AsyncStorageService.getUserId().then(userId => {
-          PackageService.getCurrentQuota(userId).then(updatedQuota => {
+        (async () => {
+          try {
+            setIsProcessingPayment(true);
+            const userId = await AsyncStorageService.getUserId();
+            const updatedQuota = await PackageService.getCurrentQuota(userId);
             setCurrentQuota(updatedQuota);
-            setIsProcessingPayment(false);
-            setPaymentRequestId(null);
             Toast.show({
               type: 'success',
               text1: `Thanh toán thành công lúc ${new Date(updatedQuota.updated_at).toLocaleString('vi-VN')}`,
               text2: 'Đã cập nhật số lượng quiz',
             });
-          });
-        });
+          } catch (error) {
+            console.error('Error updating quota after payment redirect:', error);
+            Toast.show({
+              type: 'error',
+              text1: 'Cập nhật quota thất bại',
+              text2: 'Xin hãy thử lại.',
+            });
+          } finally {
+            setIsProcessingPayment(false);
+            setPaymentRequestId(null);
+          }
+        })();
       }
     });
 

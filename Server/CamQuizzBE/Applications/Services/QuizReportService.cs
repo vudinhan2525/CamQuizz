@@ -27,7 +27,7 @@ public class QuizReportService : IQuizReportService
 
     public async Task CreateReportAsync(CreateQuizReportDto reportDto)
     {
-        var quiz = await _context.Quizzes.FindAsync(reportDto.QuizId) 
+        var quiz = await _context.Quizzes.FindAsync(reportDto.QuizId)
             ?? throw new KeyNotFoundException($"Quiz with ID {reportDto.QuizId} not found");
 
         var reporter = await _context.Users.FindAsync(reportDto.ReporterId)
@@ -59,7 +59,7 @@ public class QuizReportService : IQuizReportService
             });
 
         var total = await query.CountAsync();
-        
+
         var reports = await query
             .Skip((page - 1) * limit)
             .Take(limit)
@@ -89,47 +89,56 @@ public class QuizReportService : IQuizReportService
 
     public async Task<PagedResult<QuizReportDto>> GetReportsAsync(string? search, ReportStatus? status, int page, int limit)
     {
-        var reportedQuizzes = await _context.QuizReports
-        .Include(r => r.Reporter)  // Include Reporter info
-        .Include(r => r.ResolvedBy)  // Include ResolvedBy info
-        .GroupBy(r => r.QuizId)
-        .Where(g => !string.IsNullOrEmpty(search) ?
-                g.Any(r => r.Quiz.Name.Contains(search) || 
-                          r.Message.Contains(search) || 
-                          r.Reporter.UserName.Contains(search)) : true)
-            .Where(g => status.HasValue ? 
-                g.Any(r => r.Status == status.Value) : true)
-            .Select(g => new
-            {
-                QuizId = g.Key,
-                Quiz = g.First().Quiz,
-                TotalReports = g.Count(),
-                PendingReports = g.Count(r => r.Status == ReportStatus.Pending),
-                ResolvedReports = g.Count(r => r.Status == ReportStatus.Resolved),
-                LatestReport = g.OrderByDescending(r => r.CreatedAt).First()
-            })
+        // First get paginated reports
+        var query = _context.QuizReports
+            .Include(r => r.Reporter)
+            .Include(r => r.ResolvedBy)
+            .Include(r => r.Quiz)
+            .Where(r => !string.IsNullOrEmpty(search) ?
+                r.Quiz.Name.Contains(search) ||
+                r.Message.Contains(search) ||
+                r.Reporter.UserName.Contains(search) : true)
+            .Where(r => status.HasValue ? r.Status == status.Value : true)
+            .OrderByDescending(r => r.CreatedAt);
+
+        var total = await query.CountAsync();
+        
+        var reports = await query
             .Skip((page - 1) * limit)
             .Take(limit)
+            .Select(r => new
+            {
+                Report = r,
+                Counts = _context.QuizReports
+                    .Where(qr => qr.QuizId == r.QuizId)
+                    .GroupBy(qr => 1)
+                    .Select(g => new
+                    {
+                        Total = g.Count(),
+                        Pending = g.Count(qr => qr.Status == ReportStatus.Pending),
+                        Resolved = g.Count(qr => qr.Status == ReportStatus.Resolved)
+                    })
+                    .FirstOrDefault()
+            })
             .ToListAsync();
 
-        var total = await _context.QuizReports.Select(r => r.QuizId).Distinct().CountAsync();
-        
-        var items = reportedQuizzes.Select(rq => new QuizReportDto
+        var items = reports.Select(r => new QuizReportDto
         {
-            Id = rq.LatestReport.Id,  
-            QuizId = rq.QuizId,
-            QuizName = rq.Quiz.Name,
-            ReporterName = rq.LatestReport.Reporter.UserName,  
-            Message = rq.LatestReport.Message,
-            Status = rq.LatestReport.Status,
-            Action = rq.LatestReport.Action,
-            CreatedAt = rq.LatestReport.CreatedAt,
-            ResolvedAt = rq.LatestReport.ResolvedAt,
-            ResolvedByName = rq.LatestReport.ResolvedBy?.UserName,
-            TotalReports = rq.TotalReports,
-            PendingReports = rq.PendingReports,
-            ResolvedReports = rq.ResolvedReports,
-            ActionDisplay = GetActionDisplay(rq.LatestReport.Action)
+            Id = r.Report.Id,
+            QuizId = r.Report.QuizId,
+            QuizName = r.Report.Quiz.Name,
+            ReporterName = r.Report.Reporter.UserName,
+            Message = r.Report.Message,
+            Status = r.Report.Status,
+            Action = r.Report.Action,
+            AdminNote = r.Report.AdminNote,
+            CreatedAt = r.Report.CreatedAt,
+            ResolvedAt = r.Report.ResolvedAt,
+            ResolvedByName = r.Report.ResolvedBy?.UserName,
+            TotalReports = r.Counts?.Total ?? 0,
+            PendingReports = r.Counts?.Pending ?? 0,
+            ResolvedReports = r.Counts?.Resolved ?? 0,
+            ActionDisplay = GetActionDisplay(r.Report.Action)
         }).ToList();
 
         return new PagedResult<QuizReportDto>(items, total, page, limit);
@@ -210,15 +219,19 @@ public class QuizReportService : IQuizReportService
             switch (updateDto.Action)
             {
                 case QuizReportAction.Keep:
-                    quiz.IsDeleted = false;  
+                    quiz.IsDeleted = false;
                     _context.Quizzes.Update(quiz);
                     break;
                 case QuizReportAction.SoftDelete:
-                    quiz.IsDeleted = true; 
+                    quiz.IsDeleted = true;
                     _context.Quizzes.Update(quiz);
+                    // Update all pending reports for this quiz to resolved
+                    await UpdatePendingReportsToResolved(quiz.Id, updateDto.AdminId, reportId);
                     break;
                 case QuizReportAction.HardDelete:
-                    _context.Quizzes.Remove(quiz);  
+                    _context.Quizzes.Remove(quiz);
+                    // Update all pending reports for this quiz to resolved
+                    await UpdatePendingReportsToResolved(quiz.Id, updateDto.AdminId, reportId);
                     break;
             }
         }
@@ -280,5 +293,20 @@ public class QuizReportService : IQuizReportService
             .ToDictionaryAsync(x => x.Action, x => x.Count);
 
         return stats;
+    }
+
+    private async Task UpdatePendingReportsToResolved(int quizId, int adminId, int excludeReportId)
+    {
+        var pendingReports = await _context.QuizReports
+            .Where(r => r.QuizId == quizId && r.Status == ReportStatus.Pending && r.Id != excludeReportId)
+            .ToListAsync();
+
+        foreach (var report in pendingReports)
+        {
+            report.Status = ReportStatus.Resolved;
+            report.ResolvedById = adminId;
+            report.ResolvedAt = DateTime.UtcNow;
+            report.AdminNote = "bài quizz đã được xử lý từ một đơn báo cáo khác, cảm ơn bạn đã báo cáo";
+        }
     }
 }

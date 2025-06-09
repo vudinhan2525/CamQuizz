@@ -101,8 +101,8 @@ export const Explore = ({ navigation }) => {
     };
 
     const handleError = (error) => {
-      console.error("Hub error:", error);
-      Alert.alert("Lỗi", error.Message || "Không thể tham gia phòng");
+      // console.error("Hub error:", error);
+      // Alert.alert("Lỗi", error.Message || "Không thể tham gia phòng");
       setIsJoining(false);
     };
 
@@ -119,7 +119,7 @@ export const Explore = ({ navigation }) => {
     if(quota.remaining_quizz>0)
       navigation.navigate(SCREENS.QUIZ_CREATION) 
     else 
-      Alert.alert("Thông báo", `Bạn đã sử dụng hết ${quota.remaining_quizz} bài kiểm tra được tạo\n\nCó thể mua thêm ở Gói giới hạn`)
+      Alert.alert("Thông báo", `Bạn đã sử dụng hết ${quota.total_quizz} bài kiểm tra được tạo\n\nCó thể mua thêm ở Gói giới hạn`)
   }
   const handleSeeMore = async (category, navigate) => {
     // Xử lý sự kiện khi nhấn nút "Xem thêm"

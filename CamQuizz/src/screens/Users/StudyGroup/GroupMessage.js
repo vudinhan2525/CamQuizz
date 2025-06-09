@@ -28,12 +28,12 @@ const GroupMessage = ({ navigation, route }) => {
   const flatListRef = useRef();
 
   const formatMessage = useCallback(
-    (msg) => ({
+    (msg, updated = true) => ({
       id: msg.MessageId || Math.random().toString(),
       sender: msg.UserName || 'Unknown',
       text: msg.Message,
       time: msg.Timestamp
-        ? new Date(new Date(msg.Timestamp).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+        ? new Date(new Date(msg.Timestamp).getTime() + (!updated ? 0 : 7 * 60 * 60 * 1000)).toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit',
           })
@@ -50,7 +50,7 @@ const GroupMessage = ({ navigation, route }) => {
       //console.log(`${msg.GroupId} !== ${group.id.toString()}`)
       //console.log("ignore", msg.GroupId !== group.id.toString())
       //if (msg.GroupId !== group.id.toString()) return; // ignore messages for other groups
-      setMessages((prev) => [...prev, formatMessage(msg)]);
+      setMessages((prev) => [...prev, formatMessage(msg, false)]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     },
     [formatMessage]

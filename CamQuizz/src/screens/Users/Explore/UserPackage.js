@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, Image, Linking, AppState } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, Image, AppState } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
@@ -42,18 +42,12 @@ const UserPackage = ({ navigation }) => {
     const handleAppStateChange = async (nextAppState) => {
       if (nextAppState === 'active' && paymentRequestId && !isProcessingPayment) {
         setIsProcessingPayment(true);
-        const userId = await AsyncStorageService.getUserId();
-        const updatedQuota = await PackageService.getCurrentQuota(userId);
-        setCurrentQuota(updatedQuota);
+        // const userId = await AsyncStorageService.getUserId();
+        // const updatedQuota = await PackageService.getCurrentQuota(userId);
+        // setCurrentQuota(updatedQuota);
         setIsProcessingPayment(false);
         setPaymentRequestId(null);
-        Toast.show({
-          type: 'success',
-          text1: `Thanh toán thành công lúc ${new Date(
-            updatedQuota.updated_at
-          ).toLocaleString('vi-VN')}`,
-          text2: `Đã cập nhật số lượng quiz`,
-        });
+        
       }
     };
     const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -73,9 +67,13 @@ const UserPackage = ({ navigation }) => {
             setCurrentQuota(updatedQuota);
             Toast.show({
               type: 'success',
-              text1: `Thanh toán thành công lúc ${new Date(updatedQuota.updated_at).toLocaleString('vi-VN')}`,
+              text1: `Thanh toán thành công lúc ${new Date(new Date(updatedQuota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}`,
               text2: 'Đã cập nhật số lượng quiz',
             });
+            
           } catch (error) {
             console.error('Error updating quota after payment redirect:', error);
             Toast.show({
@@ -162,7 +160,39 @@ const UserPackage = ({ navigation }) => {
 
       {/* Current Quota Info */}
       <View style={styles.currentPackageContainer}>
-        <Text style={styles.sectionTitle}>Quota hiện tại của bạn</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Quota hiện tại của bạn</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={async () => {
+              try {
+                const userId = await AsyncStorageService.getUserId();
+                const quota = await PackageService.getCurrentQuota(userId);
+                setCurrentQuota(quota);
+                Toast.show({
+                  type: 'success',
+                  text1: `Thanh toán lần gấn nhất lúc ${new Date(new Date(updatedQuota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}`,
+                  position: 'top',
+                  visibilityTime: 2000,
+                });
+                
+              } catch (error) {
+                console.error('Error refreshing quota:', error);
+                Toast.show({
+                  type: 'error',
+                  text1: 'Không thể cập nhật quota',
+                  position: 'top',
+                  visibilityTime: 2000,
+                });
+              }
+            }}
+          >
+            <Ionicons name="refresh" size={20} color={COLORS.BLUE} />
+          </TouchableOpacity>
+        </View>
         <View style={styles.currentPackageInfo}>
           {[
             { label: 'Tổng số bài kiểm tra có thể tạo:', value: currentQuota?.total_quizz ?? '-' },
@@ -222,6 +252,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  refreshButton: {
+    padding: 8,
   },
   currentPackageInfo: {
     backgroundColor: COLORS.BLUE,

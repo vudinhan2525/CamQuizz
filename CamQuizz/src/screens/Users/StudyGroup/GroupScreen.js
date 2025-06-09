@@ -49,8 +49,28 @@ const GroupScreen = ({ navigation, route }) => {
           .withAutomaticReconnect()
           .build();
 
+        
+        newConnection.start().then(() => {
+          newConnection.invoke('GetUnreadMessageCounts', userId.toString());
+          newConnection.on('unreadMessageCounts', (counts) => {
+            console.log("counts", counts)
+            const groupUnread = counts.find(c => c.GroupId === group.id.toString());
+            setUnreadCount(groupUnread ? groupUnread.UnreadCount : 0);
+          });
+          newConnection.on('receiveMessage', (message) => {
+            if (message) {
+              console.log("message", message)
+              // Kiểm tra xem tin nhắn có thuộc về nhóm hiện tại không
+              if (message.GroupId === group.id.toString()) {
+                // Cập nhật số lượng tin nhắn chưa đọc ngay lập tức
+                setUnreadCount(prev => prev + 1);
+              }
+              newConnection.invoke('GetUnreadMessageCounts', userId.toString());
+            }
+          });
+        });
         setConnection(newConnection);
-
+        
 
       } catch (error) {
         console.error('Error connecting to SignalR hub:', error);
@@ -61,19 +81,32 @@ const GroupScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (connection) {
-      connection.start().then(() => {
-        connection.invoke('GetUnreadMessageCounts', userId.toString());
-        connection.on('unreadMessageCounts', (counts) => {
-          console.log("counts", counts)
-          const groupUnread = counts.find(c => c.GroupId === group.id.toString());
-          setUnreadCount(groupUnread ? groupUnread.UnreadCount : 0);
-        });
-        connection.on('receiveMessage', (message) => {
-          if (message) {
-            connection.invoke('GetUnreadMessageCounts', userId.toString());
-          }
-        });
-      });
+      // connection.start().then(() => {
+      //   connection.invoke('GetUnreadMessageCounts', userId.toString());
+      //   connection.on('unreadMessageCounts', (counts) => {
+      //     console.log("counts", counts)
+      //     const groupUnread = counts.find(c => c.GroupId === group.id.toString());
+      //     setUnreadCount(groupUnread ? groupUnread.UnreadCount : 0);
+      //   });
+      //   connection.on('receiveMessage', (message) => {
+      //     if (message) {
+      //       // Kiểm tra xem tin nhắn có thuộc về nhóm hiện tại không
+      //       if (message.GroupId === group.id.toString()) {
+      //         // Cập nhật số lượng tin nhắn chưa đọc ngay lập tức
+      //         setUnreadCount(prev => prev + 1);
+      //       }
+      //       connection.invoke('GetUnreadMessageCounts', userId.toString());
+      //     }
+      //   });
+      // });
+
+      // Cleanup khi component unmount
+      // return () => {
+      //   if (connection.state === 'Connected') {
+      //     connection.off('unreadMessageCounts');
+      //     connection.off('receiveMessage');
+      //   }
+      // };
     }
   }, [connection, group.id, userId, isFocused]);
 
@@ -116,38 +149,38 @@ const GroupScreen = ({ navigation, route }) => {
 
 
   const renderQuizItem = ({ item }) => (
-    <View style={[styles.card, { position: 'relative' }]}> 
-      {isLeader 
-      &&false //api is failing
-      &&
-      (
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => {
-            Alert.alert(
-              'Xác nhận',
-              'Bạn có chắc chắn muốn xóa quiz này khỏi nhóm?',
-              [
-                { text: 'Hủy', style: 'cancel' },
-                {
-                  text: 'Xóa',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await StudyGroupService.deleteQuizFromGroup(group.id, item.id);
-                      loadSharedQuizzes();
-                    } catch (error) {
-                      Alert.alert('Lỗi', 'Không thể xóa quiz. Vui lòng thử lại.');
+    <View style={[styles.card, { position: 'relative' }]}>
+      {isLeader
+        && false //api is failing
+        &&
+        (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => {
+              Alert.alert(
+                'Xác nhận',
+                'Bạn có chắc chắn muốn xóa quiz này khỏi nhóm?',
+                [
+                  { text: 'Hủy', style: 'cancel' },
+                  {
+                    text: 'Xóa',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await StudyGroupService.deleteQuizFromGroup(group.id, item.id);
+                        loadSharedQuizzes();
+                      } catch (error) {
+                        Alert.alert('Lỗi', 'Không thể xóa quiz. Vui lòng thử lại.');
+                      }
                     }
                   }
-                }
-              ]
-            );
-          }}
-        >
-          <Ionicons name="trash" size={22} color={COLORS.RED} />
-        </TouchableOpacity>
-      )}
+                ]
+              );
+            }}
+          >
+            <Ionicons name="trash" size={22} color={COLORS.RED} />
+          </TouchableOpacity>
+        )}
       <TouchableOpacity
         style={{ flex: 1, flexDirection: 'row' }}
         onPress={() => navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id })}
@@ -222,29 +255,29 @@ const GroupScreen = ({ navigation, route }) => {
         <View style={styles.quizHeader}>
           <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
           {!isLeader
-          &&<TouchableOpacity
-            style={styles.quitButton}
-            onPress={() => {
-              Alert.alert(
-                "Xác nhận",
-                "Bạn có chắc chắn muốn rời khỏi nhóm không?",
-                [
-                  {
-                    text: "Hủy",
-                    style: "cancel"
-                  },
-                  {
-                    text: "Đồng ý",
-                    onPress: () => {
-                      StudyGroupService.leaveGroup(group.id, userId);
+            && <TouchableOpacity
+              style={styles.quitButton}
+              onPress={() => {
+                Alert.alert(
+                  "Xác nhận",
+                  "Bạn có chắc chắn muốn rời khỏi nhóm không?",
+                  [
+                    {
+                      text: "Hủy",
+                      style: "cancel"
+                    },
+                    {
+                      text: "Đồng ý",
+                      onPress: () => {
+                        StudyGroupService.leaveGroup(group.id, userId);
+                      }
                     }
-                  }
-                ]
-              );
-            }}
-          >
-            <Text style={styles.quitText}>Rời nhóm</Text>
-          </TouchableOpacity>}
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.quitText}>Rời nhóm</Text>
+            </TouchableOpacity>}
         </View>
 
         <FlatList

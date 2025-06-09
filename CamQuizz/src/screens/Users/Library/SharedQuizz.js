@@ -1,17 +1,11 @@
 import React, { useState, useEffect } from "react";
-import {View, Text, FlatList, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from "react-native";
+import {View, Text, FlatList, StyleSheet, SafeAreaView, ActivityIndicator } from "react-native";
 import QuizCard from "../../../components/QuizCard";
 import COLORS from "../../../constant/colors";
 import QuizzService from "../../../services/QuizzService";
 import Toast from "react-native-toast-message";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { validateToken } from "../../../services/AuthService";
-
-const FILTERS = [
-  { id: "newest", label: "Mới nhất", sort: "created_at" },
-  { id: "1month", label: "1 tháng trước", sort: "created_at" },
-  { id: "2months", label: "2 tháng trước", sort: "created_at" },
-];
 
 const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.') => {
   Toast.show({
@@ -28,7 +22,6 @@ const handleAuthError = (navigation, message = 'Phiên đăng nhập đã hết 
 const SharedQuizz = () => {
   const navigation = useNavigation();
   const [quizzes, setQuizzes] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState("newest");
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState(null);
   const [page, setPage] = useState(1);
@@ -48,25 +41,22 @@ const SharedQuizz = () => {
         setLoading(true);
       }
 
-      const selectedFilterData = FILTERS.find(f => f.id === selectedFilter);
-      const sortBy = selectedFilterData?.sort || 'created_at';
-
-      const response = await QuizzService.getSharedQuizzes(null, currentPage, 10, sortBy);
+      const response = await QuizzService.getSharedQuizzes(null, currentPage, 10, 'created_at');
 
       if (response && response.data) {
         const formattedQuizzes = response.data.map(quiz => ({
           id: quiz.id.toString(),
-          title: quiz.name,
-          questions: quiz.number_of_questions || quiz.questions?.length || 0,
-          attempts: quiz.number_of_attended || 0,
+          name: quiz.name,
+          number_of_questions: quiz.number_of_questions || quiz.questions?.length || 0,
+          number_of_attended: quiz.number_of_attended || 0,
           image: quiz.image || "https://via.placeholder.com/150",
-          date: quiz.created_at,
+          created_at: quiz.created_at,
           description: quiz.description,
           duration: quiz.duration,
           status: quiz.status,
           shared_users: quiz.shared_users || [],
           shared_groups: quiz.shared_groups || [],
-          questions_data: quiz.questions || []
+          questions: quiz.questions || []
         }));
 
         if (isRefresh || currentPage === 1) {
@@ -95,33 +85,7 @@ const SharedQuizz = () => {
     }
   };
 
-  // Filter quizzes by time locally (after fetching from API)
-  const filterQuizzesByTime = () => {
-    const now = new Date();
-    return quizzes.filter((quiz) => {
-      const quizDate = new Date(quiz.date);
 
-      if (selectedFilter === "newest") {
-        return true;
-      } else if (selectedFilter === "1month") {
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(now.getMonth() - 1);
-        return quizDate >= oneMonthAgo;
-      } else if (selectedFilter === "2months") {
-        const twoMonthsAgo = new Date();
-        twoMonthsAgo.setMonth(now.getMonth() - 2);
-        return quizDate >= twoMonthsAgo;
-      }
-      return false;
-    });
-  };
-
-  // Handle filter change
-  const handleFilterChange = (filterId) => {
-    setSelectedFilter(filterId);
-    setPage(1);
-    fetchSharedQuizzes(1, true);
-  };
 
   // Load more quizzes for pagination
   const loadMoreQuizzes = () => {
@@ -140,32 +104,11 @@ const SharedQuizz = () => {
     React.useCallback(() => {
       fetchSharedQuizzes(1, true);
       return () => {};
-    }, [selectedFilter])
+    }, [])
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.filterContainer}>
-        {FILTERS.map((filter) => (
-          <TouchableOpacity
-            key={filter.id}
-            style={[
-              styles.filterButton,
-              selectedFilter === filter.id && styles.selectedFilterButton,
-            ]}
-            onPress={() => handleFilterChange(filter.id)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                selectedFilter === filter.id && styles.selectedFilterText,
-              ]}
-            >
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
 
       {/* Loading indicator */}
       {loading && quizzes.length === 0 ? (
@@ -174,9 +117,9 @@ const SharedQuizz = () => {
           <Text style={styles.loadingText}>Đang tải quiz được chia sẻ...</Text>
         </View>
       ) : (
-        /* Hiển thị danh sách QuizCard sau khi lọc */
+        /* Hiển thị danh sách QuizCard */
         <FlatList
-          data={filterQuizzesByTime()}
+          data={quizzes}
           keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={quizzes.length > 0 ? styles.row : null}
@@ -221,31 +164,7 @@ const styles = StyleSheet.create({
     textAlign: "left",
     color: COLORS.PRIMARY,
   },
-  filterContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  filterButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderColor: COLORS.GRAY_TEXT,
-    borderRadius: 20,
-  },
-  selectedFilterButton: {
-    backgroundColor: COLORS.PRIMARY,
-    borderColor: COLORS.PRIMARY,
-  },
-  filterText: {
-    fontSize: 14,
-    color: COLORS.BLACK,
-  },
-  selectedFilterText: {
-    color: COLORS.BLUE,
-    fontWeight: "bold",
-  },
+
   row: {
     justifyContent: "space-between",
     marginBottom: 10,

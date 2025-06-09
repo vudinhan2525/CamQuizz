@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, Modal, Image, AppState } from 'react-native'
 import React, { useState, useEffect } from 'react'
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import QRCode from 'react-native-qrcode-svg';
@@ -146,7 +147,7 @@ const UserPackage = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Gói dịch vụ</Text>
@@ -171,7 +172,7 @@ const UserPackage = ({ navigation }) => {
                 setCurrentQuota(quota);
                 Toast.show({
                   type: 'success',
-                  text1: `Thanh toán lần gấn nhất lúc ${new Date(new Date(updatedQuota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+                  text1: `Thanh toán lần gần nhất lúc ${new Date(new Date(quota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}`,
@@ -218,7 +219,7 @@ const UserPackage = ({ navigation }) => {
           contentContainerStyle={styles.packagesList}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

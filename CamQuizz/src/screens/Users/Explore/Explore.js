@@ -3,6 +3,7 @@ import {
   View, Text, Image, StyleSheet, TextInput, TouchableOpacity, Animated,
   Platform, FlatList, Alert, KeyboardAvoidingView, ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as signalR from '@microsoft/signalr';
 import { useNavigation } from '@react-navigation/native';
 import EvilIcons from 'react-native-vector-icons/EvilIcons';
@@ -344,7 +345,7 @@ export const Explore = ({ navigation }) => {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
 
       {/* headers */}
       <Animated.View style={[styles.header,
@@ -469,7 +470,7 @@ export const Explore = ({ navigation }) => {
 
       </Animated.ScrollView>
 
-    </View>
+    </SafeAreaView>
   );
 };
 

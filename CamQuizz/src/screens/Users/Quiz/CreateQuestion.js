@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Image, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Image, Switch, SafeAreaView, StatusBar, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import COLORS from '../../../constant/colors';
@@ -213,111 +213,121 @@ const CreateQuestion = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>
-                    {isEditing ? 'Chỉnh sửa câu hỏi' : 'Tạo câu hỏi mới'}
-                </Text>
-                <TouchableOpacity
-                    onPress={handleSave}
-                    disabled={!isQuestionValid()}
-                >
-                    <Text style={[
-                        styles.saveQuestionButton,
-                        !isQuestionValid() && styles.saveQuestionButtonDisabled
-                    ]}>
-                        Lưu
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back" size={24} color="black" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>
+                        {isEditing ? 'Chỉnh sửa câu hỏi' : 'Tạo câu hỏi mới'}
                     </Text>
-                </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.content}>
-                <View style={styles.optionsRow}>
-                    <View style={styles.infoDisplay}>
-                        <Ionicons name="time-outline" size={20} color={COLORS.GRAY_DARK} />
-                        <Text style={styles.infoText}>{questionData.duration} giây</Text>
-                    </View>
-
-                    <View style={styles.infoDisplay}>
-                        <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.GRAY_DARK} />
-                        <Text style={styles.infoText}>{questionData.points} điểm</Text>
-                    </View>
-
                     <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={handleOpenSettings}
+                        onPress={handleSave}
+                        disabled={!isQuestionValid()}
                     >
-                        <Ionicons name="create-outline" size={20} color={COLORS.BLUE} />
+                        <Text style={[
+                            styles.saveQuestionButton,
+                            !isQuestionValid() && styles.saveQuestionButtonDisabled
+                        ]}>
+                            Lưu
+                        </Text>
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.questionContainer}>
-                    <View style={styles.questionHeaderContainer}>
-                        <Text style={styles.requiredField}>*</Text>
-                        <TextInput
-                            style={styles.questionInput}
-                            placeholder="Thêm câu hỏi của bạn ở đây"
-                            multiline
-                            value={questionData.question}
-                            onChangeText={(text) => updateQuestionField('question', text)}
-                            placeholderTextColor={COLORS.WHITE + '80'}
-                        />
-                    </View>
-
-                    {/* Image Section */}
-                    <View style={styles.imageSection}>
-                        {questionImage ? (
-                            <View style={styles.imageContainer}>
-                                <Image
-                                    source={{ uri: questionImage }}
-                                    style={styles.questionImage}
-                                />
-                                <View style={styles.imageActions}>
-                                    <TouchableOpacity
-                                        style={styles.imageActionButton}
-                                        onPress={handleRemoveImage}
-                                    >
-                                        <Ionicons name="trash-outline" size={20} color={COLORS.WHITE} />
-                                        <Text style={styles.imageActionText}>Xóa</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.imageActionButton}
-                                        onPress={handleImagePicker}
-                                    >
-                                        <Ionicons name="create-outline" size={20} color={COLORS.WHITE} />
-                                        <Text style={styles.imageActionText}>Sửa</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.addImageButton}
-                                onPress={handleImagePicker}
-                            >
-                                <Ionicons name="image-outline" size={24} color={COLORS.WHITE} />
-                                <Text style={styles.addImageText}>Thêm hình ảnh</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
-                {/* Question Settings Card */}
-                <View style={styles.questionSettingsCard}>
-                    {/* <View style={styles.questionSettingsRow}>
-                        <View style={styles.switchContainer}>
-                            <Switch
-                                value={hasMultipleAnswers}
-                                onValueChange={setHasMultipleAnswers}
-                                trackColor={{ false: COLORS.GRAY_LIGHT, true: COLORS.BLUE + '80' }}
-                                thumbColor={hasMultipleAnswers ? COLORS.BLUE : COLORS.GRAY_DARK}
-                            />
-                            <Text style={styles.switchLabel}>Nhiều đáp án đúng</Text>
+                <ScrollView style={styles.content}>
+                    <View style={styles.optionsRow}>
+                        <View style={styles.infoDisplay}>
+                            <Ionicons name="time-outline" size={20} color={COLORS.GRAY_DARK} />
+                            <Text style={styles.infoText}>{questionData.duration} giây</Text>
                         </View>
 
-                        <TouchableOpacity 
+                        <View style={styles.infoDisplay}>
+                            <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.GRAY_DARK} />
+                            <Text style={styles.infoText}>{questionData.points} điểm</Text>
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.editButton}
+                            onPress={handleOpenSettings}
+                        >
+                            <Ionicons name="create-outline" size={20} color={COLORS.BLUE} />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.questionContainer}>
+                        <View style={styles.questionHeaderContainer}>
+                            <Text style={styles.requiredField}>*</Text>
+                            <TextInput
+                                style={styles.questionInput}
+                                placeholder="Thêm câu hỏi của bạn ở đây"
+                                multiline
+                                value={questionData.question}
+                                onChangeText={(text) => updateQuestionField('question', text)}
+                                placeholderTextColor={COLORS.WHITE + '80'}
+                            />
+                        </View>
+
+                        {/* Image Section */}
+                        <View style={styles.imageSection}>
+                            {questionImage ? (
+                                <View style={styles.imageContainer}>
+                                    <Image
+                                        source={{ uri: questionImage }}
+                                        style={styles.questionImage}
+                                    />
+                                    <View style={styles.imageActions}>
+                                        <TouchableOpacity
+                                            style={styles.imageActionButton}
+                                            onPress={handleRemoveImage}
+                                        >
+                                            <Ionicons name="trash-outline" size={20} color={COLORS.WHITE} />
+                                            <Text style={styles.imageActionText}>Xóa</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.imageActionButton}
+                                            onPress={handleImagePicker}
+                                        >
+                                            <Ionicons name="create-outline" size={20} color={COLORS.WHITE} />
+                                            <Text style={styles.imageActionText}>Sửa</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.addImageButton}
+                                    onPress={handleImagePicker}
+                                >
+                                    <Ionicons name="image-outline" size={24} color={COLORS.WHITE} />
+                                    <Text style={styles.addImageText}>Thêm hình ảnh</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+
+                    {/* Question Settings Card */}
+                    <View style={styles.questionSettingsCard}>
+                        {/* <View style={styles.questionSettingsRow}>
+                            <View style={styles.switchContainer}>
+                                <Switch
+                                    value={hasMultipleAnswers}
+                                    onValueChange={setHasMultipleAnswers}
+                                    trackColor={{ false: COLORS.GRAY_LIGHT, true: COLORS.BLUE + '80' }}
+                                    thumbColor={hasMultipleAnswers ? COLORS.BLUE : COLORS.GRAY_DARK}
+                                />
+                                <Text style={styles.switchLabel}>Nhiều đáp án đúng</Text>
+                            </View>
+
+                            <TouchableOpacity 
+                                style={styles.explanationButton}
+                                onPress={handleOpenExplanation}
+                            >
+                                <Text style={styles.explanationButtonText}>
+                                    {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View> */}
+                        <TouchableOpacity
                             style={styles.explanationButton}
                             onPress={handleOpenExplanation}
                         >
@@ -325,258 +335,250 @@ const CreateQuestion = () => {
                                 {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
                             </Text>
                         </TouchableOpacity>
-                    </View> */}
-                    <TouchableOpacity
-                        style={styles.explanationButton}
-                        onPress={handleOpenExplanation}
-                    >
-                        <Text style={styles.explanationButtonText}>
-                            {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
-                        </Text>
-                    </TouchableOpacity>
-                    {explanation !== '' && (
-                        <View style={styles.explanationContainer}>
-                            <Text style={styles.explanationLabel}>Giải thích:</Text>
-                            <Text style={styles.explanationText}>{explanation}</Text>
-                        </View>
-                    )}
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                    <Ionicons name="information-circle-outline" size={24} color={COLORS.BLUE} />
-                    <Text style={{ color: COLORS.GRAY_DARK }}>Bấm vào tùy chọn để thiết lập đáp án đúng</Text>
-                </View>
-                <View style={styles.optionsContainer}>
-                    {questionData.options.map((option, index) => (
-                        <View key={option.id} style={[styles.optionItem, option.isCorrect && styles.correctOption]}>
-                            <View style={styles.optionHeader}>
-                                <Text style={styles.optionLabel}>Tùy chọn {option.id}</Text>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.correctIndicator,
-                                        !option.text.trim() && styles.correctIndicatorDisabled
-                                    ]}
-                                    onPress={() => toggleCorrectAnswer(index)}
-                                    disabled={!option.text.trim()}
-                                >
-                                    <Ionicons
-                                        name={option.isCorrect ? "checkmark-circle" : "checkmark-circle-outline"}
-                                        size={24}
-                                        color={
-                                            !option.text.trim()
-                                                ? COLORS.GRAY_LIGHT
-                                                : option.isCorrect
-                                                    ? COLORS.GREEN
-                                                    : COLORS.GRAY_DARK
-                                        }
-                                    />
-                                </TouchableOpacity>
+                        {explanation !== '' && (
+                            <View style={styles.explanationContainer}>
+                                <Text style={styles.explanationLabel}>Giải thích:</Text>
+                                <Text style={styles.explanationText}>{explanation}</Text>
                             </View>
-
-                            <View style={styles.optionContentContainer}>
-                                <View style={styles.optionInputContainer}>
-                                    <TextInput
-                                        style={styles.answerInput}
-                                        placeholder={`Nhập đáp án ${option.id}`}
-                                        value={option.text}
-                                        onChangeText={(text) => updateOption(index, text)}
-                                    />
-                                    {/* <TouchableOpacity
-                                        style={styles.imageButton}
-                                        onPress={() => handleOptionImagePicker(index)}
+                        )}
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                        <Ionicons name="information-circle-outline" size={24} color={COLORS.BLUE} />
+                        <Text style={{ color: COLORS.GRAY_DARK }}>Bấm vào tùy chọn để thiết lập đáp án đúng</Text>
+                    </View>
+                    <View style={styles.optionsContainer}>
+                        {questionData.options.map((option, index) => (
+                            <View key={option.id} style={[styles.optionItem, option.isCorrect && styles.correctOption]}>
+                                <View style={styles.optionHeader}>
+                                    <Text style={styles.optionLabel}>Tùy chọn {option.id}</Text>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.correctIndicator,
+                                            !option.text.trim() && styles.correctIndicatorDisabled
+                                        ]}
+                                        onPress={() => toggleCorrectAnswer(index)}
+                                        disabled={!option.text.trim()}
                                     >
                                         <Ionicons
-                                            name="image-outline"
+                                            name={option.isCorrect ? "checkmark-circle" : "checkmark-circle-outline"}
                                             size={24}
-                                            color={option.image ? COLORS.BLUE : COLORS.GRAY_DARK}
+                                            color={
+                                                !option.text.trim()
+                                                    ? COLORS.GRAY_LIGHT
+                                                    : option.isCorrect
+                                                        ? COLORS.GREEN
+                                                        : COLORS.GRAY_DARK
+                                            }
                                         />
-                                    </TouchableOpacity> */}
+                                    </TouchableOpacity>
                                 </View>
 
-                                {option.image && (
-                                    <View style={styles.optionImageContainer}>
-                                        <Image
-                                            source={{ uri: option.image }}
-                                            style={styles.optionImage}
+                                <View style={styles.optionContentContainer}>
+                                    <View style={styles.optionInputContainer}>
+                                        <TextInput
+                                            style={styles.answerInput}
+                                            placeholder={`Nhập đáp án ${option.id}`}
+                                            value={option.text}
+                                            onChangeText={(text) => updateOption(index, text)}
                                         />
-                                        <TouchableOpacity
-                                            style={styles.removeImageButton}
-                                            onPress={() => handleRemoveOptionImage(index)}
+                                        {/* <TouchableOpacity
+                                            style={styles.imageButton}
+                                            onPress={() => handleOptionImagePicker(index)}
                                         >
-                                            <Ionicons name="close-circle" size={24} color={COLORS.RED} />
-                                        </TouchableOpacity>
+                                            <Ionicons
+                                                name="image-outline"
+                                                size={24}
+                                                color={option.image ? COLORS.BLUE : COLORS.GRAY_DARK}
+                                            />
+                                        </TouchableOpacity> */}
                                     </View>
-                                )}
-                            </View>
-                        </View>
-                    ))}
 
-                    {/* Nút thêm tùy chọn mới */}
-                    <TouchableOpacity
-                        style={styles.addOptionButton}
-                        onPress={handleAddOption}
-                    >
-                        <View style={styles.addOptionContent}>
-                            <Ionicons name="add-circle-outline" size={24} color={COLORS.BLUE} />
-                            <Text style={styles.addOptionText}>Thêm tùy chọn</Text>
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-
-            {/* Settings Modal */}
-            <Modal
-                visible={showSettingsModal}
-                transparent={true}
-                animationType="fade"
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Cài đặt câu hỏi</Text>
-                            <TouchableOpacity
-                                onPress={() => setShowSettingsModal(false)}
-                                style={styles.closeButton}
-                            >
-                                <Ionicons name="close" size={24} color={COLORS.BLACK} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.settingsContainer}>
-                            <View style={styles.settingField}>
-                                <Text style={styles.fieldLabel}>Thời gian (giây)</Text>
-                                <View style={styles.inputContainer}>
-                                    <TouchableOpacity
-                                        style={styles.adjustButton}
-                                        onPress={() => setTempSettings(prev => ({
-                                            ...prev,
-                                            duration: Math.max(1, prev.duration - 5)
-                                        }))}
-                                    >
-                                        <Ionicons name="remove" size={24} color={COLORS.BLUE} />
-                                    </TouchableOpacity>
-
-                                    <TextInput
-                                        style={styles.fieldInput}
-                                        value={tempSettings.duration.toString()}
-                                        onChangeText={(value) => setTempSettings(prev => ({
-                                            ...prev,
-                                            duration: parseInt(value) || 0
-                                        }))}
-                                        keyboardType="numeric"
-                                    />
-
-                                    <TouchableOpacity
-                                        style={styles.adjustButton}
-                                        onPress={() => setTempSettings(prev => ({
-                                            ...prev,
-                                            duration: prev.duration + 5
-                                        }))}
-                                    >
-                                        <Ionicons name="add" size={24} color={COLORS.BLUE} />
-                                    </TouchableOpacity>
+                                    {option.image && (
+                                        <View style={styles.optionImageContainer}>
+                                            <Image
+                                                source={{ uri: option.image }}
+                                                style={styles.optionImage}
+                                            />
+                                            <TouchableOpacity
+                                                style={styles.removeImageButton}
+                                                onPress={() => handleRemoveOptionImage(index)}
+                                            >
+                                                <Ionicons name="close-circle" size={24} color={COLORS.RED} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
+                        ))}
 
-                            <View style={styles.settingField}>
-                                <Text style={styles.fieldLabel}>Điểm số</Text>
-                                <View style={styles.inputContainer}>
-                                    <TouchableOpacity
-                                        style={styles.adjustButton}
-                                        onPress={() => setTempSettings(prev => ({
-                                            ...prev,
-                                            points: Math.max(1, prev.points - 1)
-                                        }))}
-                                    >
-                                        <Ionicons name="remove" size={24} color={COLORS.BLUE} />
-                                    </TouchableOpacity>
-
-                                    <TextInput
-                                        style={styles.fieldInput}
-                                        value={tempSettings.points.toString()}
-                                        onChangeText={(value) => setTempSettings(prev => ({
-                                            ...prev,
-                                            points: parseInt(value) || 1
-                                        }))}
-                                        keyboardType="numeric"
-                                    />
-
-                                    <TouchableOpacity
-                                        style={styles.adjustButton}
-                                        onPress={() => setTempSettings(prev => ({
-                                            ...prev,
-                                            points: prev.points + 1
-                                        }))}
-                                    >
-                                        <Ionicons name="add" size={24} color={COLORS.BLUE} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        </View>
-
+                        {/* Nút thêm tùy chọn mới */}
                         <TouchableOpacity
-                            style={styles.saveSettingsButton}
-                            onPress={handleSaveSettings}
+                            style={styles.addOptionButton}
+                            onPress={handleAddOption}
                         >
-                            <Text style={styles.saveSettingsText}>Lưu</Text>
+                            <View style={styles.addOptionContent}>
+                                <Ionicons name="add-circle-outline" size={24} color={COLORS.BLUE} />
+                                <Text style={styles.addOptionText}>Thêm tùy chọn</Text>
+                            </View>
                         </TouchableOpacity>
                     </View>
-                </View>
-            </Modal>
+                </ScrollView>
 
-            {/* Explanation Modal */}
-            <Modal
-                visible={showExplanationModal}
-                transparent={true}
-                animationType="fade"
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>
-                                {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
-                            </Text>
-                            <TouchableOpacity
-                                onPress={() => setShowExplanationModal(false)}
-                                style={styles.closeButton}
-                            >
-                                <Ionicons name="close" size={24} color={COLORS.BLACK} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <TextInput
-                            style={styles.explanationInput}
-                            placeholder="Nhập giải thích cho câu hỏi..."
-                            multiline
-                            value={tempExplanation}
-                            onChangeText={setTempExplanation}
-                            textAlignVertical="top"
-                        />
-
-                        <View style={styles.modalFooter}>
-                            {explanation !== '' && (
+                {/* Settings Modal */}
+                <Modal
+                    visible={showSettingsModal}
+                    transparent={true}
+                    animationType="fade"
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Cài đặt câu hỏi</Text>
                                 <TouchableOpacity
-                                    style={styles.clearButton}
-                                    onPress={() => {
-                                        setTempExplanation('');
-                                        setExplanation('');
-                                        setShowExplanationModal(false);
-                                    }}
+                                    onPress={() => setShowSettingsModal(false)}
+                                    style={styles.closeButton}
                                 >
-                                    <Text style={styles.clearButtonText}>Xóa giải thích</Text>
+                                    <Ionicons name="close" size={24} color={COLORS.BLACK} />
                                 </TouchableOpacity>
-                            )}
+                            </View>
+
+                            <View style={styles.settingsContainer}>
+                                <View style={styles.settingField}>
+                                    <Text style={styles.fieldLabel}>Thời gian (giây)</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TouchableOpacity
+                                            style={styles.adjustButton}
+                                            onPress={() => setTempSettings(prev => ({
+                                                ...prev,
+                                                duration: Math.max(1, prev.duration - 5)
+                                            }))}
+                                        >
+                                            <Ionicons name="remove" size={24} color={COLORS.BLUE} />
+                                        </TouchableOpacity>
+
+                                        <TextInput
+                                            style={styles.fieldInput}
+                                            value={tempSettings.duration.toString()}
+                                            onChangeText={(value) => setTempSettings(prev => ({
+                                                ...prev,
+                                                duration: parseInt(value) || 0
+                                            }))}
+                                            keyboardType="numeric"
+                                        />
+
+                                        <TouchableOpacity
+                                            style={styles.adjustButton}
+                                            onPress={() => setTempSettings(prev => ({
+                                                ...prev,
+                                                duration: prev.duration + 5
+                                            }))}
+                                        >
+                                            <Ionicons name="add" size={24} color={COLORS.BLUE} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
+                                <View style={styles.settingField}>
+                                    <Text style={styles.fieldLabel}>Điểm số</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TouchableOpacity
+                                            style={styles.adjustButton}
+                                            onPress={() => setTempSettings(prev => ({
+                                                ...prev,
+                                                points: Math.max(1, prev.points - 1)
+                                            }))}
+                                        >
+                                            <Ionicons name="remove" size={24} color={COLORS.BLUE} />
+                                        </TouchableOpacity>
+
+                                        <TextInput
+                                            style={styles.fieldInput}
+                                            value={tempSettings.points.toString()}
+                                            onChangeText={(value) => setTempSettings(prev => ({
+                                                ...prev,
+                                                points: parseInt(value) || 1
+                                            }))}
+                                            keyboardType="numeric"
+                                        />
+
+                                        <TouchableOpacity
+                                            style={styles.adjustButton}
+                                            onPress={() => setTempSettings(prev => ({
+                                                ...prev,
+                                                points: prev.points + 1
+                                            }))}
+                                        >
+                                            <Ionicons name="add" size={24} color={COLORS.BLUE} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            </View>
 
                             <TouchableOpacity
-                                style={styles.saveButton}
-                                onPress={handleSaveExplanation}
+                                style={styles.saveSettingsButton}
+                                onPress={handleSaveSettings}
                             >
-                                <Text style={styles.saveButtonText}>Lưu</Text>
+                                <Text style={styles.saveSettingsText}>Lưu</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
-            </Modal>
-        </View>
+                </Modal>
+
+                {/* Explanation Modal */}
+                <Modal
+                    visible={showExplanationModal}
+                    transparent={true}
+                    animationType="fade"
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>
+                                    {explanation ? 'Sửa giải thích' : 'Thêm giải thích'}
+                                </Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowExplanationModal(false)}
+                                    style={styles.closeButton}
+                                >
+                                    <Ionicons name="close" size={24} color={COLORS.BLACK} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <TextInput
+                                style={styles.explanationInput}
+                                placeholder="Nhập giải thích cho câu hỏi..."
+                                multiline
+                                value={tempExplanation}
+                                onChangeText={setTempExplanation}
+                                textAlignVertical="top"
+                            />
+
+                            <View style={styles.modalFooter}>
+                                {explanation !== '' && (
+                                    <TouchableOpacity
+                                        style={styles.clearButton}
+                                        onPress={() => {
+                                            setTempExplanation('');
+                                            setExplanation('');
+                                            setShowExplanationModal(false);
+                                        }}
+                                    >
+                                        <Text style={styles.clearButtonText}>Xóa giải thích</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                <TouchableOpacity
+                                    style={styles.saveButton}
+                                    onPress={handleSaveExplanation}
+                                >
+                                    <Text style={styles.saveButtonText}>Lưu</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
+            </View>
+        </SafeAreaView>
     );
 };
 
@@ -591,6 +593,12 @@ const getOptionColor = (index) => {
 };
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: COLORS.WHITE,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+        paddingBottom: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: {
         flex: 1,
         backgroundColor: COLORS.WHITE,

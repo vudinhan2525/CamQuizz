@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Switch, Image, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dropdown } from 'react-native-element-dropdown';
 import { Ionicons } from '@expo/vector-icons';
 import { StudyGroupCard } from '../../../components/StudyGroupCard';
@@ -205,7 +206,7 @@ export const StudyGroup = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Nhóm học tập</Text>
       </View>
@@ -395,7 +396,7 @@ export const StudyGroup = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 

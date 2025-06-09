@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, use } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, TextInput, SafeAreaView, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import COLORS from '../../../constant/colors';
@@ -314,211 +314,219 @@ const QuizCreation = () => {
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="arrow-back" size={24} color="black" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Tạo bài kiểm tra</Text>
-                <TouchableOpacity
-                    style={[
-                        !isQuizValid() && styles.saveButtonDisabled
-                    ]}
-                    onPress={handleSaveQuiz}
-                    disabled={!isQuizValid()}
-                >
-                    <Text style={[
-                        styles.saveButtonText,
-                    ]}>
-                        Lưu
-                    </Text>
-                </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.container}>
-                <View style={styles.content}>
-                    <TouchableOpacity style={styles.imageCard} onPress={handleImagePicker}>
-                        {imageUri ? (
-                            <>
-                                <Image source={imageUri} style={styles.image} />
-                                <View style={styles.imageActions}>
-                                    <TouchableOpacity onPress={handleDeleteImage} style={styles.actionButton}>
-                                        <Ionicons name="trash-outline" size={24} color={COLORS.RED} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity onPress={handleModifyImage} style={styles.actionButton}>
-                                        <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
-                                    </TouchableOpacity>
-                                </View>
-                            </>
-                        ) : (
-                            <>
-                                <Ionicons name="image-outline" size={24} color={COLORS.GRAY_DARK} />
-                                <Text style={styles.imageCardText}>Thêm hình ảnh</Text>
-                            </>
-                        )}
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()}>
+                        <Ionicons name="arrow-back" size={24} color="black" />
                     </TouchableOpacity>
-                    <View style={styles.quizInfoCard}>
-                        <View style={styles.quizInfo}>
-                            <Text style={styles.quizInfoText}>Tên bài kiểm tra: <Text style={{ color: COLORS.BLACK }}>{quizInfo.name}</Text></Text>
-                            <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{getCategoryName(quizInfo.categoryId)}</Text></Text>
-                            <Text style={styles.quizInfoText}>Quyền truy cập: <Text style={{ color: COLORS.BLACK }}>{quizInfo.access}</Text></Text>
-                            <View style={styles.accessDetailsContainer}>
-                                {quizInfo.access === 'Riêng tư' && <Text style={styles.quizInfoText}>Chia sẻ với:</Text>}
-                                <View style={styles.flowContainer}>
-                                    {quizInfo.selectedGroups.map(groupId => {
-                                        const group = myGroups.find(g => g.id === groupId);
-                                        return (
-                                            <View key={`group-${groupId}`} style={styles.itemTag}>
-                                                <Ionicons name="people" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
-                                                <Text style={styles.itemTagText}>{group?.name}</Text>
-                                            </View>
-                                        );
-                                    })}
-                                    {quizInfo.invitedEmails.map((email, index) => (
-                                        <View key={`email-${index}`} style={styles.itemTag}>
-                                            <Ionicons name="mail" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
-                                            <Text style={styles.itemTagText}>{email}</Text>
-                                        </View>
-                                    ))}
-                                </View>
-                            </View>
-                        </View>
-                        <TouchableOpacity style={styles.editButton}>
-                            <Ionicons name="create-outline" size={24} color={COLORS.BLUE} onPress={() => bottomSheetRef.current.open()} />
+                    <Text style={styles.headerTitle}>Tạo bài kiểm tra</Text>
+                    <TouchableOpacity
+                        style={[
+                            !isQuizValid() && styles.saveButtonDisabled
+                        ]}
+                        onPress={handleSaveQuiz}
+                        disabled={!isQuizValid()}
+                    >
+                        <Text style={[
+                            styles.saveButtonText,
+                        ]}>
+                            Lưu
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.scrollContainer}>
+                    <View style={styles.content}>
+                        <TouchableOpacity style={styles.imageCard} onPress={handleImagePicker}>
+                            {imageUri ? (
+                                <>
+                                    <Image source={imageUri} style={styles.image} />
+                                    <View style={styles.imageActions}>
+                                        <TouchableOpacity onPress={handleDeleteImage} style={styles.actionButton}>
+                                            <Ionicons name="trash-outline" size={24} color={COLORS.RED} />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={handleModifyImage} style={styles.actionButton}>
+                                            <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons name="image-outline" size={24} color={COLORS.GRAY_DARK} />
+                                    <Text style={styles.imageCardText}>Thêm hình ảnh</Text>
+                                </>
+                            )}
                         </TouchableOpacity>
-                    </View>
-                    <View style={styles.questionSliderContainer}>
-                        <QuestionSlider
-                            questions={questions}
-                            setQuestions={setQuestions}
-                            handleEditQuestion={handleEditQuestion}
-                        />
-                    </View>
-                </View>
-            </ScrollView>
-            <View style={styles.footer}>
-
-                <TouchableOpacity
-                    style={styles.footerButton}
-                    onPress={handleCreateQuestion}
-                >
-                    <Ionicons name="create-outline" color={COLORS.WHITE} size={24} />
-                    <Text style={[styles.buttonText, styles.footerButtonText]}>
-                        Thêm câu hỏi
-                    </Text>
-                </TouchableOpacity>
-            </View>
-            <BottomSheet ref={bottomSheetRef} title="Thông tin bài kiểm tra" height={'100%'}>
-                <View style={styles.dropdownContainer}>
-                    <Text style={styles.label}>Tên bài kiểm tra</Text>
-                    <TextInput
-                        style={styles.dropdown}
-                        placeholder="Nhập tên bài kiểm tra"
-                        value={tmpQuizInfo.name}
-                        onChangeText={(text) => {
-                            setTmpQuizInfo({ ...tmpQuizInfo, name: text });
-                        }}
-                    />
-                </View>
-                <View style={styles.dropdownContainer}>
-                    <Text style={styles.label}>Chủ đề</Text>
-                    <Dropdown
-                        style={styles.dropdown}
-                        data={categories}
-                        labelField="label"
-                        valueField="value"
-                        value={tmpQuizInfo.categoryId}
-                        onChange={(item) => {
-                            setTmpQuizInfo({ ...tmpQuizInfo, categoryId: item.value });
-                        }}
-                    />
-                </View>
-                <View style={styles.dropdownContainer}>
-                    <Text style={styles.label}>Quyền truy cập</Text>
-                    <Dropdown
-                        style={styles.dropdown}
-                        data={accesses}
-                        labelField="label"
-                        valueField="value"
-                        value={tmpQuizInfo.access}
-                        onChange={handleAccessChange}
-                    />
-                </View>
-                <View style={styles.accessContainer}>
-
-                    {tmpQuizInfo.access === 'Private' && (
-                        <View style={styles.selectedItemsContainer}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
-                                <TouchableOpacity
-                                    style={styles.editButton}
-                                    onPress={() => setShowGroupModal(true)}
-                                >
-                                    <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
-                                </TouchableOpacity>
-                            </View>
-
-                            {tmpQuizInfo.selectedGroups.length > 0 && (
-                                <View style={styles.selectedGroupsContainer}>
-                                    <Text style={styles.smallLabel}>Nhóm được chọn:</Text>
-                                    <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.groupsScrollView}
-                                    >
-                                        {tmpQuizInfo.selectedGroups.map(groupId => {
+                        <View style={styles.quizInfoCard}>
+                            <View style={styles.quizInfo}>
+                                <Text style={styles.quizInfoText}>Tên bài kiểm tra: <Text style={{ color: COLORS.BLACK }}>{quizInfo.name}</Text></Text>
+                                <Text style={styles.quizInfoText}>Chủ đề: <Text style={{ color: COLORS.BLACK }}>{getCategoryName(quizInfo.categoryId)}</Text></Text>
+                                <Text style={styles.quizInfoText}>Quyền truy cập: <Text style={{ color: COLORS.BLACK }}>{quizInfo.access}</Text></Text>
+                                <View style={styles.accessDetailsContainer}>
+                                    {quizInfo.access === 'Riêng tư' && <Text style={styles.quizInfoText}>Chia sẻ với:</Text>}
+                                    <View style={styles.flowContainer}>
+                                        {quizInfo.selectedGroups.map(groupId => {
                                             const group = myGroups.find(g => g.id === groupId);
                                             return (
-                                                <View key={groupId} style={styles.groupTag}>
-                                                    <Text style={styles.groupTagText}>{group?.name}</Text>
+                                                <View key={`group-${groupId}`} style={styles.itemTag}>
+                                                    <Ionicons name="people" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
+                                                    <Text style={styles.itemTagText}>{group?.name}</Text>
                                                 </View>
                                             );
                                         })}
-                                    </ScrollView>
-                                </View>
-                            )}
-
-                            {tmpQuizInfo.invitedEmails?.length > 0 && (
-                                <View style={styles.selectedGroupsContainer}>
-                                    <Text style={styles.smallLabel}>Email được mời:</Text>
-                                    <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.groupsScrollView}
-                                    >
-                                        {tmpQuizInfo.invitedEmails.map((email, index) => (
-                                            <View key={index} style={styles.groupTag}>
-                                                <Text style={styles.groupTagText}>{email}</Text>
+                                        {quizInfo.invitedEmails.map((email, index) => (
+                                            <View key={`email-${index}`} style={styles.itemTag}>
+                                                <Ionicons name="mail" size={14} color={COLORS.BLUE} style={styles.tagIcon} />
+                                                <Text style={styles.itemTagText}>{email}</Text>
                                             </View>
                                         ))}
-                                    </ScrollView>
+                                    </View>
                                 </View>
-                            )}
+                            </View>
+                            <TouchableOpacity style={styles.editButton}>
+                                <Ionicons name="create-outline" size={24} color={COLORS.BLUE} onPress={() => bottomSheetRef.current.open()} />
+                            </TouchableOpacity>
                         </View>
-                    )}
-                </View>
+                        <View style={styles.questionSliderContainer}>
+                            <QuestionSlider
+                                questions={questions}
+                                setQuestions={setQuestions}
+                                handleEditQuestion={handleEditQuestion}
+                            />
+                        </View>
+                    </View>
+                </ScrollView>
+                <View style={styles.footer}>
 
-                <View style={styles.modalButtons}>
                     <TouchableOpacity
-                        disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
-                        style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
-                        onPress={() => saveQuizInfo()} >
-                        <Text style={styles.buttonText}>Lưu</Text>
+                        style={styles.footerButton}
+                        onPress={handleCreateQuestion}
+                    >
+                        <Ionicons name="create-outline" color={COLORS.WHITE} size={24} />
+                        <Text style={[styles.buttonText, styles.footerButtonText]}>
+                            Thêm câu hỏi
+                        </Text>
                     </TouchableOpacity>
                 </View>
-            </BottomSheet>
-            <OptionalAccessModal
-                visible={showGroupModal}
-                onClose={() => setShowGroupModal(false)}
-                onSave={handleSaveOptionalAccess}
-                selectedGroups={selectedGroups}
-                initialInvitedEmails={tmpQuizInfo.invitedEmails}
-                myGroups={myGroups}
-            />
-        </View>
+                <BottomSheet ref={bottomSheetRef} title="Thông tin bài kiểm tra" height={'100%'}>
+                    <View style={styles.dropdownContainer}>
+                        <Text style={styles.label}>Tên bài kiểm tra</Text>
+                        <TextInput
+                            style={styles.dropdown}
+                            placeholder="Nhập tên bài kiểm tra"
+                            value={tmpQuizInfo.name}
+                            onChangeText={(text) => {
+                                setTmpQuizInfo({ ...tmpQuizInfo, name: text });
+                            }}
+                        />
+                    </View>
+                    <View style={styles.dropdownContainer}>
+                        <Text style={styles.label}>Chủ đề</Text>
+                        <Dropdown
+                            style={styles.dropdown}
+                            data={categories}
+                            labelField="label"
+                            valueField="value"
+                            value={tmpQuizInfo.categoryId}
+                            onChange={(item) => {
+                                setTmpQuizInfo({ ...tmpQuizInfo, categoryId: item.value });
+                            }}
+                        />
+                    </View>
+                    <View style={styles.dropdownContainer}>
+                        <Text style={styles.label}>Quyền truy cập</Text>
+                        <Dropdown
+                            style={styles.dropdown}
+                            data={accesses}
+                            labelField="label"
+                            valueField="value"
+                            value={tmpQuizInfo.access}
+                            onChange={handleAccessChange}
+                        />
+                    </View>
+                    <View style={styles.accessContainer}>
+
+                        {tmpQuizInfo.access === 'Private' && (
+                            <View style={styles.selectedItemsContainer}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Text style={styles.label}>Tùy chọn quyền truy cập:</Text>
+                                    <TouchableOpacity
+                                        style={styles.editButton}
+                                        onPress={() => setShowGroupModal(true)}
+                                    >
+                                        <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {tmpQuizInfo.selectedGroups.length > 0 && (
+                                    <View style={styles.selectedGroupsContainer}>
+                                        <Text style={styles.smallLabel}>Nhóm được chọn:</Text>
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.groupsScrollView}
+                                        >
+                                            {tmpQuizInfo.selectedGroups.map(groupId => {
+                                                const group = myGroups.find(g => g.id === groupId);
+                                                return (
+                                                    <View key={groupId} style={styles.groupTag}>
+                                                        <Text style={styles.groupTagText}>{group?.name}</Text>
+                                                    </View>
+                                                );
+                                            })}
+                                        </ScrollView>
+                                    </View>
+                                )}
+
+                                {tmpQuizInfo.invitedEmails?.length > 0 && (
+                                    <View style={styles.selectedGroupsContainer}>
+                                        <Text style={styles.smallLabel}>Email được mời:</Text>
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.groupsScrollView}
+                                        >
+                                            {tmpQuizInfo.invitedEmails.map((email, index) => (
+                                                <View key={index} style={styles.groupTag}>
+                                                    <Text style={styles.groupTagText}>{email}</Text>
+                                                </View>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                            disabled={tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0)}
+                            style={[styles.button, { opacity: tmpQuizInfo.name === '' || tmpQuizInfo.categoryId === '' || tmpQuizInfo.access === '' || (tmpQuizInfo.access === 'Private' && tmpQuizInfo.selectedGroups.length === 0 && tmpQuizInfo.invitedEmails.length === 0) ? 0.5 : 1 }]}
+                            onPress={() => saveQuizInfo()} >
+                            <Text style={styles.buttonText}>Lưu</Text>
+                        </TouchableOpacity>
+                    </View>
+                </BottomSheet>
+                <OptionalAccessModal
+                    visible={showGroupModal}
+                    onClose={() => setShowGroupModal(false)}
+                    onSave={handleSaveOptionalAccess}
+                    selectedGroups={selectedGroups}
+                    initialInvitedEmails={tmpQuizInfo.invitedEmails}
+                    myGroups={myGroups}
+                />
+            </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: COLORS.WHITE,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+        paddingBottom: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
     container: {
         flex: 1,
         backgroundColor: COLORS.WHITE,

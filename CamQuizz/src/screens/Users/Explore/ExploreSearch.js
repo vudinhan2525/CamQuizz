@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect } from 'react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -127,7 +128,7 @@ export const ExploreSearch = () => {
 
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={[styles.searchContainer, {
           position: 'absolute',
@@ -227,7 +228,7 @@ export const ExploreSearch = () => {
         </View>
       </BottomSheet>
 
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import COLORS from '../../../constant/colors';
 
 const RankingItem = ({ user, newScore, oldScore, isCorrect, index }) => {
@@ -23,7 +24,7 @@ const RankingItem = ({ user, newScore, oldScore, isCorrect, index }) => {
 
 const Ranking = ({ users }) => {
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <Text style={styles.title}>Bảng Xếp Hạng</Text>
             {users.map((user, index) => (
                 <RankingItem
@@ -34,7 +35,7 @@ const Ranking = ({ users }) => {
                     index={index}
                 />
             ))}
-        </View>
+        </SafeAreaView>
     );
 };
 

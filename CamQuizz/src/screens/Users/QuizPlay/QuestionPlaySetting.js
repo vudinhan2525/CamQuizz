@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, TextInput, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 
@@ -13,7 +14,7 @@ const QuestionPlaySetting = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Cài đặt hiển thị bảng xếp hạng</Text>
@@ -53,8 +54,8 @@ const QuestionPlaySetting = ({ navigation, route }) => {
                 </TouchableOpacity>
             </View>
 
-          
-        </View>
+
+        </SafeAreaView>
     );
 };
 

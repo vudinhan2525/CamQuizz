@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Dimensions, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart } from 'react-native-chart-kit';
 import COLORS from '../../../constant/colors';
@@ -338,7 +339,7 @@ const QuizReport = ({ navigation, route }) => {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton} 
@@ -382,7 +383,7 @@ const QuizReport = ({ navigation, route }) => {
       </View>
 
       {activeTab === 'personal' ? renderPersonalTab() : renderOverallTab()}
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -101,8 +101,8 @@ export const Explore = ({ navigation }) => {
     };
 
     const handleError = (error) => {
-      console.error("Hub error:", error);
-      Alert.alert("Lỗi", error.Message || "Không thể tham gia phòng");
+      // console.error("Hub error:", error);
+      // Alert.alert("Lỗi", error.Message || "Không thể tham gia phòng");
       setIsJoining(false);
     };
 

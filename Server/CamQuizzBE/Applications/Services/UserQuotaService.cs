@@ -29,7 +29,7 @@ public class UserQuotaService(
         if (defaultPackage == null)
             throw new Exception("No default package found");
 
-        return new UserQuota
+        var newQuota = new UserQuota
         {
             UserId = userId,
             RemainingQuizz = defaultPackage.MaxNumberOfQuizz,
@@ -37,5 +37,8 @@ public class UserQuotaService(
             TotalParticipants = defaultPackage.MaxNumberOfAttended,
             UpdatedAt = DateTime.UtcNow
         };
+
+        await userQuotaRepository.AddQuotaAsync(newQuota);
+        return newQuota;
     }
 }

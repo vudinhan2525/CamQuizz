@@ -68,7 +68,7 @@ export const Package = ({ navigation }) => {
         return;
       }
 
-      if (editedPackage.price > 50000000 ||editedPackage.price< 1000 ) {
+      if (editedPackage.price > 50000000 || editedPackage.price < 1000) {
         Alert.alert('Lỗi', 'Giá gói không được từ 1000 đồng đến 50 triệu');
         return;
       }
@@ -140,12 +140,13 @@ export const Package = ({ navigation }) => {
             >
               <Ionicons name="close" size={24} color={COLORS.RED} />
             </TouchableOpacity>)}
-          <TouchableOpacity
-            style={styles.editIconButton}
-            onPress={() => handleEditPackage(item)}
-          >
-            <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
-          </TouchableOpacity>
+          {item.price !== 0 && (
+            <TouchableOpacity
+              style={styles.editIconButton}
+              onPress={() => handleEditPackage(item)}
+            >
+              <Ionicons name="create-outline" size={24} color={COLORS.BLUE} />
+            </TouchableOpacity>)}
 
         </View>
       </View>
@@ -217,7 +218,7 @@ export const Package = ({ navigation }) => {
                 }}
                 keyboardType="numeric"
                 placeholder="Nhập giá gói"
-                
+
               />
             </View>}
 

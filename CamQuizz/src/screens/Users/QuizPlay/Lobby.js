@@ -309,7 +309,7 @@ const Lobby = ({ navigation, route }) => {
             {quiz && (
                 <View style={styles.quizInfoContainer}>
                     <Text style={styles.quizTitle}>{quiz.title}</Text>
-                    <Text style={styles.quizAuthor}>Tác giả: {quiz.author}</Text>
+                    {/* <Text style={styles.quizAuthor}>Tác giả: {quiz.author}</Text> */}
                     <Text style={styles.quizAuthor}>Số câu hỏi: {quiz.question_num}</Text>
                     <Text style={styles.quizAuthor}>Thời gian: {quiz.duration} giây</Text>
                 </View>

@@ -17,8 +17,31 @@ public class UserQuotaRepository : IUserQuotaRepository
 
     public async Task<UserQuota> GetByUserIdAsync(int userId)
     {
-        return await _context.Set<UserQuota>()
+        var quota = await _context.Set<UserQuota>()
             .FirstOrDefaultAsync(q => q.UserId == userId);
+
+        if (quota == null)
+        {
+            // Create default quota from first package
+            var defaultPackage = await _context.Packages
+                .OrderBy(p => p.Id)
+                .FirstOrDefaultAsync();
+
+            if (defaultPackage != null)
+            {
+                quota = new UserQuota
+                {
+                    UserId = userId,
+                    TotalQuizz = defaultPackage.MaxNumberOfQuizz,
+                    RemainingQuizz = defaultPackage.MaxNumberOfQuizz,
+                    TotalParticipants = defaultPackage.MaxNumberOfAttended,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await AddQuotaAsync(quota);
+            }
+        }
+        
+        return quota;
     }
 
     public async Task AddQuotaAsync(UserQuota quota)
@@ -63,26 +86,8 @@ public class UserQuotaRepository : IUserQuotaRepository
     {
         var quota = await GetByUserIdAsync(userId);
         
-        // If no quota exists, create default from first package
         if (quota == null)
-        {
-            var defaultPackage = await _context.Packages
-                .OrderBy(p => p.Id)
-                .FirstOrDefaultAsync();
-
-            if (defaultPackage == null)
-                throw new ValidatorException("No default package found");
-
-            quota = new UserQuota
-            {
-                UserId = userId,
-                TotalQuizz = defaultPackage.MaxNumberOfQuizz,
-                RemainingQuizz = defaultPackage.MaxNumberOfQuizz,
-                TotalParticipants = defaultPackage.MaxNumberOfAttended,
-                UpdatedAt = DateTime.UtcNow
-            };
-            await AddQuotaAsync(quota);
-        }
+            throw new ValidatorException("No quota available for this user");
 
         if (quota.RemainingQuizz <= 0)
             throw new ValidatorException("No remaining quiz quota");

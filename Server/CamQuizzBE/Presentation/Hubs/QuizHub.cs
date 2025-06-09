@@ -346,6 +346,16 @@ public class QuizHub : Hub
         try
         {
             _logger.LogInformation("User {UserId} joining room {RoomId}", request.UserId, request.RoomId);
+            
+            // Log game state if one exists
+            if (_games.TryGetValue(request.RoomId, out var gameState) && gameState.QuestionStartTime.HasValue)
+            {
+                var timeElapsed = DateTime.UtcNow - gameState.QuestionStartTime.Value;
+                var timeLeft = Math.Max(0, gameState.OriginalDuration - timeElapsed.TotalSeconds);
+                _logger.LogInformation(
+                    "[TIMING] Room {RoomId} - Player {PlayerId} joining with {TimeLeft:F1}s left (Started at {StartTime}, Elapsed {Elapsed:F1}s)",
+                    request.RoomId, request.UserId, timeLeft, gameState.QuestionStartTime, timeElapsed.TotalSeconds);
+            }
 
             if (!_rooms.ContainsKey(request.RoomId))
             {
@@ -504,22 +514,55 @@ public class QuizHub : Hub
             }
             _logger.LogInformation("First question duration: {Duration}s", duration);
 
+            var startTime = DateTime.UtcNow;
             var gameState = new GameState
             {
                 IsStarted = true,
                 CurrentQuestionIndex = 0,
-                QuestionStartTime = null,  // Will be set after questionStarted event
+                QuestionStartTime = startTime,  
                 OriginalDuration = duration,
                 TimeRemaining = duration,
                 IsPaused = false,
                 ShowRanking = request.ShowRanking,
                 IsEnded = false,
-                LastAnswerTime = null
+                LastAnswerTime = null,
+                TimerCancellation = new CancellationTokenSource()
+            };
+            //Log for host
+            // _logger.LogInformation(
+            //     "[TIMING] Starting first question for room {RoomId} at {StartTime} - Host={HostId}, Duration={Duration}s, Players={PlayerCount}",
+            //     request.RoomId, startTime, room.HostId, duration, room.PlayerList.Count);
+
+            foreach (var player in room.PlayerList)
+            {
+                //Log for each player
+                // _logger.LogInformation(
+                //     "[TIMING] Room {RoomId} - {Role} {PlayerId} ({Name}) starting question",
+                //     request.RoomId,
+                //     player.Id == room.HostId ? "Host" : "Player",
+                //     player.Id,
+                //     player.Name);
+            }
+            var orderedAnswers = questions[0].Answers.OrderBy(a => a.Id).ToList();
+            var firstQuestion = new GameQuestionResponse
+            {
+                Id = questions[0].Id,
+                Name = questions[0].Name,
+                Explanation = questions[0].Description,
+                TimeLimit = duration,
+                Options = orderedAnswers.Select((a, index) => new GameQuestionOption
+                {
+                    Label = ((char)('A' + index)).ToString(),
+                    Content = a.Answer
+                }).ToList(),
+                RoomId = room.RoomId,
             };
 
-            _games[request.RoomId] = gameState;
+            // Initialize game state and start hub context
+            using var hubScope = _scopeFactory.CreateScope();
+            var hubContext = hubScope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
 
-            // Create or update quiz attempts and increment attendance count
+            // Update database state
             using (var dbScope = _scopeFactory.CreateScope())
             {
                 var context = dbScope.ServiceProvider.GetRequiredService<DataContext>();
@@ -591,32 +634,8 @@ public class QuizHub : Hub
                 }
             }
 
-            _logger.LogInformation("Starting game for room {RoomId}, question {QuestionId}, duration: {Duration}s",
-                request.RoomId, questions[0].Id, duration);
-
-            // Get answers in consistent order for first question
-            var orderedAnswers = questions[0].Answers.OrderBy(a => a.Id).ToList();
-            var firstQuestion = new GameQuestionResponse
-            {
-                Id = questions[0].Id,
-                Name = questions[0].Name,
-                Explanation = questions[0].Description,
-                TimeLimit = duration,
-                Options = orderedAnswers.Select((a, index) => new GameQuestionOption
-                {
-                    Label = ((char)('A' + index)).ToString(),
-                    Content = a.Answer
-                }).ToList(),
-                RoomId = room.RoomId,
-            };
-
-            _logger.LogInformation(
-                "First question {QuestionId} options: {Options}",
-                questions[0].Id,
-                string.Join(", ", orderedAnswers.Select((a, i) => $"{(char)('A' + i)}: {a.Answer} (ID: {a.Id})")));
-
-            using var hubScope = _scopeFactory.CreateScope(); // Renamed to hubScope
-            var hubContext = hubScope.ServiceProvider.GetRequiredService<IHubContext<QuizHub>>();
+            // Initialize game state after DB operations but before sending events
+            _games[request.RoomId] = gameState;
 
             // Game start sequence
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarting");
@@ -624,20 +643,16 @@ public class QuizHub : Hub
             await hubContext.Clients.Group(request.RoomId).SendAsync("gameStarted", new { room.RoomId, firstQuestion });
             //await Task.Delay(TimeSpan.FromSeconds(2));
 
+            // Start timer immediately with game state
+            _ = Task.Run(() => StartQuestionTimer(request.RoomId, duration, gameState), gameState.TimerCancellation.Token);
+
             // Start first question
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarting");
-            //await Task.Delay(TimeSpan.FromSeconds(2));
             await hubContext.Clients.Group(request.RoomId).SendAsync("questionStarted");
 
-            // Set question start time after announcing question started
-            gameState.QuestionStartTime = DateTime.UtcNow;
             _logger.LogInformation(
                 "Started first question {QuestionId} at {StartTime} in room {RoomId}",
                 questions[0].Id, gameState.QuestionStartTime, request.RoomId);
-
-            // Start timer using StartQuestionTimer
-            gameState.TimerCancellation = new CancellationTokenSource();
-            _ = Task.Run(() => StartQuestionTimer(request.RoomId, duration, gameState), gameState.TimerCancellation.Token);
         }
         catch (Exception ex)
         {
@@ -1035,12 +1050,34 @@ public class QuizHub : Hub
                 throw new Exception($"Invalid duration {duration}");
             }
 
-            gameState.QuestionStartTime = DateTime.UtcNow;
+            var startTime = DateTime.UtcNow;
+            gameState.QuestionStartTime = startTime;
             gameState.TimeRemaining = duration;
+
+            _logger.LogInformation(
+                "[TIMING] Starting timer for room {RoomId} at {StartTime} for {Duration}s",
+                roomId, startTime, duration);
 
             for (int time = (int)Math.Ceiling(duration); time >= 0 && !gameState.TimerCancellation.Token.IsCancellationRequested; time--)
             {
-                _logger.LogDebug("Timer tick for room {RoomId}, time: {Time}s", roomId, time);
+                // Get current room info for each tick
+                if (_rooms.TryGetValue(roomId, out var currentRoom))
+                {
+                    foreach (var player in currentRoom.PlayerList)
+                    {
+                        var hasAnswered = gameState.PlayerAnswers.ContainsKey(player.Id);
+                        _logger.LogInformation(
+                            "[TIMING] Room: {RoomId} Time: {Time}s - {Role} {PlayerId} ({Name}): {Status}",
+                            roomId,
+                            time,
+                            player.Id == currentRoom.HostId ? "Host" : "Player",
+                            player.Id,
+                            player.Name,
+                            hasAnswered ? "Answered" : "Waiting"
+                        );
+                    }
+                }
+                
                 gameState.TimeRemaining = time;
                 await hubContext.Clients.Group(roomId).SendAsync("timerUpdate", new
                 {
@@ -1313,23 +1350,37 @@ public class QuizHub : Hub
 
                 //await Task.Delay(TimeSpan.FromSeconds(2));
 
-                // Reset state for next question
-                gameState.QuestionStartTime = null; // Clear old time
+                // Reset and initialize state for next question
                 gameState.PlayerAnswers.Clear();
+                var nextStartTime = DateTime.UtcNow;
+                gameState.QuestionStartTime = nextStartTime;
+                gameState.TimerCancellation = new CancellationTokenSource();
 
-
-                await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
-
-                // Set new start time after announcing question start
-                gameState.QuestionStartTime = DateTime.UtcNow; // Already incremented CurrentQuestionIndex at line 1108
                 _logger.LogInformation(
-                    "Started question {QuestionId} at {StartTime} in room {RoomId}",
+                    "[TIMING] Starting next question {QuestionId} for room {RoomId} at {StartTime} - Host={HostId}, Duration={Duration}s",
+                    nextQuestion.Id, roomId, nextStartTime, room.HostId, nextQuestion.TimeLimit);
+
+                foreach (var player in room.PlayerList)
+                {
+                    _logger.LogInformation(
+                        "[TIMING] Room {RoomId} Question {QuestionId} - {Role} {PlayerId} ({Name}) starting question",
+                        roomId,
+                        nextQuestion.Id,
+                        player.Id == room.HostId ? "Host" : "Player",
+                        player.Id,
+                        player.Name);
+                }
+
+                // Start timer immediately
+                _ = Task.Run(() => StartQuestionTimer(roomId, nextQuestion.TimeLimit, gameState), gameState.TimerCancellation.Token);
+
+                _logger.LogInformation(
+                    "Starting question {QuestionId} at {StartTime} in room {RoomId}",
                     nextQuestion.Id,
                     gameState.QuestionStartTime,
                     roomId);
 
-                gameState.TimerCancellation = new CancellationTokenSource();
-                _ = Task.Run(() => StartQuestionTimer(roomId, nextQuestion.TimeLimit, gameState), gameState.TimerCancellation.Token);
+                await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
 
                 _logger.LogInformation(
                     "Starting next question {QuestionId} at {StartTime} in room {RoomId}",
@@ -1373,12 +1424,8 @@ public class QuizHub : Hub
                 _logger.LogInformation("Game ended and attempts finalized for room {RoomId}", roomId);
             }
 
-            await hubContext.Clients.Group(roomId).SendAsync("questionStarting");
-            //await Task.Delay(TimeSpan.FromSeconds(2));
-            await hubContext.Clients.Group(roomId).SendAsync("questionStarted");
-
-            gameState.TimerCancellation = new CancellationTokenSource();
-            _ = Task.Run(() => StartQuestionTimer(roomId, gameState.TimeRemaining, gameState), gameState.TimerCancellation.Token);
+            // Remove redundant question start events and timer
+            // These are already handled in the hasNextQuestion block above
         }
         catch (Exception ex)
         {

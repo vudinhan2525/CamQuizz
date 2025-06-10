@@ -30,7 +30,7 @@ Start-Sleep -Seconds 5
 
 $ngrokUrl = (Invoke-RestMethod http://localhost:4040/api/tunnels).tunnels[0].public_url
 
-(Get-Content "appsettings.json") -replace '"NGROK_SERVER":\s*".*?"', '"NGROK_SERVER": "' + $ngrokUrl + '"' | Set-Content "appsettings.Development.json"
+(Get-Content "appsettings.Development.json") -replace '"NGROK_SERVER":\s*".*?"', '"NGROK_SERVER": "' + $ngrokUrl + '"' | Set-Content "appsettings.Development.json"
 
 Write-Output "NGROK_SERVER updated to $ngrokUrl in appsettings.Development.json"
 

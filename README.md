@@ -51,11 +51,9 @@ dotnet run
 ```powershell
 cd CamQuizz/CamQuizz
 ```
-Tạo file ``.env`` và copy URL của ngrok trên vào ``API_URL``, ``CLOUDINARY_CLOUD_NAME`` và ``CLOUDINARY_UPLOAD_PRESET`` có trong file zip source code 
+Vào file ``.env`` ở frontend và copy URL của ngrok trên vào ``API_URL``, 
 ```powershell
 API_URL=""
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_UPLOAD_PRESET=""
 ```
 ---
 ## 🔽 Step 5: Chạy Frontend

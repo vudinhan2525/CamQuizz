@@ -212,7 +212,10 @@ const GroupScreen = ({ navigation, route }) => {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+    style={styles.container} 
+    edges={['top']} 
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />

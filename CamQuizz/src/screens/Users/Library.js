@@ -222,7 +222,10 @@ export const Library = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top']} // Chỉ áp dụng safe area cho phần top, không áp dụng cho bottom
+    >
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>

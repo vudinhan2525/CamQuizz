@@ -38,7 +38,15 @@ const ReportHistory = ({ navigation }) => {
       style={styles.reportItem}
     >
       <Text style={styles.quizName}>{item.quiz_name || 'Không rõ tên quiz'}</Text>
-      <Text style={styles.reportTime}>{item.created_at ? new Date(item.created_at).toLocaleString() : item.reportTime}</Text>
+      <Text style={styles.reportTime}>{item.created_at
+    ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000).toLocaleString('vi-VN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      })
+    : item.reportTime}</Text>
       <Text style={[
         styles.status,
         { color: item.status === 'Resolved' ? COLORS.GREEN : COLORS.ORANGE }

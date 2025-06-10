@@ -2,6 +2,7 @@
 
 - .NET SDK 9.0 (https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 - ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
+- Full .zip source with env file & key
 
 # 1. Change directory to BE
 

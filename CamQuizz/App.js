@@ -1,6 +1,6 @@
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import React, { useEffect, useState, useCallback } from 'react';
-import { Platform, SafeAreaView, StatusBar, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { Platform, StatusBar, StyleSheet, ActivityIndicator, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthStackNavigator, UsersStackNavigation, AdminStackNavigation } from './src/navigation';
 import COLORS from './src/constant/colors';
@@ -10,6 +10,7 @@ import { checkAuthStatus } from './src/services/AuthService';
 import { useFocusEffect } from '@react-navigation/native';
 import { HubConnectionProvider } from "./src/contexts/SignalRContext";
 import Toast from 'react-native-toast-message';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 enableScreens();
 SplashScreen.preventAutoHideAsync();
@@ -102,8 +103,8 @@ const App = () => {
   }
 
   return (
-    <NavigationContainer theme={MyTheme}>
-      <SafeAreaView style={styles.container}>
+    <SafeAreaProvider>
+      <NavigationContainer theme={MyTheme}>
         <StatusBar style="auto" />
         <Stack.Navigator
           initialRouteName="Root"
@@ -111,9 +112,9 @@ const App = () => {
         >
           <Stack.Screen name="Root" component={RootNavigator} />
         </Stack.Navigator>
-      </SafeAreaView>
-      <Toast />
-    </NavigationContainer>
+        <Toast />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 };
 
@@ -121,6 +122,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.BG,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+
   },
   loadingContainer: {
     flex: 1,

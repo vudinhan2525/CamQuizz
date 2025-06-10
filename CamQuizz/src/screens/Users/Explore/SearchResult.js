@@ -5,7 +5,7 @@ import Entypo from 'react-native-vector-icons/Entypo';
 import QuizzService from '../../../services/QuizzService';
 import { useNavigation } from '@react-navigation/native';
 import SCREENS from '../..';
-export const SearchResult = ({ searchQuery, filters , categories}) => {
+export const SearchResult = ({ searchQuery, filters, categories }) => {
   const navigation = useNavigation()
   const [quizzes, setQuizzes] = React.useState([]);
   const [pagination, setPagination] = React.useState({
@@ -17,7 +17,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
     return () => {
       resetState();
     };
-  },[]);
+  }, []);
   const resetState = () => {
     setQuizzes([]);
     setPagination({
@@ -52,7 +52,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
   const handleSeeMore = async () => {
     try {
       const categoryId = filters.categoryId === 0 ? null : filters.categoryId;
-      const { data, pagination:serverPagination } = await QuizzService.getAllQuizz(searchQuery, categoryId, pagination.page + 1, pagination.limit, filters.newestSort, filters.popularSort);
+      const { data, pagination: serverPagination } = await QuizzService.getAllQuizz(searchQuery, categoryId, pagination.page + 1, pagination.limit, filters.newestSort, filters.popularSort);
       if (data) {
         setIsAll(serverPagination.total_pages === pagination.page + 1);
         setQuizzes((prev) => [...prev, ...data]);
@@ -71,11 +71,11 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
   };
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.card}
-      onPress={()=>{
+      onPress={() => {
         navigation.navigate(SCREENS.QUIZ_DETAIL, { quizId: item.id });
       }}
     >
-      <Image source={{ uri: item.image|| 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg'  }} style={styles.image} />
+      <Image source={{ uri: item.image || 'https://i.pinimg.com/736x/be/01/85/be0185c37ebe61993e2ae5c818a7b85d.jpg' }} style={styles.image} />
       <View style={styles.infoContainer}>
         <Text style={styles.title}>{item.name}</Text>
         <View style={styles.row}>
@@ -91,7 +91,7 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
   );
 
   const renderFooter = () => (
-    !isAll && quizzes.length!=0 && <View style={styles.footerContainer}>
+    !isAll && quizzes.length != 0 && <View style={styles.footerContainer}>
       <TouchableOpacity style={styles.footerButton} onPress={() => handleSeeMore()}>
         <Text style={styles.footerButtonText}>See More</Text>
       </TouchableOpacity>
@@ -105,7 +105,12 @@ export const SearchResult = ({ searchQuery, filters , categories}) => {
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
       ListFooterComponent={renderFooter}
-    
+      ListEmptyComponent={
+        <View style={{ padding: 20, alignItems: 'center' }}>
+          <Text style={{ color: 'gray' }}>Không có bài nào phù hợp.</Text>
+        </View>
+      }
+
     />
   );
 };

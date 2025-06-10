@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, StatusBar,Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
@@ -204,6 +204,11 @@ const QuizDetail = ({ navigation, route }) => {
                 <TouchableOpacity
                     style={styles.playButton}
                     onPress={() => {
+                        if(quiz.questions===0)
+                        {
+                            Alert.alert("Thông báo", "Đây là quiz mẫu, chưa có dữ liệu")
+                            return;
+                        }
                         handleBegin()
                     }}
                 >

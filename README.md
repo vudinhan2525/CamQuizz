@@ -1,52 +1,70 @@
-# Requirements
+# 🚀 CamQuizz – Backend Setup with Ngrok
 
-- .NET SDK 9.0 (https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
-- ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
-- Full .zip source with env file & key
+## 📦 Requirements
 
-# 1. Change directory to BE
+- [.NET SDK 9.0](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+- `ngrok` để public server local (không cần cài toàn cục)
 
+---
+
+## 📁 Folder Structure
 ```
+CamQuizz/
+├── ngrok-server/
+│ └── ngrok.exe # ⚠️ Bạn phải tự tải và đặt vào đây
+├── Server/
+│ └── CamQuizzBE/
+│ └── appsettings.json
+├── CamQuizz/ # frontend
+│ └── .env 
+├── README.md
+```
+
+---
+
+## 🔽 Step 1: Tải ngrok
+
+1. Truy cập: https://ngrok.com/download
+2. Tải về `ngrok.exe` (Windows) hoặc `ngrok` (Linux/macOS)
+3. Giải nén và copy `ngrok.exe` vào`ngrok-server/`** trong project
+
+---
+
+## 🔧 Step 2: Cấu hình Ngrok URL vào appsettings
+```powershell
+cd CamQuizz/ngrok-server
+ngrok http 5001
+```
+Copy URL ở Forwarding, ví dụ: https://cb1b-2402-800-fde7.ngrok-free.app
+
+Gán giá trị cho ``NGROK_SERVER`` ở ``appsettings.json`` là URL vừa copy
+
+## 🔽 Step 3: Chạy Backend
+
+```powershell
 cd Server/CamQuizzBE
-```
-
-# 2. Live Server with ngrok
-
-**Linux**
-
-```
-nohup ngrok http 5001 > /dev/null &
-
-sleep 5
-
-NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
-
-sed -i "s|\"NGROK_SERVER\": \".*\"|\"NGROK_SERVER\": \"$NGROK_URL\"|g" appsettings.Development.json
-
-echo "NGROK_SERVER updated to $NGROK_URL in appsettings.Development.json"
-```
-
-**Window**
-
-```
-Start-Process "ngrok.exe" -ArgumentList "http 5001" -WindowStyle Hidden
-
-Start-Sleep -Seconds 5
-
-$ngrokUrl = (Invoke-RestMethod http://localhost:4040/api/tunnels).tunnels[0].public_url
-$replacement = '"NGROK_SERVER": "' + $ngrokUrl + '"'
-(Get-Content "appsettings.Development.json") | ForEach-Object {
-    $_ -replace '"NGROK_SERVER":\s*".*?"', $replacement
-} | Set-Content "appsettings.Development.json"
-
-Write-Output "NGROK_SERVER updated to $ngrokUrl in appsettings.Development.json"
-
-```
-
-# 3. Run Backend Server
-
-```
 dotnet run
 ```
 
-# 4. Run Frontend
+## 🔽 Step 4: Chuẩn bị biến môi trường cho Frontend
+
+```powershell
+cd CamQuizz/CamQuizz
+```
+Tạo file ``.env`` và copy URL của ngrok trên vào ``API_URL``, ``CLOUDINARY_CLOUD_NAME`` và ``CLOUDINARY_UPLOAD_PRESET`` có trong file zip source code 
+```powershell
+API_URL=""
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_UPLOAD_PRESET=""
+```
+---
+## 🔽 Step 5: Chạy Frontend
+
+```powershell
+cd CamQuizz/CamQuizz
+npm install --legacy-peer-deps
+npx expo start -c
+```
+
+
+```

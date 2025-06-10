@@ -48,7 +48,7 @@ const UserPackage = ({ navigation }) => {
         // setCurrentQuota(updatedQuota);
         setIsProcessingPayment(false);
         setPaymentRequestId(null);
-        
+
       }
     };
     const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -68,20 +68,23 @@ const UserPackage = ({ navigation }) => {
             setCurrentQuota(updatedQuota);
             Toast.show({
               type: 'success',
-              text1: `Thanh toán thành công lúc ${new Date(new Date(updatedQuota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+              text1: `Thanh toán lần gần nhất ${new Date(new Date(updatedQuota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
               })}`,
               text2: 'Đã cập nhật số lượng quiz',
             });
-            
+
           } catch (error) {
             console.error('Error updating quota after payment redirect:', error);
-            Toast.show({
-              type: 'error',
-              text1: 'Cập nhật quota thất bại',
-              text2: 'Xin hãy thử lại.',
-            });
+            // Toast.show({
+            //   type: 'error',
+            //   text1: 'Cập nhật quota thất bại',
+            //   text2: 'Xin hãy thử lại.',
+            // });
           } finally {
             setIsProcessingPayment(false);
             setPaymentRequestId(null);
@@ -163,7 +166,7 @@ const UserPackage = ({ navigation }) => {
       <View style={styles.currentPackageContainer}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Quota hiện tại của bạn</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.refreshButton}
             onPress={async () => {
               try {
@@ -172,22 +175,23 @@ const UserPackage = ({ navigation }) => {
                 setCurrentQuota(quota);
                 Toast.show({
                   type: 'success',
-                  text1: `Thanh toán lần gần nhất lúc ${new Date(new Date(quota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
+                  text1: `Thanh toán lần gần nhất ${new Date(new Date(quota.updated_at).getTime() + 7 * 60 * 60 * 1000).toLocaleTimeString('vi-VN', {
                     hour: '2-digit',
                     minute: '2-digit',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
                   })}`,
-                  position: 'top',
-                  visibilityTime: 2000,
                 });
-                
+
               } catch (error) {
                 console.error('Error refreshing quota:', error);
-                Toast.show({
-                  type: 'error',
-                  text1: 'Không thể cập nhật quota',
-                  position: 'top',
-                  visibilityTime: 2000,
-                });
+                // Toast.show({
+                //   type: 'error',
+                //   text1: 'Không thể cập nhật quota',
+                //   position: 'top',
+                //   visibilityTime: 2000,
+                // });
               }
             }}
           >

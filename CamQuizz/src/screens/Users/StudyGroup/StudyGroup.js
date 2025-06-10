@@ -206,7 +206,8 @@ export const StudyGroup = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}
+    edges={['top']} >
       <View style={styles.header}>
         <Text style={styles.title}>Nhóm học tập</Text>
       </View>

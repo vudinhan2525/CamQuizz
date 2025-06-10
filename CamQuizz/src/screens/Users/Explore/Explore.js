@@ -345,7 +345,10 @@ export const Explore = ({ navigation }) => {
 
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView 
+      style={styles.container} 
+      edges={['top']} // Chỉ áp dụng safe area cho phần top, không áp dụng cho bottom
+    >
 
       {/* headers */}
       <Animated.View style={[styles.header,

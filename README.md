@@ -1,5 +1,5 @@
 # Requirements
- - .NET SDK 9.0
+ - .NET SDK 9.0 (https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
  - ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
 
 # 1. Change directory to BE

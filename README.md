@@ -22,7 +22,7 @@ CamQuizz/
 
 ---
 
-## 🔽 Step 1: Tải ngrok
+## 🔽 Step 1: Tải ngrok (đã có trong file zip)
 
 1. Truy cập: https://ngrok.com/download
 2. Tải về `ngrok.exe` (Windows) hoặc `ngrok` (Linux/macOS)
@@ -31,6 +31,7 @@ CamQuizz/
 ---
 
 ## 🔧 Step 2: Cấu hình Ngrok URL vào appsettings
+Đăng nhập theo hướng dẫn: https://ngrok.com/docs/getting-started/
 ```powershell
 cd CamQuizz/ngrok-server
 ngrok http 5001

@@ -297,7 +297,7 @@ export const Quizz = () => {
       </View>
 
       {/* Stats */}
-      <View style={styles.statsContainer}>
+      {/* <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{stats.totalQuizzes}</Text>
           <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
@@ -320,9 +320,9 @@ export const Quizz = () => {
           <Text style={styles.statValue}>{stats.resolvedReports}</Text>
           <Text style={styles.statLabel}>Đã xử lý</Text>
         </View>
-      </View>
+      </View> */}
       {/* Filter */}
-      <View style={styles.filterContainer}>
+      {/* <View style={styles.filterContainer}>
         <Text style={styles.filterLabel}>Lọc theo trạng thái:</Text>
         <View style={styles.filterOptions}>
           
@@ -345,17 +345,66 @@ export const Quizz = () => {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </View> */}
 
       {/* Reports List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.BLUE} />
-          <Text style={styles.loadingText}>Đang tải báo cáo...</Text>
-        </View>
-      ) : (
+   
         <FlatList
           data={reports}
+          ListHeaderComponent={
+            <>
+              {/* Stats */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.totalQuizzes}</Text>
+                  <Text style={styles.statLabel}>Tổng số bài kiểm tra</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.totalAttempts}</Text>
+                  <Text style={styles.statLabel}>Tổng lượt thi</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.totalReports}</Text>
+                  <Text style={styles.statLabel}>Tổng báo cáo</Text>
+                </View>
+              </View>
+              <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.pendingReports}</Text>
+                  <Text style={styles.statLabel}>Chờ xử lý</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{stats.resolvedReports}</Text>
+                  <Text style={styles.statLabel}>Đã xử lý</Text>
+                </View>
+              </View>
+              {/* Filter */}
+              <View style={styles.filterContainer}>
+                <Text style={styles.filterLabel}>Lọc theo trạng thái:</Text>
+                <View style={styles.filterOptions}>
+
+
+
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterStatus === 'Pending' && styles.activeFilterOption]}
+                    onPress={() => setFilterStatus('Pending')}
+                  >
+                    <Text style={[styles.filterText, filterStatus === 'Pending' && styles.activeFilterText]}>
+                      Chờ xử lý
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterOption, filterStatus === 'Processed' && styles.activeFilterOption]}
+                    onPress={() => setFilterStatus('Processed')}
+                  >
+                    <Text style={[styles.filterText, filterStatus === 'Processed' && styles.activeFilterText]}>
+                      Đã xử lý
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </>
+          }
           renderItem={renderReportItem}
           keyExtractor={item => item.created_at.toString()}
           contentContainerStyle={styles.listContainer}
@@ -372,7 +421,7 @@ export const Quizz = () => {
           }}
           onEndReachedThreshold={0.1}
         />
-      )}
+      
 
       {/* Process Report Modal */}
       <Modal
@@ -545,7 +594,7 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     paddingTop: 16,
     backgroundColor: COLORS.WHITE,
   },

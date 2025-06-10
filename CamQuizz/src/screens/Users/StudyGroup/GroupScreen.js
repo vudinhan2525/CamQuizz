@@ -134,7 +134,7 @@ const GroupScreen = ({ navigation, route }) => {
       }));
 
       setQuizzes(transformedQuizzes);
-      console.log(`Loaded ${transformedQuizzes.length} shared quizzes`);
+      console.log(`Loaded ${transformedQuizzes?.length} shared quizzes`);
 
     } catch (error) {
       console.error('Error loading shared quizzes:', error);
@@ -257,7 +257,7 @@ const GroupScreen = ({ navigation, route }) => {
 
       <>
         <View style={styles.quizHeader}>
-          <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes.length})</Text>
+          <Text style={styles.quizHeaderTitle}>Quiz được chia sẻ ({quizzes?.length||0})</Text>
           {!isLeader
             && <TouchableOpacity
               style={styles.quitButton}
@@ -288,7 +288,7 @@ const GroupScreen = ({ navigation, route }) => {
           data={quizzes}
           renderItem={renderQuizItem}
           keyExtractor={(item, index) => item.id || index.toString()}
-          contentContainerStyle={quizzes.length === 0 ? styles.emptyContent : styles.content}
+          contentContainerStyle={quizzes?.length === 0 ? styles.emptyContent : styles.content}
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
           ref={flatListRef}

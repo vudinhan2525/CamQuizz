@@ -1,6 +1,6 @@
 # Requirements
  - .NET SDK 9.0
- - ngrok must be installed and available in PATH. 
+ - ngrok must be installed and available in PATH. (https://ngrok.com/docs/getting-started/)
 
 # 1. Change directory to BE
 ```

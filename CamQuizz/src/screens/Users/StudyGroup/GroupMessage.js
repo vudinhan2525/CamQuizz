@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import COLORS from '../../../constant/colors';
 import { API_URL } from '@env';
@@ -182,7 +183,7 @@ const GroupMessage = ({ navigation, route }) => {
     );
   };
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.BLACK} />
@@ -216,7 +217,7 @@ const GroupMessage = ({ navigation, route }) => {
           <Ionicons name="send" size={24} color={COLORS.BLUE} />
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

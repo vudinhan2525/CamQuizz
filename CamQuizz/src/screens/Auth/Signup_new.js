@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, KeyboardAvo
 import { useNavigation } from '@react-navigation/native';
 import COLORS from '../../constant/colors';
 import { Ionicons } from 'react-native-vector-icons';
+import { Dropdown } from 'react-native-element-dropdown';
 import { signup, validateSignup } from '../../services/AuthService';
 
 export const Signup = () => {
@@ -15,6 +16,12 @@ export const Signup = () => {
   const [gender, setGender] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Dữ liệu cho dropdown giới tính
+  const genderOptions = [
+    { label: 'Nam', value: 'Nam' },
+    { label: 'Nữ', value: 'Nữ' }
+  ];
 
   const handleSignup = async () => {
     // Kiểm tra dữ liệu đầu vào
@@ -127,11 +134,15 @@ export const Signup = () => {
 
         <View style={styles.inputContainer}>
           <Ionicons name="male-female-outline" size={20} color={COLORS.GRAY} style={styles.inputIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Giới tính (Nam/Nữ)"
+          <Dropdown
+            style={styles.dropdown}
+            data={genderOptions}
+            labelField="label"
+            valueField="value"
+            placeholder="Chọn giới tính"
             value={gender}
-            onChangeText={setGender}
+            onChange={(item) => setGender(item.value)}
+            renderLeftIcon={() => null}
           />
         </View>
 
@@ -232,6 +243,11 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 10,
+  },
+  dropdown: {
+    flex: 1,
+    height: 50,
+    paddingHorizontal: 8,
   },
   signupButton: {
     backgroundColor: COLORS.BLUE,

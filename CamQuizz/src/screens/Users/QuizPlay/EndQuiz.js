@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import COLORS from '../../../constant/colors';
 import SCREENS from '../../index'
 
@@ -20,7 +21,7 @@ const EndQuiz = ({ navigation, route }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <Text style={styles.title}>Bảng Xếp Hạng</Text>
             <ScrollView style={styles.rankingList}>
                 {finalRanking.map((user, index) => (
@@ -78,7 +79,7 @@ const EndQuiz = ({ navigation, route }) => {
                     <Text style={styles.buttonText}>Thoát</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 

@@ -23,4 +23,7 @@ public class UpdateQuizDto
 
     [JsonPropertyName("shared_groups")]
     public List<string>? SharedGroups { get; set; }
+
+    [JsonPropertyName("duration")]
+    public int? Duration { get; set; }
 }

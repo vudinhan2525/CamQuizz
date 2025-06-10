@@ -66,7 +66,7 @@ export const Explore = ({ navigation }) => {
     const fetchQuizzes = async () => {
       try {
         console.log('Fetching quizzes for category:', selectedCategory.id);
-        const { data, paginationn: serverPagination } = await QuizzService.getAllQuizz(null, selectedCategory.id, 1, pagination.limit);
+        const { data, pagination: serverPagination } = await QuizzService.getAllQuizz(null, selectedCategory.id, 1, pagination.limit);
         if (data) {
           setQuizzes(data);
           setPagination({

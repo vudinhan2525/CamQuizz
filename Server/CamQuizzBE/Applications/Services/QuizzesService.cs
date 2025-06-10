@@ -129,6 +129,10 @@ public class QuizzesService : IQuizzesService
         {
             existingQuiz.Status = updateQuiz.Status;
         }
+        if (updateQuiz.Duration.HasValue)
+        {
+            existingQuiz.Duration = updateQuiz.Duration.Value;
+        }
         existingQuiz.UpdatedAt = DateTime.UtcNow;
 
         // Update quiz in database
